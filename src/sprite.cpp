@@ -24,8 +24,10 @@ namespace rlge {
         };
 
         const Vector2 pos{t->position.x, t->position.y};
-        const Vector2 origin{src.width * 0.5f, src.height * 0.5f};
-        const Rectangle dest{pos.x - origin.x, pos.y - origin.y, src.width, src.height};
+        const Vector2 scale{t->scale.x, t->scale.y};
+        const Vector2 size{src.width * scale.x, src.height * scale.y};
+        const Vector2 origin{size.x * 0.5f, size.y * 0.5f};
+        const Rectangle dest{pos.x, pos.y, size.x, size.y};
         const float rotation = t->rotation;
 
         auto& rq = entity().scene().engine().renderer();
@@ -75,8 +77,10 @@ namespace rlge {
 
         const Frame& f = frames_[idx_];
         const Vector2 pos{t->position.x, t->position.y};
-        const Vector2 origin{f.rect.width * 0.5f, f.rect.height * 0.5f};
-        const Rectangle dest{pos.x - origin.x, pos.y - origin.y, f.rect.width, f.rect.height};
+        const Vector2 scale{t->scale.x, t->scale.y};
+        const Vector2 size{f.rect.width * scale.x, f.rect.height * scale.y};
+        const Vector2 origin{size.x * 0.5f, size.y * 0.5f};
+        const Rectangle dest{pos.x - origin.x, pos.y - origin.y, size.x, size.y};
         const float rotation = t->rotation;
 
         auto& rq = entity().scene().engine().renderer();
@@ -87,4 +91,3 @@ namespace rlge {
             });
     }
 }
-

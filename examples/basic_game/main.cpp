@@ -43,9 +43,9 @@ private:
 };
 
 // Simple player entity that can move left/right/rotate and is followed by the camera.
-class Player final : public RenderEntity {
+class Snake final : public RenderEntity {
 public:
-    explicit Player(Scene& scene, Texture2D& texture)
+    explicit Snake(Scene& scene, Texture2D& texture)
         : RenderEntity(scene) {
         auto& tr = add<rlge::Transform>();
         tr.position = {100.0f, 200.0f};
@@ -92,7 +92,7 @@ public:
 
         // Draw order: background first, player on top.
         bg_  = &spawn<Background>(bgTex);
-        player_ = &spawn<Player>(playerTex);
+        snake_ = &spawn<Snake>(playerTex);
         fps_ = &spawn<FpsCounter>();
     }
 
@@ -104,19 +104,19 @@ public:
             ImGui::Checkbox("Show background", &bg_->visible_);
         }
 
-        if (player_) {
-            if (auto* tr = player_->get<rlge::Transform>()) {
+        if (snake_) {
+            if (auto* tr = snake_->get<rlge::Transform>()) {
                 ImGui::SliderFloat("Player X", &tr->position.x, -500.f, 500.f);
                 ImGui::SliderFloat("Player Y", &tr->position.y, -500.f, 500.f);
                 ImGui::SliderFloat("Player rotation", &tr->rotation, 0.f, 360.f);
             }
-            ImGui::SliderFloat("Player speed", &player_->speed_, 50.f, 600.f);
+            ImGui::SliderFloat("Player speed", &snake_->speed_, 50.f, 600.f);
         }
         ImGui::End();
     }
 private:
     Background* bg_{nullptr};
-    Player* player_{nullptr};
+    Snake* snake_{nullptr};
     FpsCounter* fps_{nullptr};
 };
 

@@ -6,7 +6,7 @@
 namespace rlge {
     Engine::Engine(const int width, const int height, const int fps, const char* title)
         : running_(false) {
-        SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI);
+        //SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI);
         InitWindow(width, height, title);
         SetTargetFPS(fps);
         rlImGuiSetup(true);
