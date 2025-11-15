@@ -15,6 +15,13 @@ namespace rlge {
         const RenderQueue& rq() const {
             return scene().engine().renderer();
         }
+
+        GameServices& services() {
+            return scene().engine().services();
+        }
+
+        EventBus& events() {
+            return scene().engine().services().events();
+        }
     };
 }
-

@@ -7,6 +7,7 @@
 #include "audio.hpp"
 #include "camera.hpp"
 #include "collision.hpp"
+#include "events.hpp"
 #include "input.hpp"
 #include "prefab.h"
 #include "render_queue.hpp"
@@ -20,6 +21,7 @@ namespace rlge {
     class GameServices {
     public:
         CollisionSystem& collisions() { return collisions_; }
+        EventBus& events() { return events_; }
         TweenSystem& tweens() { return tweens_; }
         AudioManager& audio() { return audio_; }
         PrefabFactory& prefabs() { return prefabs_; }
@@ -27,6 +29,7 @@ namespace rlge {
 
     private:
         CollisionSystem collisions_;
+        EventBus events_;
         TweenSystem tweens_;
         AudioManager audio_;
         PrefabFactory prefabs_;

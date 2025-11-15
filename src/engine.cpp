@@ -6,7 +6,7 @@
 namespace rlge {
     Engine::Engine(const int width, const int height, const int fps, const char* title)
         : running_(false) {
-        //SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI);
+        SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
         InitWindow(width, height, title);
         SetTargetFPS(fps);
         rlImGuiSetup(true);
@@ -32,6 +32,7 @@ namespace rlge {
             scenes_.update(dt);
             services_.collisions().update(dt);
             services_.audio().update();
+            services_.events().dispatchQueued();
 
             BeginDrawing();
             ClearBackground(BLACK);
@@ -63,4 +64,3 @@ namespace rlge {
     GameServices& Engine::services() { return services_; }
     const GameServices& Engine::services() const { return services_; }
 }
-
