@@ -5,7 +5,7 @@ namespace rlge {
     class Component {
     public:
         virtual ~Component() = default;
-        virtual void update(float) {}
+        virtual void update(const float) {}
         virtual void draw() {}
 
         Entity& entity() { return entity_; }

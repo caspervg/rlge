@@ -7,17 +7,16 @@
 #include "audio.hpp"
 #include "camera.hpp"
 #include "collision.hpp"
-#include "imgui.h"
 #include "input.hpp"
 #include "prefab.h"
-#include "raylib.h"
 #include "render_queue.hpp"
-#include "rlImGui.h"
 #include "scene.hpp"
 #include "tween.hpp"
 
 
 namespace rlge {
+    class Scene;
+
     class GameServices {
     public:
         CollisionSystem& collisions() { return collisions_; }
@@ -38,20 +37,8 @@ namespace rlge {
 
     class Engine {
     public:
-        Engine(const int width, const int height, const int fps, const char* title) :
-            running_(false) {
-            SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI);
-            InitWindow(width, height, title);
-            SetTargetFPS(fps);
-            rlImGuiSetup(true);
-        }
-
-        ~Engine() {
-            scenes_ = SceneStack{}; // destroy scenes first
-            assets_.unloadAll();
-            rlImGuiShutdown();
-            CloseWindow();
-        }
+        Engine(int width, int height, int fps, const char* title);
+        ~Engine();
 
         Engine(const Engine&) = delete;
         Engine& operator=(const Engine&) = delete;
@@ -63,50 +50,22 @@ namespace rlge {
             scenes_.push(std::move(ptr));
         }
 
-        void popScene() { scenes_.pop(); }
+        void popScene();
+        void run();
 
-        void run() {
-            running_ = true;
-            while (running_ && !WindowShouldClose()) {
-                const float dt = GetFrameTime();
+        void quit();
 
-                services_.tweens().update(dt);
-                scenes_.update(dt);
-                services_.collisions().update(dt);
-                services_.audio().update();
+        AssetStore& assetStore();
+        const AssetStore& assetStore() const;
 
-                BeginDrawing();
-                ClearBackground(BLACK);
+        Input& input();
+        const Input& input() const;
 
-                // Let scenes enqueue draw commands into the render queue.
-                scenes_.draw();
+        RenderQueue& renderer();
+        const RenderQueue& renderer() const;
 
-                // Flush all draw commands with the active camera.
-                renderer_.flush(services_.camera().camera());
-
-                // Debug overlays via ImGui for scenes that opt in.
-                rlImGuiBegin();
-                ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
-                scenes_.drawDebug();
-                rlImGuiEnd();
-
-                EndDrawing();
-            }
-        }
-
-        void quit() { running_ = false; }
-
-        AssetStore& assetStore() { return assets_; }
-        const AssetStore& assetStore() const { return assets_; }
-
-        Input& input() { return input_; }
-        const Input& input() const { return input_; }
-
-        RenderQueue& renderer() { return renderer_; }
-        const RenderQueue& renderer() const { return renderer_; }
-
-        GameServices& services() { return services_; }
-        const GameServices& services() const { return services_; }
+        GameServices& services();
+        const GameServices& services() const;
 
     private:
         bool running_;

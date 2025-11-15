@@ -4,32 +4,25 @@
 #include <utility>
 #include <vector>
 
-#include "entity.hpp"
 #include "entity_registry.hpp"
-#include "debug.hpp"
 
 namespace rlge {
+    class Engine;
+    class Entity;
+
     class Scene {
     public:
-        explicit Scene(Engine& e) :
-            engine_(e) {}
+        explicit Scene(Engine& e);
 
-        virtual ~Scene() = default;
+        virtual ~Scene();
 
-        virtual void enter() {}
-        virtual void exit() {}
-        virtual void pause() {}
-        virtual void resume() {}
+        virtual void enter();
+        virtual void exit();
+        virtual void pause();
+        virtual void resume();
 
-        virtual void update(float dt) {
-            for (auto& e : entities_)
-                e->update(dt);
-        }
-
-        virtual void draw() {
-            for (auto& e : entities_)
-                e->draw();
-        }
+        virtual void update(float dt);
+        virtual void draw();
 
         template <typename T, typename... Args>
         T& spawn(Args&&... args) {
@@ -42,11 +35,11 @@ namespace rlge {
             return ref;
         }
 
-        Entity* get(const EntityId id) const { return registry_.get(id); }
-        const std::vector<std::unique_ptr<Entity>>& entities() { return entities_; }
+        Entity* get(EntityId id) const;
+        const std::vector<std::unique_ptr<Entity>>& entities();
 
-        Engine& engine() { return engine_; }
-        const Engine& engine() const { return engine_; }
+        Engine& engine();
+        const Engine& engine() const;
 
     private:
         Engine& engine_;
@@ -56,41 +49,11 @@ namespace rlge {
 
     class SceneStack {
     public:
-        void push(std::unique_ptr<Scene> s) {
-            if (!stack_.empty())
-                stack_.back()->pause();
-            stack_.push_back(std::move(s));
-            stack_.back()->enter();
-        }
-
-        void pop() {
-            if (stack_.empty())
-                return;
-            stack_.back()->exit();
-            stack_.pop_back();
-            if (!stack_.empty())
-                stack_.back()->resume();
-        }
-
-        void update(float dt) {
-            if (stack_.empty())
-                return;
-            stack_.back()->update(dt);
-        }
-
-        void draw() {
-            for (auto& s : stack_)
-                s->draw();
-        }
-
-        // Invoke debug overlays on scenes that opt into HasDebugOverlay.
-        void drawDebug() {
-            for (auto& s : stack_) {
-                if (auto* dbg = dynamic_cast<HasDebugOverlay*>(s.get())) {
-                    dbg->debugOverlay();
-                }
-            }
-        }
+        void push(std::unique_ptr<Scene> s);
+        void pop();
+        void update(float dt);
+        void draw();
+        void drawDebug();
 
     private:
         std::vector<std::unique_ptr<Scene>> stack_;

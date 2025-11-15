@@ -4,27 +4,21 @@
 #include <utility>
 #include <vector>
 
-#include "component.hpp"
 #include "entity_registry.hpp"
+#include "component.hpp"
 
 namespace rlge {
     class Scene;
+    class Component;
 
     class Entity {
     public:
-        virtual ~Entity() = default;
+        virtual ~Entity();
 
-        EntityId id() const { return id_; }
+        EntityId id() const;
 
-        virtual void update(float dt) {
-            for (auto& c : components_)
-                c->update(dt);
-        }
-
-        virtual void draw() {
-            for (auto& c : components_)
-                c->draw();
-        }
+        virtual void update(float dt);
+        virtual void draw();
 
         template <typename T, typename... Args>
         T& add(Args&&... args) {
@@ -53,8 +47,8 @@ namespace rlge {
             return nullptr;
         }
 
-        Scene& scene() { return scene_; }
-        const Scene& scene() const { return scene_; }
+        Scene& scene();
+        const Scene& scene() const;
 
     protected:
         explicit Entity(Scene& s) :

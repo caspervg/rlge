@@ -48,13 +48,15 @@ target_include_directories(rlimgui PUBLIC ${rlimgui_SOURCE_DIR} PRIVATE ${raylib
 target_link_libraries(rlimgui PUBLIC imgui raylib)
 
 set(PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src/")
+file(GLOB RLGE_SOURCES "${PROJECT_INCLUDE}*.cpp")
 
-# Header-only interface library for the engine
-add_library(rlge INTERFACE)
+add_library(rlge STATIC ${RLGE_SOURCES})
+target_include_directories(rlge PUBLIC ${PROJECT_INCLUDE})
+target_link_libraries(rlge PUBLIC raylib rlimgui)
 
-target_include_directories(rlge INTERFACE ${PROJECT_INCLUDE})
-target_link_libraries(rlge INTERFACE raylib rlimgui)
-
-# Example game executable
+# Example game executables
 add_executable(rlge_basic_game examples/basic_game/main.cpp)
 target_link_libraries(rlge_basic_game PRIVATE rlge raylib rlimgui imgui)
+
+add_executable(rlge_snake examples/snake/main.cpp)
+target_link_libraries(rlge_snake PRIVATE rlge raylib rlimgui imgui)

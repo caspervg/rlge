@@ -4,26 +4,18 @@
 namespace rlge {
     class Camera {
     public:
-        Camera() {
-            cam_.target = {0, 0};
-            cam_.offset = {480, 270};
-            cam_.rotation = 0.0f;
-            cam_.zoom = 1.0f;
-        }
+        Camera();
 
-        void follow(const Vector2 pos, const float lerp = 0.1f) {
-            cam_.target.x += (pos.x - cam_.target.x) * lerp;
-            cam_.target.y += (pos.y - cam_.target.y) * lerp;
-        }
+        void follow(Vector2 pos, float lerp = 0.1f);
 
-        void setZoom(const float z) { cam_.zoom = z; }
-        void setRotation(const float r) { cam_.rotation = r; }
-        void setOffset(const Vector2 o) { cam_.offset = o; }
+        void setZoom(float z);
+        void setRotation(float r);
+        void setOffset(Vector2 o);
 
-        Camera2D& camera() { return cam_; }
-        const Camera2D& camera() const { return cam_; }
+        Camera2D& camera();
+        const Camera2D& camera() const;
 
     private:
-        Camera2D cam_;
+        Camera2D cam_{};
     };
 }
