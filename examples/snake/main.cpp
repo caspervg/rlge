@@ -1,3 +1,4 @@
+#include <chrono>
 #include <print>
 #include <random>
 
@@ -7,6 +8,7 @@
 #include "sprite.hpp"
 #include "transformer.hpp"
 #include "render_entity.hpp"
+#include "rlgl.h"
 #include "sprite_sheet.hpp"
 
 using namespace rlge;
@@ -35,21 +37,23 @@ public:
 // Background entity that draws a wide patterned image so movement is obvious.
 class Background final : public RenderEntity {
 public:
-    explicit Background(Scene& scene, Texture2D& texture) :
-        RenderEntity(scene)
-        , texture_(texture) {}
+    explicit Background(Scene& scene) :
+        RenderEntity(scene) {}
 
     void draw() override {
         if (!visible_)
             return;
         // Draw at world origin; the camera moving will reveal different parts.
-        rq().submitBackground([this] {
-            DrawTexture(texture_, -texture_.width / 2, -texture_.height / 4, WHITE);
+        rq().submitBackground([] {
+            rlPushMatrix();
+                rlTranslatef(0, SCREEN_PIXELS_Y/2.f, 0); //SCREEN_PIXELS_Y/2.f, 0);
+                rlRotatef(90, 1, 0, 0);
+                DrawGrid(TILES_X*2, TILE_PIXELS);
+            rlPopMatrix();
         });
     }
 
 private:
-    Texture2D& texture_;
     bool visible_ = true;
 
     friend class GameScene;
@@ -79,14 +83,19 @@ private:
     SheetSprite* sprite_;
 };
 
-// Simple player entity that can move left/right/rotate and is followed by the camera.
+// Simple player entity that moves on a tile grid but is rendered smoothly between tiles.
 class Snake final : public RenderEntity {
 public:
     explicit Snake(Scene& scene, SpriteSheet& sheet) :
         RenderEntity(scene) {
         auto& tr = add<rlge::Transform>();
-        tr.position = {0, 0};
-        tr.scale = {4, 4};
+        tr.scale = {MAGNIFICATION, MAGNIFICATION};
+
+        // Start roughly in the middle of the board in grid coordinates.
+        gridX_ = TILES_X / 2;
+        gridY_ = TILES_Y / 2;
+        prevWorldPos_ = nextWorldPos_ = tileCenter(gridX_, gridY_);
+        tr.position = prevWorldPos_;
 
         sprite_ = &add<SheetSprite>(sheet, 1, 3);
     }
@@ -97,35 +106,107 @@ public:
         auto& eng = scene().engine();
         const auto& input = eng.input();
 
+        // Change direction discretely based on input and update sprite frame.
+        if (input.pressed("left")) {
+            dir_ = Direction::Left;
+            sprite_->setTile(2, 3);
+        }
+        else if (input.pressed("right")) {
+            dir_ = Direction::Right;
+            sprite_->setTile(4, 3);
+        }
+        else if (input.pressed("up")) {
+            dir_ = Direction::Up;
+            sprite_->setTile(1, 3);
+        }
+        else if (input.pressed("down")) {
+            dir_ = Direction::Down;
+            sprite_->setTile(3, 3);
+        }
+
         auto* tr = get<rlge::Transform>();
         if (!tr)
             return;
 
-        if (input.down("left")) {
-            tr->position.x -= speed_ * dt;
-            sprite_->setTile(2, 3);
+        if (speed_ <= 0.0f)
             return;
-        }
-        if (input.down("right")) {
-            tr->position.x += speed_ * dt;
-            sprite_->setTile(4, 3);
-            return;
-        }
-        if (input.down("up")) {
-            tr->position.y -= speed_ * dt;
-            sprite_->setTile(1, 3);
-            return;
-        }
-        if (input.down("down")) {
-            tr->position.y += speed_ * dt;
-            sprite_->setTile(3, 3);
-            return;
+
+        // Derive move interval from "speed" (tiles per second).
+        moveInterval_ = 1.0f / speed_;
+
+        // Accumulate time, but only trigger a move once the interval has fully elapsed.
+        moveTimer_ += dt;
+        if (!lerping_) {
+            while (moveTimer_ >= moveInterval_) {
+                moveTimer_ -= moveInterval_;
+
+                prevWorldPos_ = nextWorldPos_;
+
+                // Advance one tile on the grid.
+                switch (dir_) {
+                    case Direction::Left:  gridX_ -= 1; break;
+                    case Direction::Right: gridX_ += 1; break;
+                    case Direction::Up:    gridY_ -= 1; break;
+                    case Direction::Down:  gridY_ += 1; break;
+                    case Direction::None: break;
+                }
+
+                nextWorldPos_ = tileCenter(gridX_, gridY_);
+
+                // Start a short interpolation between tiles.
+                lerping_ = true;
+                lerpTimer_ = 0.0f;
+
+                // Only start one tile move per frame; extra elapsed time will be processed next frame.
+                break;
+            }
         }
 
+        if (lerping_) {
+            lerpTimer_ += dt;
+            const float alpha = std::min(lerpTimer_ / lerpDuration_, 1.0f);
+            tr->position.x = prevWorldPos_.x + (nextWorldPos_.x - prevWorldPos_.x) * alpha;
+            tr->position.y = prevWorldPos_.y + (nextWorldPos_.y - prevWorldPos_.y) * alpha;
+
+            if (lerpTimer_ >= lerpDuration_) {
+                lerping_ = false;
+                tr->position = nextWorldPos_;
+            }
+        }
+        else {
+            // Resting exactly on the current tile center.
+            tr->position = nextWorldPos_;
+        }
+
+        tr->rotation = 0.0f;
     }
 
-    float speed_ = 200.0f;
+private:
+    enum class Direction { None, Left, Right, Up, Down };
+
+    float speed_ = 5.0f; // tiles per second
     SheetSprite* sprite_;
+
+    Direction dir_ = Direction::Right;
+
+    // Grid-space position and timing for tile-based movement.
+    int gridX_ = 0;
+    int gridY_ = 0;
+    float moveInterval_ = 0.2f;
+    float moveTimer_ = 0.0f;
+    bool lerping_ = false;
+    float lerpTimer_ = 0.0f;
+    float lerpDuration_ = 0.05f; // quick hop between tiles
+
+    Vector2 prevWorldPos_{0.0f, 0.0f};
+    Vector2 nextWorldPos_{0.0f, 0.0f};
+
+    static Vector2 tileCenter(int tileX, int tileY) {
+        return {
+            static_cast<float>(tileX * TILE_PIXELS) - SCREEN_PIXELS_X / 2.0f + TILE_PIXELS / 2.0f,
+            static_cast<float>(tileY * TILE_PIXELS) - SCREEN_PIXELS_Y / 2.0f + TILE_PIXELS / 2.0f
+        };
+    }
 
     friend class GameScene;
 };
@@ -141,6 +222,7 @@ public:
         spriteSheet_ = std::make_unique<SpriteSheet>(spriteTex, 8, 8);
 
         // Draw order: background first, player on top.
+        bg_ = &spawn<Background>();
         snake_ = &spawn<Snake>(*spriteSheet_);
         fps_ = &spawn<FpsCounter>();
         walls_ = std::vector<Wall*>{};
@@ -148,7 +230,7 @@ public:
             walls_.push_back(&spawn<Wall>(*spriteSheet_, 0, y));
             walls_.push_back(&spawn<Wall>(*spriteSheet_, TILES_X - 1, y));
         }
-        for (auto x = 0; x < TILES_X; ++x) {
+        for (auto x = 1; x < TILES_X - 1; ++x) {
             walls_.push_back(&spawn<Wall>(*spriteSheet_, x, 0));
             walls_.push_back(&spawn<Wall>(*spriteSheet_, x, TILES_Y - 1));
         }
@@ -164,12 +246,13 @@ public:
                 ImGui::SliderFloat("Player Y", &tr->position.y, 0, TILES_Y * PIXELS_PER_TILE * MAGNIFICATION / 2 );
                 ImGui::SliderFloat("Player rotation", &tr->rotation, 0.f, 360.f);
             }
-            ImGui::SliderFloat("Player speed", &snake_->speed_, 50.f, 600.f);
+            ImGui::SliderFloat("Player speed (tiles/s)", &snake_->speed_, 1.f, 20.f);
         }
         ImGui::End();
     }
 
 private:
+    Background* bg_{nullptr};
     Snake* snake_{nullptr};
     FpsCounter* fps_{nullptr};
     std::vector<Wall*> walls_;
