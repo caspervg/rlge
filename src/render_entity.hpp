@@ -12,7 +12,7 @@ namespace rlge {
             return scene().engine().renderer();
         }
 
-        const RenderQueue& rq() const {
+        [[nodiscard]] const RenderQueue& rq() const {
             return scene().engine().renderer();
         }
 

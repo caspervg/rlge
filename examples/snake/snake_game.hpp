@@ -33,6 +33,8 @@ namespace snake {
         int amount = 1;
     };
 
+    struct SnakeDied {};
+
     class Game {
     public:
         struct Cell {

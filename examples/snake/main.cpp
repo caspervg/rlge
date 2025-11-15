@@ -18,6 +18,7 @@ int main() {
     engine.input().bind("right", KEY_D);
     engine.input().bind("up", KEY_W);
     engine.input().bind("down", KEY_S);
+    engine.input().bind("enter", KEY_ENTER);
 
     auto& camera = engine.services().camera();
     camera.setOffset({

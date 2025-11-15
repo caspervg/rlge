@@ -12,7 +12,7 @@ namespace snake {
           , appleX_(cfg.tilesX / 2 + 2)
           , appleY_(cfg.tilesY / 2)
           , dir_(Direction::Right)
-          , moveInterval_(1.0f / cfg.movesPerSecond)
+          , moveInterval_(0.75f / cfg.movesPerSecond)
           , rng_(std::random_device{}())
           , appleXRng_(1, cfg.tilesX - 2)
           , appleYRng_(1, cfg.tilesY - 2)
@@ -71,7 +71,9 @@ namespace snake {
         // Simple wall collision: borders are walls.
         if (nextX <= 0 || nextX >= cfg_.tilesX - 1 ||
             nextY <= 0 || nextY >= cfg_.tilesY - 1) {
-            // For now, just ignore the move (could trigger game over).
+            if (bus_) {
+                bus_->enqueue(SnakeDied{});
+            }
             return;
         }
 
@@ -80,7 +82,9 @@ namespace snake {
         const int lastIndex = static_cast<int>(body_.size()) - 1;
         for (int i = 0; i < lastIndex; ++i) {
             if (body_[i].x == nextX && body_[i].y == nextY) {
-                // TODO: handle game over; for now, ignore the move.
+                if (bus_) {
+                    bus_->enqueue(SnakeDied{});
+                }
                 return;
             }
         }
@@ -96,6 +100,7 @@ namespace snake {
                 bus_->enqueue(AppleEaten{1});
             }
             spawnApple();
+            moveInterval_ *= 0.97f; // Speed up a little each time
         } else {
             // Move forward without growing: drop tail.
             body_.pop_back();

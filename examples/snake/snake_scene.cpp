@@ -1,14 +1,15 @@
 #include "snake_scene.hpp"
+#include "game_over_scene.h"
 
 #include <format>
 #include <random>
 
-#include "collision.hpp"
 #include "imgui.h"
 #include "rlgl.h"
 #include "transformer.hpp"
 
 namespace snake {
+    class GameOverScene;
     using namespace rlge;
 
     void FpsCounter::draw() {
@@ -163,7 +164,20 @@ namespace snake {
         tr->position = game_.appleWorldPos();
     }
 
+    void AppleSprite::changeSprite() const {
+        sprite_->setTile(6, randomSpriteRow());
+    }
+
+    int AppleSprite::randomSpriteRow() const {
+        std::vector<int> samples;
+        std::ranges::sample(sheetSpriteRows_,
+                            std::back_inserter(samples), 1, *game_.rng());
+        return samples.back();
+    }
+
     void Scoreboard::draw() {
+        if (!visible_) return;
+
         rq().submitUI([this] {
             const auto text = std::format("Score: {}", score_);
             const auto textWidth = MeasureText(text.c_str(), 30);
@@ -183,6 +197,9 @@ namespace snake {
         if (appleSubId_ != 0) {
             bus.unsubscribe<AppleEaten>(appleSubId_);
         }
+        if (diedSubId_ != 0) {
+            bus.unsubscribe<SnakeDied>(diedSubId_);
+        }
     }
 
     void GameScene::enter() {
@@ -199,8 +216,17 @@ namespace snake {
         fps_ = &spawn<FpsCounter>();
 
         auto& bus = engine().services().events();
-        appleSubId_ = bus.subscribe<AppleEaten>([this](const AppleEaten& e) {
+        appleSubId_ = bus.subscribe<AppleEaten>([this] (const AppleEaten& e) {
             score_ += e.amount;
+            if (apple_) {
+                apple_->changeSprite();
+            }
+        });
+        diedSubId_ = bus.subscribe<SnakeDied>([this] (const SnakeDied& e) {
+            if (scoreboard_) {
+                scoreboard_->toggleVisibility();
+            }
+            engine().pushScene<GameOverScene>(score_);
         });
     }
 

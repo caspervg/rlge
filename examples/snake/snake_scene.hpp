@@ -90,9 +90,13 @@ namespace snake {
 
         void update(float dt) override;
 
+        void changeSprite() const;
     private:
+        [[nodiscard]] int randomSpriteRow() const;
+
         Game& game_;
         rlge::SheetSprite* sprite_{nullptr};
+        std::vector<int> sheetSpriteRows_{0, 1, 3, 4};
     };
 
     class Scoreboard final : public rlge::RenderEntity {
@@ -101,8 +105,11 @@ namespace snake {
             RenderEntity(scene), score_(score) {}
 
         void draw() override;
+
+        void toggleVisibility() { visible_ = !visible_; }
     private:
         int& score_;
+        bool visible_ = true;
     };
 
     class GameScene final : public rlge::Scene, public rlge::HasDebugOverlay {
@@ -127,6 +134,7 @@ namespace snake {
 
         std::unique_ptr<rlge::SpriteSheet> spriteSheet_;
         rlge::EventBus::SubscriptionId appleSubId_{0};
+        rlge::EventBus::SubscriptionId diedSubId_{0};
         int score_ = 0;
     };
 
