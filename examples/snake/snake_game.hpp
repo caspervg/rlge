@@ -35,6 +35,8 @@ namespace snake {
 
     struct SnakeDied {};
 
+    struct RestartGame {};
+
     class Game {
     public:
         struct Cell {

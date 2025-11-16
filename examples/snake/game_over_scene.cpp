@@ -30,9 +30,7 @@ namespace snake {
     void GameOverScene::update(float dt) {
         const auto& input = engine().input();
         if (input.pressed("enter")) {
-            engine().popScene();
-            engine().popScene();
-            engine().pushScene<GameScene>();
+            engine().services().events().enqueue(RestartGame{});
         }
     }
 

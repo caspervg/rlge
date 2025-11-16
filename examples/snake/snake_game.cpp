@@ -1,5 +1,6 @@
 #include "snake_game.hpp"
 
+#include <random>
 #include "events.hpp"
 
 namespace snake {

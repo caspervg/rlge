@@ -27,6 +27,13 @@ int main() {
     });
     camera.follow({0.0f, 0.0f}, 1.0f);
 
+    auto& bus = engine.services().events();
+    bus.subscribe<snake::RestartGame>([&engine](const snake::RestartGame& _) {
+        engine.popScene(); // pop GameOverScene
+        engine.popScene(); // pop old GameScene
+        engine.pushScene<snake::GameScene>();
+    });
+
     engine.pushScene<snake::GameScene>();
     engine.run();
 
