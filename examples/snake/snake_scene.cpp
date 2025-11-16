@@ -89,7 +89,6 @@ namespace snake {
 
                 // Tail
                 if (i == segments.size() - 1) {
-                    std::println("Drawing tail at segment {}", i);
                     src = sheet_.tile(8, 3);
 
                     const auto myCell = segments[i];
