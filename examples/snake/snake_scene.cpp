@@ -203,6 +203,12 @@ namespace snake {
     }
 
     void GameScene::enter() {
+        auto& audio = engine().services().audio();
+        audio.loadSound("apple", "../examples/snake/assets/apple.wav");
+        audio.loadSound("game_over", "../examples/snake/assets/game_over.wav");
+        audio.loadMusic("bgm", "../examples/snake/assets/fma-bgm.wav");
+        audio.playMusic("bgm", true);
+
         auto& spriteTex = engine().assetStore().loadTexture(
             "spritesheet", "../examples/snake/assets/spritesheet.png");
         spriteSheet_ = std::make_unique<SpriteSheet>(spriteTex, kPixelsPerTile, kPixelsPerTile);
@@ -217,12 +223,14 @@ namespace snake {
 
         auto& bus = engine().services().events();
         appleSubId_ = bus.subscribe<AppleEaten>([this] (const AppleEaten& e) {
+            engine().services().audio().playSound("apple");
             score_ += e.amount;
             if (apple_) {
                 apple_->changeSprite();
             }
         });
         diedSubId_ = bus.subscribe<SnakeDied>([this] (const SnakeDied& e) {
+            engine().services().audio().playSound("game_over");
             if (scoreboard_) {
                 scoreboard_->toggleVisibility();
             }
@@ -249,6 +257,10 @@ namespace snake {
         game_.update(dt);
 
         Scene::update(dt);
+    }
+
+    void GameScene::exit() {
+        engine().services().audio().stopMusic();
     }
 
     void GameScene::debugOverlay() {

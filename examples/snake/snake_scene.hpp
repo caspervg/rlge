@@ -119,6 +119,7 @@ namespace snake {
 
         void enter() override;
         void update(float dt) override;
+        void exit() override;
         void debugOverlay() override;
 
     private:
