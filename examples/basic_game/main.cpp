@@ -2,6 +2,7 @@
 
 #include "debug.hpp"
 #include "runtime.hpp"
+#include "window.hpp"
 #include "imgui.h"
 #include "sprite.hpp"
 #include "transformer.hpp"
@@ -120,7 +121,13 @@ private:
 };
 
 int main() {
-    Runtime runtime(960, 540, 60, "RLGE Basic Game");
+    WindowConfig cfg{
+        .width = 960,
+        .height = 540,
+        .fps = 60,
+        .title = "RLGE Basic Game"
+    };
+    Runtime runtime(cfg);
 
     // Basic input bindings
     runtime.input().bind("left", KEY_A);

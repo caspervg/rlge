@@ -13,6 +13,7 @@
 #include "render_queue.hpp"
 #include "scene.hpp"
 #include "tween.hpp"
+#include "window.hpp"
 
 
 namespace rlge {
@@ -40,7 +41,7 @@ namespace rlge {
 
     class Runtime {
     public:
-        Runtime(int width, int height, int fps, const char* title);
+        explicit Runtime(const WindowConfig& cfg);
         ~Runtime();
 
         Runtime(const Runtime&) = delete;
@@ -70,10 +71,14 @@ namespace rlge {
         GameServices& services();
         const GameServices& services() const;
 
+        Window& window();
+        const Window& window() const;
+
     private:
         bool running_;
         bool debugEnabled_ = false;
         KeyboardKey debugKey_ = KEY_F1;
+        Window window_;
         AssetStore assets_;
         Input input_;
         GameServices services_;

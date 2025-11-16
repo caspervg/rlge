@@ -1,5 +1,6 @@
 #include "debug.hpp"
 #include "runtime.hpp"
+#include "window.hpp"
 #include "particle_emitter.hpp"
 
 #include "imgui.h"
@@ -181,7 +182,13 @@ private:
 };
 
 int main() {
-    Runtime runtime(1600, 900, 144, "RLGE Particles");
+    WindowConfig cfg{
+        .width = 1600,
+        .height = 900,
+        .fps = 144,
+        .title = "RLGE Particles"
+    };
+    Runtime runtime(cfg);
 
     runtime.pushScene<ParticleDemoScene>();
     runtime.run();

@@ -4,11 +4,9 @@
 #include "rlImGui.h"
 
 namespace rlge {
-    Runtime::Runtime(const int width, const int height, const int fps, const char* title)
-        : running_(false) {
-        SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
-        InitWindow(width, height, title);
-        SetTargetFPS(fps);
+    Runtime::Runtime(const WindowConfig& cfg)
+        : running_(false)
+        , window_(cfg) {
         rlImGuiSetup(true);
     }
 
@@ -16,7 +14,6 @@ namespace rlge {
         scenes_ = SceneStack{};
         assets_.unloadAll();
         rlImGuiShutdown();
-        CloseWindow();
     }
 
     void Runtime::popScene() {
@@ -69,4 +66,7 @@ namespace rlge {
 
     GameServices& Runtime::services() { return services_; }
     const GameServices& Runtime::services() const { return services_; }
+
+    Window& Runtime::window() { return window_; }
+    const Window& Runtime::window() const { return window_; }
 }

@@ -80,9 +80,15 @@ The particles example demonstrates a configurable particle emitter with pluggabl
 
 At a high level, to build a new game on RLGE:
 
-1. Create a `Runtime` instance with your desired window size and title:
+1. Create a `WindowConfig` and `Runtime` with your desired window size and title:
    ```cpp
-   rlge::Runtime runtime(width, height, 60, "My Game");
+   rlge::WindowConfig cfg{
+       .width = width,
+       .height = height,
+       .fps = 60,
+       .title = "My Game"
+   };
+   rlge::Runtime runtime(cfg);
    ```
 2. Bind input actions:
    ```cpp

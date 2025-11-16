@@ -1,4 +1,5 @@
 #include "runtime.hpp"
+#include "window.hpp"
 #include "snake_game.hpp"
 #include "snake_scene.hpp"
 
@@ -7,11 +8,13 @@ using namespace rlge;
 int main() {
     snake::Config cfg;
 
-    Runtime runtime(
-        snake::kTilesX * snake::kPixelsPerTile * snake::kMagnification,
-        snake::kTilesY * snake::kPixelsPerTile * snake::kMagnification,
-        60,
-        "RLGE Snake");
+    WindowConfig wcfg{
+        .width = snake::kTilesX * snake::kPixelsPerTile * snake::kMagnification,
+        .height = snake::kTilesY * snake::kPixelsPerTile * snake::kMagnification,
+        .fps = 60,
+        .title = "RLGE Snake"
+    };
+    Runtime runtime(wcfg);
 
     // Basic input bindings
     runtime.input().bind("left", KEY_A);
