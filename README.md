@@ -139,6 +139,7 @@ The engine integrates ImGui each frame and calls `drawDebug()` on scenes that im
 ### Assets
 
 - Snake sprites: _[Snake Game Assets](https://cosme.itch.io/snake)_ by Cosme, from itch.io (CC0).
+- Snake sound effects: Generated myself with a very basic Python script.
 - Snake background music: _[Snake around the Sun](https://freemusicarchive.org/music/crowander/circles/snake-around-the-sun/)_ by Crowander, from the Free Music Archive (CC BY-NC-ND).
 
 Include authors, sources/URLs, and license information for each asset pack.
