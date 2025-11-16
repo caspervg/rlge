@@ -33,9 +33,9 @@ namespace snake {
     void GameOverScene::exit() { overlay_ = nullptr; }
 
     void GameOverScene::update(float dt) {
-        const auto& input = engine().input();
-        if (input.pressed("enter")) {
-            engine().services().events().enqueue(RestartGame{});
+        const auto& in = input();
+        if (in.pressed("enter")) {
+            events().enqueue(RestartGame{});
         }
     }
 

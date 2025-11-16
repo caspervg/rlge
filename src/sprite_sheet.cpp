@@ -1,6 +1,5 @@
 #include "sprite_sheet.hpp"
 
-#include "engine.hpp"
 #include "entity.hpp"
 #include "scene.hpp"
 
@@ -67,7 +66,7 @@ namespace rlge {
         dest.y = std::roundf(dest.y);
         const float rotation = t->rotation;
 
-        auto& rq = entity().scene().engine().renderer();
+        auto& rq = entity().scene().rq();
         rq.submitWorld(
             pos.y,
             [this, src, dest, origin, rotation]() {

@@ -1,10 +1,10 @@
-#include "engine.hpp"
+#include "runtime.hpp"
 
 #include "imgui.h"
 #include "rlImGui.h"
 
 namespace rlge {
-    Engine::Engine(const int width, const int height, const int fps, const char* title)
+    Runtime::Runtime(const int width, const int height, const int fps, const char* title)
         : running_(false) {
         SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
         InitWindow(width, height, title);
@@ -12,18 +12,18 @@ namespace rlge {
         rlImGuiSetup(true);
     }
 
-    Engine::~Engine() {
+    Runtime::~Runtime() {
         scenes_ = SceneStack{};
         assets_.unloadAll();
         rlImGuiShutdown();
         CloseWindow();
     }
 
-    void Engine::popScene() {
+    void Runtime::popScene() {
         scenes_.pop();
     }
 
-    void Engine::run() {
+    void Runtime::run() {
         running_ = true;
         while (running_ && !WindowShouldClose()) {
             const float dt = GetFrameTime();
@@ -56,17 +56,17 @@ namespace rlge {
         }
     }
 
-    void Engine::quit() { running_ = false; }
+    void Runtime::quit() { running_ = false; }
 
-    AssetStore& Engine::assetStore() { return assets_; }
-    const AssetStore& Engine::assetStore() const { return assets_; }
+    AssetStore& Runtime::assetStore() { return assets_; }
+    const AssetStore& Runtime::assetStore() const { return assets_; }
 
-    Input& Engine::input() { return input_; }
-    const Input& Engine::input() const { return input_; }
+    Input& Runtime::input() { return input_; }
+    const Input& Runtime::input() const { return input_; }
 
-    RenderQueue& Engine::renderer() { return renderer_; }
-    const RenderQueue& Engine::renderer() const { return renderer_; }
+    RenderQueue& Runtime::renderer() { return renderer_; }
+    const RenderQueue& Runtime::renderer() const { return renderer_; }
 
-    GameServices& Engine::services() { return services_; }
-    const GameServices& Engine::services() const { return services_; }
+    GameServices& Runtime::services() { return services_; }
+    const GameServices& Runtime::services() const { return services_; }
 }

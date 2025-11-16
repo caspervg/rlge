@@ -14,8 +14,8 @@ namespace snake {
 
     class GameOverScene final : public rlge::Scene {
     public:
-        explicit GameOverScene(rlge::Engine& e, const int score) :
-            Scene(e), score_(score) {}
+        explicit GameOverScene(rlge::Runtime& r, const int score) :
+            Scene(r), score_(score) {}
 
         ~GameOverScene() override;
 

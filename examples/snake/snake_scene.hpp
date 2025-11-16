@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "debug.hpp"
-#include "engine.hpp"
 #include "render_entity.hpp"
 #include "snake_game.hpp"
 #include "sprite_sheet.hpp"
@@ -114,7 +113,7 @@ namespace snake {
 
     class GameScene final : public rlge::Scene, public rlge::HasDebugOverlay {
     public:
-        explicit GameScene(rlge::Engine& e);
+        explicit GameScene(rlge::Runtime& r);
         ~GameScene() override;
 
         void enter() override;

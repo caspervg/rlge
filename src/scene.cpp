@@ -1,11 +1,15 @@
 #include "scene.hpp"
+#include "runtime.hpp"
 
 #include "debug.hpp"
 #include "entity.hpp"
 
 namespace rlge {
-    Scene::Scene(Engine& e)
-        : engine_(e) {}
+    Scene::Scene(Runtime& r)
+        : runtime_(r)
+        , ctx_{r.assetStore(), r.input(), r.renderer(),
+               r.services().events(), r.services().audio(),
+               r.services().camera()} {}
 
     Scene::~Scene() = default;
 
@@ -32,12 +36,60 @@ namespace rlge {
         return entities_;
     }
 
-    Engine& Scene::engine() {
-        return engine_;
+    Runtime& Scene::runtime() {
+        return runtime_;
     }
 
-    const Engine& Scene::engine() const {
-        return engine_;
+    const Runtime& Scene::runtime() const {
+        return runtime_;
+    }
+
+    AssetStore& Scene::assets() {
+        return ctx_.assets;
+    }
+
+    const AssetStore& Scene::assets() const {
+        return ctx_.assets;
+    }
+
+    Input& Scene::input() {
+        return ctx_.input;
+    }
+
+    const Input& Scene::input() const {
+        return ctx_.input;
+    }
+
+    RenderQueue& Scene::rq() {
+        return ctx_.renderer;
+    }
+
+    const RenderQueue& Scene::rq() const {
+        return ctx_.renderer;
+    }
+
+    EventBus& Scene::events() {
+        return ctx_.events;
+    }
+
+    const EventBus& Scene::events() const {
+        return ctx_.events;
+    }
+
+    AudioManager& Scene::audio() {
+        return ctx_.audio;
+    }
+
+    const AudioManager& Scene::audio() const {
+        return ctx_.audio;
+    }
+
+    Camera& Scene::camera() {
+        return ctx_.camera;
+    }
+
+    const Camera& Scene::camera() const {
+        return ctx_.camera;
     }
 
     void SceneStack::push(std::unique_ptr<Scene> s) {
@@ -75,4 +127,3 @@ namespace rlge {
         }
     }
 }
-

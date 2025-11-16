@@ -80,20 +80,20 @@ The particles example demonstrates a configurable particle emitter with pluggabl
 
 At a high level, to build a new game on RLGE:
 
-1. Create an `Engine` instance with your desired window size and title:
+1. Create a `Runtime` instance with your desired window size and title:
    ```cpp
-   rlge::Engine engine(width, height, 60, "My Game");
+   rlge::Runtime runtime(width, height, 60, "My Game");
    ```
 2. Bind input actions:
    ```cpp
-   engine.input().bind("left", KEY_A);
-   engine.input().bind("right", KEY_D);
+   runtime.input().bind("left", KEY_A);
+   runtime.input().bind("right", KEY_D);
    ```
 3. Implement a `Scene` subclass for your game logic:
    ```cpp
    class MyScene : public rlge::Scene {
    public:
-       explicit MyScene(rlge::Engine& e) : Scene(e) {}
+       explicit MyScene(rlge::Runtime& r) : Scene(r) {}
        void enter() override {
            // load assets, spawn entities
        }
@@ -103,10 +103,10 @@ At a high level, to build a new game on RLGE:
        }
    };
    ```
-4. Push your scene and run the engine:
+4. Push your scene and run the runtime:
    ```cpp
-   engine.pushScene<MyScene>();
-   engine.run();
+   runtime.pushScene<MyScene>();
+   runtime.run();
    ```
 
 Look at `examples/basic_game/main.cpp`, `examples/snake`, and `examples/particles/main.cpp` for concrete patterns.

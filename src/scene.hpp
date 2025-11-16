@@ -4,15 +4,30 @@
 #include <utility>
 #include <vector>
 
+#include "asset.hpp"
+#include "audio.hpp"
+#include "camera.hpp"
 #include "entity_registry.hpp"
+#include "events.hpp"
+#include "input.hpp"
+#include "render_queue.hpp"
 
 namespace rlge {
-    class Engine;
+    class Runtime;
     class Entity;
+
+    struct GameContext {
+        AssetStore& assets;
+        Input& input;
+        RenderQueue& renderer;
+        EventBus& events;
+        AudioManager& audio;
+        Camera& camera;
+    };
 
     class Scene {
     public:
-        explicit Scene(Engine& e);
+        explicit Scene(Runtime& r);
 
         virtual ~Scene();
 
@@ -38,11 +53,30 @@ namespace rlge {
         Entity* get(EntityId id) const;
         const std::vector<std::unique_ptr<Entity>>& entities();
 
-        Engine& engine();
-        const Engine& engine() const;
+        Runtime& runtime();
+        const Runtime& runtime() const;
+
+        AssetStore& assets();
+        const AssetStore& assets() const;
+
+        Input& input();
+        const Input& input() const;
+
+        RenderQueue& rq();
+        const RenderQueue& rq() const;
+
+        EventBus& events();
+        const EventBus& events() const;
+
+        AudioManager& audio();
+        const AudioManager& audio() const;
+
+        Camera& camera();
+        const Camera& camera() const;
 
     private:
-        Engine& engine_;
+        Runtime& runtime_;
+        GameContext ctx_;
         EntityRegistry registry_;
         std::vector<std::unique_ptr<Entity>> entities_;
     };

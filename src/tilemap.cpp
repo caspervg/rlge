@@ -2,7 +2,6 @@
 
 #include <fstream>
 
-#include "engine.hpp"
 #include "scene.hpp"
 #include "transformer.hpp"
 #include "render_queue.hpp"
@@ -68,7 +67,7 @@ namespace rlge {
                     offset.y + y * th_
                 };
 
-                scene().engine().renderer().submitBackground(
+                scene().rq().submitBackground(
                     pos.y,
                     [this, src, pos]() {
                         DrawTextureRec(texture_, src, pos, WHITE);
@@ -77,4 +76,3 @@ namespace rlge {
         }
     }
 }
-

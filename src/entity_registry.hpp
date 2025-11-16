@@ -4,7 +4,7 @@
 
 namespace rlge {
     // Forward declarations
-    class Engine;
+    class Runtime;
     class Scene;
     class Entity;
     class Component;

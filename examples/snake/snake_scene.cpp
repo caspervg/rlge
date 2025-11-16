@@ -7,6 +7,7 @@
 
 #include "imgui.h"
 #include "rlgl.h"
+#include "runtime.hpp"
 #include "transformer.hpp"
 
 namespace snake {
@@ -211,12 +212,12 @@ namespace snake {
         });
     }
 
-    GameScene::GameScene(Engine& e) :
-        Scene(e)
-        , game_(Config{}, &e.services().events()) {}
+    GameScene::GameScene(Runtime& r) :
+        Scene(r)
+        , game_(Config{}, &r.services().events()) {}
 
     GameScene::~GameScene() {
-        auto& bus = engine().services().events();
+        auto& bus = events();
         if (appleSubId_ != 0) {
             bus.unsubscribe<AppleEaten>(appleSubId_);
         }
@@ -226,13 +227,12 @@ namespace snake {
     }
 
     void GameScene::enter() {
-        auto& audio = engine().services().audio();
-        audio.loadSound("apple", "../examples/snake/assets/apple.wav");
-        audio.loadSound("game_over", "../examples/snake/assets/game_over.wav");
-        audio.loadMusic("bgm", "../examples/snake/assets/fma-bgm.wav");
-        audio.playMusic("bgm", true);
+        audio().loadSound("apple", "../examples/snake/assets/apple.wav");
+        audio().loadSound("game_over", "../examples/snake/assets/game_over.wav");
+        audio().loadMusic("bgm", "../examples/snake/assets/fma-bgm.wav");
+        audio().playMusic("bgm", true);
 
-        auto& spriteTex = engine().assetStore().loadTexture(
+        auto& spriteTex = assets().loadTexture(
             "spritesheet", "../examples/snake/assets/spritesheet.png");
         spriteSheet_ = std::make_unique<SpriteSheet>(spriteTex, kPixelsPerTile, kPixelsPerTile);
 
@@ -244,26 +244,26 @@ namespace snake {
         apple_ = &spawn<AppleSprite>(game_, *spriteSheet_);
         fps_ = &spawn<FpsCounter>();
 
-        auto& bus = engine().services().events();
+        auto& bus = events();
         appleSubId_ = bus.subscribe<AppleEaten>([this] (const AppleEaten& e) {
-            engine().services().audio().playSound("apple");
+            audio().playSound("apple");
             score_ += e.amount;
             if (apple_) {
                 apple_->changeSprite();
             }
         });
         diedSubId_ = bus.subscribe<SnakeDied>([this] (const SnakeDied& e) {
-            engine().services().audio().playSound("game_over");
+            audio().playSound("game_over");
             if (scoreboard_) {
                 scoreboard_->toggleVisibility();
             }
-            engine().pushScene<GameOverScene>(score_);
+            runtime().pushScene<GameOverScene>(score_);
         });
     }
 
     void GameScene::update(float dt) {
         // Translate input into game directions.
-        const auto& input = engine().input();
+        const auto& input = this->input();
         if (input.pressed("left")) {
             game_.setDirection(Direction::Left);
         }
@@ -283,7 +283,7 @@ namespace snake {
     }
 
     void GameScene::exit() {
-        engine().services().audio().stopMusic();
+        audio().stopMusic();
     }
 
     void GameScene::debugOverlay() {

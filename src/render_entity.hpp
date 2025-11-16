@@ -1,27 +1,41 @@
 #pragma once
-#include "engine.hpp"
 #include "entity.hpp"
+#include "scene.hpp"
 
 namespace rlge {
+    class RenderQueue;
+
     class RenderEntity : public Entity {
     protected:
         explicit RenderEntity(Scene& s)
             : Entity(s) {}
 
         RenderQueue& rq() {
-            return scene().engine().renderer();
+            return scene().rq();
         }
 
         [[nodiscard]] const RenderQueue& rq() const {
-            return scene().engine().renderer();
-        }
-
-        GameServices& services() {
-            return scene().engine().services();
+            return scene().rq();
         }
 
         EventBus& events() {
-            return scene().engine().services().events();
+            return scene().events();
+        }
+
+        AudioManager& audio() {
+            return scene().audio();
+        }
+
+        Camera& camera() {
+            return scene().camera();
+        }
+
+        Input& input() {
+            return scene().input();
+        }
+
+        AssetStore& assets() {
+            return scene().assets();
         }
     };
 }

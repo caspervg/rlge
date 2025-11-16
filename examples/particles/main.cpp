@@ -1,5 +1,5 @@
 #include "debug.hpp"
-#include "engine.hpp"
+#include "runtime.hpp"
 #include "particle_emitter.hpp"
 
 #include "imgui.h"
@@ -21,8 +21,8 @@ public:
 
 class ParticleDemoScene final : public Scene, public HasDebugOverlay {
 public:
-    explicit ParticleDemoScene(Engine& e) :
-        Scene(e) {}
+    explicit ParticleDemoScene(Runtime& r) :
+        Scene(r) {}
 
     void enter() override {
         ParticleEmitterConfig mouseCfg{
@@ -79,7 +79,7 @@ public:
         // Move emitter origin with mouse in world space for a more interactive demo.
         if (emitter_) {
             const Vector2 mouse = GetMousePosition();
-            const auto& cam = engine().services().camera().camera();
+            const auto& cam = camera().camera();
             const Vector2 worldMouse = GetScreenToWorld2D(mouse, cam);
             emitter_->setOrigin(worldMouse);
         }
@@ -181,10 +181,10 @@ private:
 };
 
 int main() {
-    Engine engine(1600, 900, 144, "RLGE Particles");
+    Runtime runtime(1600, 900, 144, "RLGE Particles");
 
-    engine.pushScene<ParticleDemoScene>();
-    engine.run();
+    runtime.pushScene<ParticleDemoScene>();
+    runtime.run();
 
     return 0;
 }

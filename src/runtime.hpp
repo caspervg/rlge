@@ -35,16 +35,16 @@ namespace rlge {
         PrefabFactory prefabs_;
         Camera camera_;
 
-        friend class Engine;
+        friend class Runtime;
     };
 
-    class Engine {
+    class Runtime {
     public:
-        Engine(int width, int height, int fps, const char* title);
-        ~Engine();
+        Runtime(int width, int height, int fps, const char* title);
+        ~Runtime();
 
-        Engine(const Engine&) = delete;
-        Engine& operator=(const Engine&) = delete;
+        Runtime(const Runtime&) = delete;
+        Runtime& operator=(const Runtime&) = delete;
 
         template <typename T, typename... Args>
         void pushScene(Args&&... args) {

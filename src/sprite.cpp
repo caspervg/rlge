@@ -1,6 +1,5 @@
 #include "sprite.hpp"
 
-#include "engine.hpp"
 #include "entity.hpp"
 #include "scene.hpp"
 
@@ -30,7 +29,7 @@ namespace rlge {
         const Rectangle dest{pos.x, pos.y, size.x, size.y};
         const float rotation = t->rotation;
 
-        auto& rq = entity().scene().engine().renderer();
+        auto& rq = entity().scene().rq();
         rq.submitWorld(
             pos.y,
             [this, src, dest, origin, rotation]() {
@@ -83,7 +82,7 @@ namespace rlge {
         const Rectangle dest{pos.x - origin.x, pos.y - origin.y, size.x, size.y};
         const float rotation = t->rotation;
 
-        auto& rq = entity().scene().engine().renderer();
+        auto& rq = entity().scene().rq();
         rq.submitWorld(
             pos.y,
             [this, f, dest, origin, rotation]() {
