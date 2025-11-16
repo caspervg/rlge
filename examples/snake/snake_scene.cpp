@@ -2,6 +2,7 @@
 #include "game_over_scene.h"
 
 #include <format>
+#include <print>
 #include <random>
 
 #include "imgui.h"
@@ -78,12 +79,35 @@ namespace snake {
             if (segments.size() <= 1)
                 return;
 
-            // Use a fixed spritesheet tile for body segments.
-            const Rectangle src = sheet_.tile(5, 3);
             constexpr auto size = static_cast<float>(kTilePixels);
             constexpr Vector2 origin{size * 0.5f, size * 0.5f};
 
             for (std::size_t i = 1; i < segments.size(); ++i) {
+                // Regular body part
+                Rectangle src = sheet_.tile(5, 3);
+                auto rot = 0.0f;
+
+                // Tail
+                if (i == segments.size() - 1) {
+                    std::println("Drawing tail at segment {}", i);
+                    src = sheet_.tile(8, 3);
+
+                    const auto myCell = segments[i];
+                    const auto prevCell = segments[i - 1];
+                    if (myCell.x < prevCell.x) {
+                        rot = 270.f; // facing left
+                    }
+                    else if (myCell.x > prevCell.x) {
+                        rot = 90.0f; // facing right
+                    }
+                    else if (myCell.y < prevCell.y) {
+                        rot = 0.0f; // facing up
+                    }
+                    else if (myCell.y > prevCell.y) {
+                        rot = 180.0f; // facing down
+                    }
+                }
+
                 const auto [wX, wY] = game_.worldPos(segments[i]);
                 const Rectangle dest{
                     wX,
@@ -91,7 +115,7 @@ namespace snake {
                     size,
                     size
                 };
-                DrawTexturePro(sheet_.texture(), src, dest, origin, 0.0f, WHITE);
+                DrawTexturePro(sheet_.texture(), src, dest, origin, rot, WHITE);
             }
         });
     }
