@@ -20,8 +20,6 @@ This repository also contains example games:
 - Tween system and collision system hooks.
 - Optional debug overlays via ImGui.
 
----
-
 ## Requirements
 
 - CMake ≥ 3.25
@@ -29,8 +27,6 @@ This repository also contains example games:
 - Git (for fetching dependencies)
 
 All third‑party libraries (raylib, ImGui, rlImGui) are fetched automatically by CMake via `FetchContent`.
-
----
 
 ## Building
 
@@ -48,8 +44,6 @@ This will produce the following executables:
 
 On Windows, they will be under `build/` or a generator‑specific subdirectory (e.g. `build/Debug`).
 
----
-
 ## Running the examples
 
 ### Basic Game
@@ -63,14 +57,13 @@ The “basic game” example shows a moving sprite, a background, and an ImGui d
 
 ### Snake Game
 
-The Snake example demonstrates a more complete setup with game logic, scenes, and a game‑over flow.
+The Snake example demonstrates a more complete setup with game logic, audio, the event bus, two scenes, and a game‑over flow.
 
 - Executable: `rlge_snake`
 - Input:
   - `W` / `A` / `S` / `D` – move the snake (left/right/up/down)
   - `Enter` – restart from the Game Over screen
 
----
 
 ## Using RLGE in your own game (overview)
 
@@ -107,27 +100,6 @@ At a high level, to build a new game on RLGE:
 
 Look at `examples/basic_game/main.cpp` and `examples/snake` for concrete patterns.
 
----
-
-## Debug Overlay
-
-Scenes can implement `rlge::HasDebugOverlay` to draw ImGui‑based debug UIs:
-
-```cpp
-class MyScene : public rlge::Scene, public rlge::HasDebugOverlay {
-    // ...
-    void debugOverlay() override {
-        ImGui::Begin("My Debug");
-        ImGui::Text("Entities: %d", entities().size());
-        ImGui::End();
-    }
-};
-```
-
-The engine integrates ImGui each frame and calls `drawDebug()` on scenes that implement this interface.
-
----
-
 ## Attributions
 
 ### Libraries
@@ -138,9 +110,7 @@ The engine integrates ImGui each frame and calls `drawDebug()` on scenes that im
 
 ### Assets
 
+- Basic game sprites/background: Generated myself with a very basic Python script.
 - Snake sprites: _[Snake Game Assets](https://cosme.itch.io/snake)_ by Cosme, from itch.io (CC0).
 - Snake sound effects: Generated myself with a very basic Python script.
 - Snake background music: _[Snake around the Sun](https://freemusicarchive.org/music/crowander/circles/snake-around-the-sun/)_ by Crowander, from the Free Music Archive (CC BY-NC-ND).
-
-Include authors, sources/URLs, and license information for each asset pack.
-
