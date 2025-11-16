@@ -15,7 +15,12 @@ namespace snake {
             DrawRectangle(gameOverTextPosX - 5, gameOverTextPosY, gameOverTextWidth + 10, 30, Fade(BLACK, 0.75f));
             DrawText(gameOverText.c_str(), gameOverTextPosX, gameOverTextPosY, 30, WHITE);
 
-
+            const auto restartText = std::format("Press [{}] to restart", "ENTER");
+            const auto restartTextWidth = MeasureText(restartText.c_str(), 20);
+            const auto restartTextPosX = kScreenPixelsX / 2 - restartTextWidth / 2;
+            const auto restartTextPosY = kScreenPixelsY / 2 + 15;
+            DrawRectangle(restartTextPosX - 5, restartTextPosY, restartTextWidth + 10, 30, Fade(BLACK, 0.75f));
+            DrawText(restartText.c_str(), restartTextPosX, restartTextPosY, 20, WHITE);
         });
     }
 
