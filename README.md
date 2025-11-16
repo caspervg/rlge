@@ -2,10 +2,11 @@
 
 RLGE is a small C++23 game engine built on top of _raylib_, _ImGui_, and _rlImGui_. It focuses on straightforward 2D games with scenes, entities, components, an event bus, and a simple rendering queue.
 
-This repository also contains example games:
+This repository also contains example games/demos:
 
 - `examples/basic_game` – a minimal “move the sprite” scene.
 - `examples/snake` – a more complete Snake game showcasing scenes, events, and UI.
+- `examples/particles` - a tech demo to show the particle emission system.
 
 ---
 
@@ -17,7 +18,7 @@ This repository also contains example games:
 - Camera system that can follow entities.
 - Input binding system mapping named actions to keys.
 - Asset store for textures.
-- Tween system and collision system hooks.
+- Tween system, collision system hooks, and a particle emitter.
 - Optional debug overlays via ImGui.
 
 ## Requirements
@@ -40,6 +41,7 @@ cmake --build build
 This will produce the following executables:
 
 - `rlge_basic_game`
+- `rlge_particles`
 - `rlge_snake`
 
 On Windows, they will be under `build/` or a generator‑specific subdirectory (e.g. `build/Debug`).
@@ -64,6 +66,15 @@ The Snake example demonstrates a more complete setup with game logic, audio, the
   - `W` / `A` / `S` / `D` – move the snake (left/right/up/down)
   - `Enter` – restart from the Game Over screen
 
+
+### Particles Demo
+
+The particles example demonstrates a configurable particle emitter with pluggable spawn functions and render callbacks, plus a live ImGui debug UI to play with the particle parameters.
+
+- Executable: `rlge_particles`
+- Input:
+  - Move the mouse to move the main emitter in world space.
+  - Press `F1` to toggle the ImGui debug overlay and tweak emitter parameters.
 
 ## Using RLGE in your own game (overview)
 
@@ -98,7 +109,7 @@ At a high level, to build a new game on RLGE:
    engine.run();
    ```
 
-Look at `examples/basic_game/main.cpp` and `examples/snake` for concrete patterns.
+Look at `examples/basic_game/main.cpp`, `examples/snake`, and `examples/particles/main.cpp` for concrete patterns.
 
 ## Attributions
 

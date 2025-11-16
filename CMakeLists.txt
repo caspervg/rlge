@@ -58,6 +58,9 @@ target_link_libraries(rlge PUBLIC raylib rlimgui)
 add_executable(rlge_basic_game examples/basic_game/main.cpp)
 target_link_libraries(rlge_basic_game PRIVATE rlge raylib rlimgui imgui)
 
+add_executable(rlge_particles examples/particles/main.cpp)
+target_link_libraries(rlge_particles PRIVATE rlge raylib rlimgui imgui)
+
 add_executable(rlge_snake
         examples/snake/main.cpp
         examples/snake/snake_game.cpp
