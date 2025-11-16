@@ -24,7 +24,7 @@ namespace snake {
         int tilesY = kTilesY;
         int pixelsPerTile = kPixelsPerTile;
         int magnification = kMagnification;
-        float movesPerSecond = 5.0f; // tiles per second
+        float movesPerSecond = 7.f; // tiles per second
     };
 
     enum class Direction { Left, Right, Up, Down };

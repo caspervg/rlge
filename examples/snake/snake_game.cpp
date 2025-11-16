@@ -13,7 +13,7 @@ namespace snake {
           , appleX_(cfg.tilesX / 2 + 2)
           , appleY_(cfg.tilesY / 2)
           , dir_(Direction::Right)
-          , moveInterval_(0.75f / cfg.movesPerSecond)
+          , moveInterval_(1 / cfg.movesPerSecond)
           , rng_(std::random_device{}())
           , appleXRng_(1, cfg.tilesX - 2)
           , appleYRng_(1, cfg.tilesY - 2)
