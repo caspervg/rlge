@@ -73,7 +73,7 @@ namespace rlge {
     private:
         bool running_;
         bool debugEnabled_ = false;
-        bool debugKey_ = KEY_F1;
+        KeyboardKey debugKey_ = KEY_F1;
         AssetStore assets_;
         Input input_;
         GameServices services_;
