@@ -28,6 +28,10 @@ namespace rlge {
         while (running_ && !WindowShouldClose()) {
             const float dt = GetFrameTime();
 
+            if (IsKeyPressed(debugKey_)) {
+                debugEnabled_ = !debugEnabled_;
+            }
+
             services_.tweens().update(dt);
             scenes_.update(dt);
             services_.collisions().update(dt);
@@ -41,10 +45,12 @@ namespace rlge {
 
             renderer_.flush(services_.camera().camera());
 
-            rlImGuiBegin();
-            ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
-            scenes_.drawDebug();
-            rlImGuiEnd();
+            if (debugEnabled_) {
+                rlImGuiBegin();
+                ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
+                scenes_.drawDebug();
+                rlImGuiEnd();
+            }
 
             EndDrawing();
         }
