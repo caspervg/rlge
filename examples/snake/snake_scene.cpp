@@ -1,4 +1,7 @@
 #include "snake_scene.hpp"
+
+#include <algorithm>
+
 #include "game_over_scene.h"
 
 #include <format>
@@ -194,7 +197,7 @@ namespace snake {
 
     int AppleSprite::randomSpriteRow() const {
         std::vector<int> samples;
-        std::ranges::sample(sheetSpriteRows_,
+        std::sample(sheetSpriteRows_.begin(), sheetSpriteRows_.end(),
                             std::back_inserter(samples), 1, *game_.rng());
         return samples.back();
     }

@@ -1,5 +1,7 @@
 #include "sprite_sheet.hpp"
 
+#include <cmath>
+
 #include "entity.hpp"
 #include "scene.hpp"
 
