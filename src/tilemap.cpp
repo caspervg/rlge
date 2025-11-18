@@ -149,6 +149,9 @@ namespace rlge {
         constexpr std::uint32_t FLIP_V = 0x40000000u;
         constexpr std::uint32_t FLIP_D = 0x20000000u;
 
+        auto& rq = scene().rq();
+
+        // Iterate over all tiles; per-view culling happens in the renderer.
         for (auto y = 0; y < height_; ++y) {
             for (auto x = 0; x < width_; ++x) {
                 const TileCell& cell = data_[y * width_ + x];
@@ -199,11 +202,9 @@ namespace rlge {
                 };
                 const Vector2 origin{halfSize.x, halfSize.y};
 
-                scene().rq().submitBackground(
-                    pos.y,
-                    [this, src, dest, origin, rotation]() {
-                        DrawTexturePro(texture_, src, dest, origin, rotation, WHITE);
-                    });
+                // Use batched sprite submission instead of lambda
+                rq.submitSprite(RenderLayer::Background, 0.0f, texture_,
+                               src, dest, origin, rotation, WHITE);
             }
         }
     }

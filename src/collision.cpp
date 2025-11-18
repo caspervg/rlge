@@ -18,7 +18,7 @@ namespace rlge {
         }
     }
 
-    void CollisionSystem::update(float) {
+    void CollisionSystem::update(float) const {
         const size_t n = colliders_.size();
         for (size_t i = 0; i < n; ++i) {
             for (size_t j = i + 1; j < n; ++j) {
@@ -39,8 +39,8 @@ namespace rlge {
 
     Collider::Collider(Entity& e,
                        CollisionSystem& system,
-                       Rectangle localBounds,
-                       bool isTrigger)
+                       const Rectangle& localBounds,
+                       const bool isTrigger)
         : Component(e)
         , system_(system)
         , local_(localBounds)

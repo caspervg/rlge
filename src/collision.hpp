@@ -12,7 +12,7 @@ namespace rlge {
     public:
         void registerCollider(Collider* c);
         void unregisterCollider(Collider* c);
-        void update(float);
+        void update(float) const;
 
     private:
         std::vector<Collider*> colliders_;
@@ -24,7 +24,7 @@ namespace rlge {
 
         Collider(Entity& e,
                  CollisionSystem& system,
-                 Rectangle localBounds,
+                 const Rectangle& localBounds,
                  bool isTrigger = true);
 
         ~Collider() override;

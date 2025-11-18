@@ -44,9 +44,9 @@ private:
 };
 
 // Simple player entity that can move left/right/rotate and is followed by the camera.
-class Snake final : public RenderEntity {
+class ExampleEntity final : public RenderEntity {
 public:
-    explicit Snake(Scene& scene, Texture2D& texture)
+    explicit ExampleEntity(Scene& scene, Texture2D& texture)
         : RenderEntity(scene) {
         auto& tr = add<rlge::Transform>();
         tr.position = {100.0f, 200.0f};
@@ -92,13 +92,25 @@ public:
 
         // Draw order: background first, player on top.
         bg_  = &spawn<Background>(bgTex);
-        snake_ = &spawn<Snake>(playerTex);
+        snake_ = &spawn<ExampleEntity>(playerTex);
         fps_ = &spawn<FpsCounter>();
     }
 
     void debugOverlay() override {
         ImGui::Begin("Game debug");
         ImGui::Text("Number of entities: %d", static_cast<int>(entities().size()));
+
+        // Render performance stats
+        const auto& stats = rq().stats();
+        ImGui::Separator();
+        ImGui::Text("Render Performance:");
+        ImGui::Text("  Sprites: %zu", stats.spritesSubmitted);
+        ImGui::Text("  Batches: %zu", stats.batchCount);
+        ImGui::Text("  Draw Calls: %zu", stats.drawCalls);
+        ImGui::Text("  Custom Cmds: %zu", stats.customCommands);
+        ImGui::Text("  Sort Time: %.3f ms", stats.sortTimeMs);
+        ImGui::Text("  Flush Time: %.3f ms", stats.flushTimeMs);
+        ImGui::Separator();
 
         if (bg_) {
             ImGui::Checkbox("Show background", &bg_->visible_);
@@ -116,7 +128,7 @@ public:
     }
 private:
     Background* bg_{nullptr};
-    Snake* snake_{nullptr};
+    ExampleEntity* snake_{nullptr};
     FpsCounter* fps_{nullptr};
 };
 

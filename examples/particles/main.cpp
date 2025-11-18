@@ -36,10 +36,8 @@ public:
             DrawCircleV(p.pos, p.size, p.color);
         });
 
-        constexpr auto halfWidth = 800.0f;
-        constexpr auto topY = -450.0f;
         ParticleEmitterConfig rainCfg{
-            .origin = {0.0f, topY},
+            .origin = {0.0f, 0.0f},
             .emitRate = 800.0f,
             .minLifetime = 1.0f,
             .maxLifetime = 3.5f,
@@ -68,9 +66,9 @@ public:
 
         if (rainEmitter_) {
             // Rain along a line near the top of the view, using a line spawn function.
-            rainEmitter_->setSpawnFn([halfWidth, topY](Vector2) {
-                const Vector2 a{-halfWidth, topY};
-                const Vector2 b{halfWidth, topY};
+            rainEmitter_->setSpawnFn([](Vector2) {
+                const Vector2 a{0, 0};
+                const Vector2 b{1600, 0};
                 return spawnOnLine(a, b);
             });
         }
@@ -80,7 +78,7 @@ public:
         // Move emitter origin with mouse in world space for a more interactive demo.
         if (emitter_) {
             const Vector2 mouse = GetMousePosition();
-            const auto& cam = camera().camera();
+            const auto& cam = camera().cam2d();
             const Vector2 worldMouse = GetScreenToWorld2D(mouse, cam);
             emitter_->setOrigin(worldMouse);
         }

@@ -91,5 +91,8 @@ add_executable(rlge_snake
         examples/snake/game_over_scene.h)
 target_link_libraries(rlge_snake PRIVATE rlge raylib rlimgui imgui)
 
-add_executable(rlge_tilemap_demo examples/tilemap_demo/main.cpp)
-target_link_libraries(rlge_tilemap_demo PRIVATE rlge raylib rlimgui imgui)
+add_executable(rlge_tilemap examples/tilemap/main.cpp)
+target_link_libraries(rlge_tilemap PRIVATE rlge raylib rlimgui imgui)
+
+add_executable(rlge_multiview examples/multiview/main.cpp)
+target_link_libraries(rlge_multiview PRIVATE rlge raylib rlimgui imgui)

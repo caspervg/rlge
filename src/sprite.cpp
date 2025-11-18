@@ -29,12 +29,10 @@ namespace rlge {
         const Rectangle dest{pos.x, pos.y, size.x, size.y};
         const float rotation = t->rotation;
 
+        // Use batched sprite submission
         auto& rq = entity().scene().rq();
-        rq.submitWorld(
-            pos.y,
-            [this, src, dest, origin, rotation]() {
-                DrawTexturePro(texture_, src, dest, origin, rotation, WHITE);
-            });
+        rq.submitSprite(RenderLayer::World, pos.y, texture_,
+                       src, dest, origin, rotation, WHITE);
     }
 
     SpriteAnim::SpriteAnim(Entity& e, Texture2D& tex, const int frameW, const int frameH)
@@ -79,14 +77,12 @@ namespace rlge {
         const Vector2 scale{t->scale.x, t->scale.y};
         const Vector2 size{f.rect.width * scale.x, f.rect.height * scale.y};
         const Vector2 origin{size.x * 0.5f, size.y * 0.5f};
-        const Rectangle dest{pos.x - origin.x, pos.y - origin.y, size.x, size.y};
+        const Rectangle dest{pos.x, pos.y, size.x, size.y};
         const float rotation = t->rotation;
 
+        // Use batched sprite submission
         auto& rq = entity().scene().rq();
-        rq.submitWorld(
-            pos.y,
-            [this, f, dest, origin, rotation]() {
-                DrawTexturePro(texture_, f.rect, dest, origin, rotation, WHITE);
-            });
+        rq.submitSprite(RenderLayer::World, pos.y, texture_,
+                       f.rect, dest, origin, rotation, WHITE);
     }
 }

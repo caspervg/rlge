@@ -36,6 +36,14 @@ namespace rlge {
 
         void draw() override;
 
+        // Dimensions in tiles
+        int mapWidth() const { return width_; }
+        int mapHeight() const { return height_; }
+
+        // Tile size in pixels
+        int tileWidth() const { return tw_; }
+        int tileHeight() const { return th_; }
+
     private:
         Texture2D& texture_;
         int tw_;

@@ -2,6 +2,7 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "asset.hpp"
 #include "audio.hpp"
@@ -18,6 +19,11 @@
 
 namespace rlge {
     class Scene;
+
+    struct View {
+        Camera* camera;
+        Rectangle viewport;
+    };
 
     class GameServices {
     public:
@@ -74,6 +80,10 @@ namespace rlge {
         Window& window();
         const Window& window() const;
 
+        // Multi-view/camera management
+        void clearViews();
+        void addView(Camera& camera, const Rectangle& viewport);
+
     private:
         bool running_;
         bool debugEnabled_ = false;
@@ -84,5 +94,6 @@ namespace rlge {
         GameServices services_;
         RenderQueue renderer_;
         SceneStack scenes_;
+        std::vector<View> views_;
     };
 }

@@ -68,11 +68,9 @@ namespace rlge {
         dest.y = std::roundf(dest.y);
         const float rotation = t->rotation;
 
+        // Use batched sprite submission
         auto& rq = entity().scene().rq();
-        rq.submitWorld(
-            pos.y,
-            [this, src, dest, origin, rotation]() {
-                DrawTexturePro(sheet_.texture(), src, dest, origin, rotation, WHITE);
-            });
+        rq.submitSprite(RenderLayer::World, pos.y, sheet_.texture(),
+                       src, dest, origin, rotation, WHITE);
     }
 }
