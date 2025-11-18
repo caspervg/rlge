@@ -3,6 +3,12 @@ project(rlge)
 
 set(CMAKE_CXX_STANDARD 23)
 
+if(NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif()
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+
 
 # Adding Raylib / ImGui / rlImGui
 include(FetchContent)
@@ -47,12 +53,28 @@ add_library(rlimgui STATIC ${rlimgui_SOURCE_DIR}/rlImGui.cpp)
 target_include_directories(rlimgui PUBLIC ${rlimgui_SOURCE_DIR} PRIVATE ${raylib_SOURCE_DIR} ${imgui_SOURCE_DIR})
 target_link_libraries(rlimgui PUBLIC imgui raylib)
 
+FetchContent_Declare(
+        tileson
+        GIT_REPOSITORY "https://github.com/SSBMTonberry/tileson.git"
+        GIT_TAG "v1.4.0"
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE
+)
+FetchContent_GetProperties(tileson)
+if (NOT tileson_POPULATED)
+    FetchContent_Populate(tileson)
+endif()
+
+add_library(tileson INTERFACE)
+target_include_directories(tileson INTERFACE ${tileson_SOURCE_DIR} ${tileson_SOURCE_DIR}/include)
+
+
 set(PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src/")
 file(GLOB RLGE_SOURCES "${PROJECT_INCLUDE}*.cpp")
 
 add_library(rlge STATIC ${RLGE_SOURCES})
 target_include_directories(rlge PUBLIC ${PROJECT_INCLUDE})
-target_link_libraries(rlge PUBLIC raylib rlimgui)
+target_link_libraries(rlge PUBLIC raylib rlimgui tileson)
 
 # Example game executables
 add_executable(rlge_basic_game examples/basic_game/main.cpp)
@@ -68,3 +90,6 @@ add_executable(rlge_snake
         examples/snake/game_over_scene.cpp
         examples/snake/game_over_scene.h)
 target_link_libraries(rlge_snake PRIVATE rlge raylib rlimgui imgui)
+
+add_executable(rlge_tilemap_demo examples/tilemap_demo/main.cpp)
+target_link_libraries(rlge_tilemap_demo PRIVATE rlge raylib rlimgui imgui)

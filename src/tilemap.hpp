@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdint>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -11,19 +13,26 @@ namespace rlge {
 
     class Tilemap : public Entity {
     public:
+        struct TileCell {
+            int index = -1;
+            std::uint32_t flipFlags = 0;
+        };
+
         Tilemap(Scene& scene,
                 Texture2D& tex,
                 int tileW,
                 int tileH,
                 int mapW,
                 int mapH,
-                std::vector<int> tiles);
+                std::vector<TileCell> tiles,
+                int margin = 0,
+                int spacing = 0,
+                int columns = 0);
 
-        static Tilemap& loadFromFile(Scene& scene,
-                                     Texture2D& tex,
-                                     const std::string& path,
-                                     int tileW,
-                                     int tileH);
+        static Tilemap& loadTMX(Scene& scene,
+                                 Texture2D& tex,
+                                 const std::filesystem::path& path,
+                                 const std::string& layerName = "");
 
         void draw() override;
 
@@ -33,6 +42,9 @@ namespace rlge {
         int th_;
         int width_;
         int height_;
-        std::vector<int> data_;
+        std::vector<TileCell> data_;
+        int margin_;
+        int spacing_;
+        int columns_;
     };
 }
