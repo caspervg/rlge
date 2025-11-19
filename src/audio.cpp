@@ -34,6 +34,9 @@ namespace rlge {
         const auto it = musics_.find(id);
         if (it == musics_.end())
             return;
+        if (current_) {
+            stopMusic();
+        }
         current_ = &it->second;
         loop_ = loop;
         PlayMusicStream(*current_);

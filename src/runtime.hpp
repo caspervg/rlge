@@ -1,4 +1,6 @@
 #pragma once
+#include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -20,7 +22,10 @@
 namespace rlge {
     class Scene;
 
+    using ViewId = std::uint32_t;
+
     struct View {
+        ViewId id;
         Camera* camera;
         Rectangle viewport;
     };
@@ -32,7 +37,6 @@ namespace rlge {
         TweenSystem& tweens() { return tweens_; }
         AudioManager& audio() { return audio_; }
         PrefabFactory& prefabs() { return prefabs_; }
-        Camera& camera() { return camera_; }
 
     private:
         CollisionSystem collisions_;
@@ -40,7 +44,6 @@ namespace rlge {
         TweenSystem tweens_;
         AudioManager audio_;
         PrefabFactory prefabs_;
-        Camera camera_;
 
         friend class Runtime;
     };
@@ -80,12 +83,20 @@ namespace rlge {
         Window& window();
         const Window& window() const;
 
-        // Multi-view/camera management
+        ViewId addView(Camera& camera, const Rectangle& viewport);
         void clearViews();
-        void addView(Camera& camera, const Rectangle& viewport);
+        bool removeView(ViewId id);
+
+        View* primaryView();
+        [[nodiscard]] const View* primaryView() const;
+
+        View* view(ViewId id);
+        [[nodiscard]] const View* view(ViewId id) const;
+
+        [[nodiscard]] const std::vector<View>& views() const;
 
     private:
-        bool running_;
+        bool running_ = false;
         bool debugEnabled_ = false;
         KeyboardKey debugKey_ = KEY_F1;
         Window window_;
@@ -95,5 +106,6 @@ namespace rlge {
         RenderQueue renderer_;
         SceneStack scenes_;
         std::vector<View> views_;
+        ViewId nextViewId_{0};
     };
 }

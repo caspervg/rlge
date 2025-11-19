@@ -239,6 +239,13 @@ namespace snake {
             "spritesheet", "../examples/snake/assets/spritesheet.png");
         spriteSheet_ = std::make_unique<SpriteSheet>(spriteTex, kPixelsPerTile, kPixelsPerTile);
 
+        camera_ = rlge::Camera();
+        camera_.setOffset({
+        snake::kTilesX * snake::kPixelsPerTile * snake::kMagnification / 2.0f,
+        snake::kTilesY * snake::kPixelsPerTile * snake::kMagnification / 2.0f
+        });
+        setSingleView(camera_);
+
         bg_ = &spawn<Background>();
         borders_ = &spawn<BorderTiles>(game_, *spriteSheet_);
         scoreboard_ = &spawn<Scoreboard>(score_);

@@ -32,6 +32,9 @@ public:
             .gravity = {0.0f, 50.0f}
         };
 
+        camera_ = rlge::Camera();
+        setSingleView(camera_);
+
         emitter_ = &spawn<ParticleEmitterEntity>(mouseCfg, [](const Particle& p) {
             DrawCircleV(p.pos, p.size, p.color);
         });
@@ -78,7 +81,7 @@ public:
         // Move emitter origin with mouse in world space for a more interactive demo.
         if (emitter_) {
             const Vector2 mouse = GetMousePosition();
-            const auto& cam = camera().cam2d();
+            const auto& cam = camera_.cam2d();
             const Vector2 worldMouse = GetScreenToWorld2D(mouse, cam);
             emitter_->setOrigin(worldMouse);
         }
@@ -177,6 +180,7 @@ private:
     ParticleEmitterEntity* emitter_{nullptr};
     ParticleEmitterEntity* rainEmitter_{nullptr};
     FpsCounter* fps_{nullptr};
+    rlge::Camera camera_;
 };
 
 int main() {

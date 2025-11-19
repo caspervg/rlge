@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include <random>
 #include <vector>
 
@@ -47,7 +48,12 @@ namespace snake {
         Game(const Config& cfg, rlge::EventBus* bus = nullptr);
 
         void setDirection(Direction dir);
-        Direction direction() const { return dir_; }
+        Direction direction() const {
+            if (!directionQueue_.empty()) {
+                return directionQueue_.front();
+            }
+            return dir_;
+        }
 
         void update(float dt);
 
@@ -73,6 +79,7 @@ namespace snake {
         int appleY_;
 
         Direction dir_;
+        std::deque<Direction> directionQueue_;
         float moveInterval_;
         float moveAccum_ = 0.0f;
 

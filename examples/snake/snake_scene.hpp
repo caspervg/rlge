@@ -132,6 +132,8 @@ namespace snake {
         AppleSprite* apple_{nullptr};
         FpsCounter* fps_{nullptr};
 
+        rlge::Camera camera_;
+
         std::unique_ptr<rlge::SpriteSheet> spriteSheet_;
         rlge::EventBus::SubscriptionId appleSubId_{0};
         rlge::EventBus::SubscriptionId diedSubId_{0};

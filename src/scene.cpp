@@ -5,11 +5,8 @@
 #include "entity.hpp"
 
 namespace rlge {
-    Scene::Scene(Runtime& r)
-        : runtime_(r)
-        , ctx_{r.assetStore(), r.input(), r.renderer(),
-               r.services().events(), r.services().audio(),
-               r.services().camera()} {}
+    Scene::Scene(Runtime& r) :
+        runtime_(r), ctx_{r.assetStore(), r.input(), r.renderer(), r.services().events(), r.services().audio()} {}
 
     Scene::~Scene() = default;
 
@@ -28,69 +25,46 @@ namespace rlge {
             e->draw();
     }
 
-    Entity* Scene::get(const EntityId id) const {
-        return registry_.get(id);
+    Entity* Scene::get(const EntityId id) const { return registry_.get(id); }
+
+    const std::vector<std::unique_ptr<Entity>>& Scene::entities() { return entities_; }
+
+    Runtime& Scene::runtime() { return runtime_; }
+
+    const Runtime& Scene::runtime() const { return runtime_; }
+
+    AssetStore& Scene::assets() { return ctx_.assets; }
+
+    const AssetStore& Scene::assets() const { return ctx_.assets; }
+
+    Input& Scene::input() { return ctx_.input; }
+
+    const Input& Scene::input() const { return ctx_.input; }
+
+    RenderQueue& Scene::rq() { return ctx_.renderer; }
+
+    const RenderQueue& Scene::rq() const { return ctx_.renderer; }
+
+    EventBus& Scene::events() { return ctx_.events; }
+
+    const EventBus& Scene::events() const { return ctx_.events; }
+
+    AudioManager& Scene::audio() { return ctx_.audio; }
+
+    const AudioManager& Scene::audio() const { return ctx_.audio; }
+
+    const View* Scene::primaryView() const {
+        return runtime_.primaryView();
     }
 
-    const std::vector<std::unique_ptr<Entity>>& Scene::entities() {
-        return entities_;
+    const std::vector<View>& Scene::views() const { return runtime_.views(); }
+
+    void Scene::setSingleView(Camera& cam) {
+        runtime().clearViews();
+        const auto [x, y] = runtime().window().size();
+        runtime().addView(cam, Rectangle{0, 0, x, y});
     }
 
-    Runtime& Scene::runtime() {
-        return runtime_;
-    }
-
-    const Runtime& Scene::runtime() const {
-        return runtime_;
-    }
-
-    AssetStore& Scene::assets() {
-        return ctx_.assets;
-    }
-
-    const AssetStore& Scene::assets() const {
-        return ctx_.assets;
-    }
-
-    Input& Scene::input() {
-        return ctx_.input;
-    }
-
-    const Input& Scene::input() const {
-        return ctx_.input;
-    }
-
-    RenderQueue& Scene::rq() {
-        return ctx_.renderer;
-    }
-
-    const RenderQueue& Scene::rq() const {
-        return ctx_.renderer;
-    }
-
-    EventBus& Scene::events() {
-        return ctx_.events;
-    }
-
-    const EventBus& Scene::events() const {
-        return ctx_.events;
-    }
-
-    AudioManager& Scene::audio() {
-        return ctx_.audio;
-    }
-
-    const AudioManager& Scene::audio() const {
-        return ctx_.audio;
-    }
-
-    Camera& Scene::camera() {
-        return ctx_.camera;
-    }
-
-    const Camera& Scene::camera() const {
-        return ctx_.camera;
-    }
 
     void SceneStack::push(std::unique_ptr<Scene> s) {
         if (!stack_.empty())
@@ -126,4 +100,4 @@ namespace rlge {
             }
         }
     }
-}
+} // namespace rlge

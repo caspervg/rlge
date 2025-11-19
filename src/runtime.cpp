@@ -4,18 +4,7 @@
 #include "rlImGui.h"
 
 namespace rlge {
-    Runtime::Runtime(const WindowConfig& cfg)
-        : running_(false)
-        , window_(cfg) {
-        rlImGuiSetup(true);
-
-        // Default full-screen view using the main camera
-        const Vector2 size = window_.size();
-        views_.push_back(View{
-            &services_.camera(),
-            Rectangle{0.0f, 0.0f, size.x, size.y}
-        });
-    }
+    Runtime::Runtime(const WindowConfig& cfg) : window_(cfg) { rlImGuiSetup(true); }
 
     Runtime::~Runtime() {
         scenes_ = SceneStack{};
@@ -23,17 +12,7 @@ namespace rlge {
         rlImGuiShutdown();
     }
 
-    void Runtime::popScene() {
-        scenes_.pop();
-    }
-
-    void Runtime::clearViews() {
-        views_.clear();
-    }
-
-    void Runtime::addView(Camera& camera, const Rectangle& viewport) {
-        views_.push_back(View{&camera, viewport});
-    }
+    void Runtime::popScene() { scenes_.pop(); }
 
     void Runtime::run() {
         running_ = true;
@@ -60,11 +39,8 @@ namespace rlge {
                 if (!view.camera)
                     continue;
 
-                BeginScissorMode(
-                    static_cast<int>(view.viewport.x),
-                    static_cast<int>(view.viewport.y),
-                    static_cast<int>(view.viewport.width),
-                    static_cast<int>(view.viewport.height));
+                BeginScissorMode(static_cast<int>(view.viewport.x), static_cast<int>(view.viewport.y),
+                                 static_cast<int>(view.viewport.width), static_cast<int>(view.viewport.height));
 
                 renderer_.flushWorld(view.camera->cam2d(), view.viewport);
 
@@ -88,17 +64,64 @@ namespace rlge {
     void Runtime::quit() { running_ = false; }
 
     AssetStore& Runtime::assetStore() { return assets_; }
+
     const AssetStore& Runtime::assetStore() const { return assets_; }
 
     Input& Runtime::input() { return input_; }
+
     const Input& Runtime::input() const { return input_; }
 
     RenderQueue& Runtime::renderer() { return renderer_; }
+
     const RenderQueue& Runtime::renderer() const { return renderer_; }
 
     GameServices& Runtime::services() { return services_; }
+
     const GameServices& Runtime::services() const { return services_; }
 
     Window& Runtime::window() { return window_; }
     const Window& Runtime::window() const { return window_; }
-}
+
+    ViewId Runtime::addView(Camera& camera, const Rectangle& viewport) {
+        const ViewId id = nextViewId_++;
+        views_.push_back(View{id, &camera, viewport});
+        return id;
+    }
+    void Runtime::clearViews() { views_.clear(); }
+
+    bool Runtime::removeView(ViewId id) {
+        const auto it = std::find_if(views_.begin(), views_.end(), [id](const View& v) { return v.id == id; });
+        if (it != views_.end()) {
+            views_.erase(it);
+            return true;
+        }
+        return false;
+    }
+    View* Runtime::primaryView() {
+        if (views_.empty())
+            return nullptr;
+        return &views_.front();
+    }
+
+    const View* Runtime::primaryView() const {
+        if (views_.empty())
+            return nullptr;
+        return &views_.front();
+    }
+    View* Runtime::view(ViewId id) {
+        const auto it = std::find_if(views_.begin(), views_.end(), [id](const View& v) { return v.id == id; });
+        if (it != views_.end()) {
+            return &(*it);
+        }
+        return nullptr;
+    }
+
+    const View* Runtime::view(ViewId id) const {
+        const auto it = std::find_if(views_.begin(), views_.end(), [id](const View& v) { return v.id == id; });
+        if (it != views_.end()) {
+            return &(*it);
+        }
+        return nullptr;
+    }
+    const std::vector<View>& Runtime::views() const { return views_; }
+} // namespace rlge

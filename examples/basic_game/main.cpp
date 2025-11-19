@@ -32,7 +32,7 @@ public:
             return;
         // Draw at world origin; the camera moving will reveal different parts.
         rq().submitBackground([this] {
-            DrawTexture(texture_, -texture_.width / 2, -texture_.height / 4, WHITE);
+            DrawTexture(texture_, 0, 0, WHITE);
         });
     }
 
@@ -70,9 +70,6 @@ public:
             tr->position.x += speed_ * dt;
         if (input.down("up"))
             tr->rotation += speed_ * dt;
-
-        // Make camera follow player
-        scene().camera().follow(tr->position);
     }
 
     float speed_ = 200.0f;
@@ -90,10 +87,23 @@ public:
         auto& bgTex = assets().loadTexture("background", "../examples/basic_game/assets/background.bmp");
         auto& playerTex = assets().loadTexture("player", "../examples/basic_game/assets/player.bmp");
 
+        camera_ = rlge::Camera();
+        setSingleView(camera_);
+
         // Draw order: background first, player on top.
         bg_  = &spawn<Background>(bgTex);
-        snake_ = &spawn<ExampleEntity>(playerTex);
+        example_entity_ = &spawn<ExampleEntity>(playerTex);
         fps_ = &spawn<FpsCounter>();
+    }
+
+    void update(float dt) override {
+        Scene::update(dt);
+        // Make the camera follow the player entity.
+        if (const auto* view = primaryView()) {
+            if (const auto* tr = example_entity_->get<rlge::Transform>()) {
+                view->camera->follow(tr->position);
+            }
+        }
     }
 
     void debugOverlay() override {
@@ -116,19 +126,20 @@ public:
             ImGui::Checkbox("Show background", &bg_->visible_);
         }
 
-        if (snake_) {
-            if (auto* tr = snake_->get<rlge::Transform>()) {
+        if (example_entity_) {
+            if (auto* tr = example_entity_->get<rlge::Transform>()) {
                 ImGui::SliderFloat("Player X", &tr->position.x, -500.f, 500.f);
                 ImGui::SliderFloat("Player Y", &tr->position.y, -500.f, 500.f);
                 ImGui::SliderFloat("Player rotation", &tr->rotation, 0.f, 360.f);
             }
-            ImGui::SliderFloat("Player speed", &snake_->speed_, 50.f, 600.f);
+            ImGui::SliderFloat("Player speed", &example_entity_->speed_, 50.f, 600.f);
         }
         ImGui::End();
     }
 private:
     Background* bg_{nullptr};
-    ExampleEntity* snake_{nullptr};
+    ExampleEntity* example_entity_{nullptr};
+    rlge::Camera camera_;
     FpsCounter* fps_{nullptr};
 };
 

@@ -13,6 +13,7 @@
 #include "render_queue.hpp"
 
 namespace rlge {
+    struct View;
     class Runtime;
     class Entity;
 
@@ -22,7 +23,6 @@ namespace rlge {
         RenderQueue& renderer;
         EventBus& events;
         AudioManager& audio;
-        Camera& camera;
     };
 
     class Scene {
@@ -71,8 +71,10 @@ namespace rlge {
         AudioManager& audio();
         const AudioManager& audio() const;
 
-        Camera& camera();
-        const Camera& camera() const;
+        [[nodiscard]] const View* primaryView() const;
+        [[nodiscard]] const std::vector<View>& views() const;
+
+        void setSingleView(Camera& cam);
 
     private:
         Runtime& runtime_;

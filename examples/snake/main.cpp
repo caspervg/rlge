@@ -23,13 +23,6 @@ int main() {
     runtime.input().bind("down", KEY_S);
     runtime.input().bind("enter", KEY_ENTER);
 
-    auto& camera = runtime.services().camera();
-    camera.setOffset({
-        snake::kTilesX * snake::kPixelsPerTile * snake::kMagnification / 2.0f,
-        snake::kTilesY * snake::kPixelsPerTile * snake::kMagnification / 2.0f
-    });
-    camera.follow({0.0f, 0.0f}, 1.0f);
-
     auto& bus = runtime.services().events();
     bus.subscribe<snake::RestartGame>([&runtime](const snake::RestartGame& _) {
         runtime.popScene(); // pop GameOverScene

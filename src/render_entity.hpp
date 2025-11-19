@@ -26,10 +26,6 @@ namespace rlge {
             return scene().audio();
         }
 
-        Camera& camera() {
-            return scene().camera();
-        }
-
         Input& input() {
             return scene().input();
         }

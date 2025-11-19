@@ -13,6 +13,9 @@ namespace demo {
             auto& tiles = assets().loadTexture("tiles", "../examples/tilemap/assets/tiles.png");
             tilemap_ = &rlge::Tilemap::loadTMX(*this, tiles, "../examples/tilemap/assets/map.tmj");
             tilemap_->get<rlge::Transform>()->position = {0, 0};
+
+            cam_ = rlge::Camera();
+            setSingleView(cam_);
         }
 
         void draw() override {
@@ -35,11 +38,12 @@ namespace demo {
                 delta.y -= speed * dt;
             if (IsKeyDown(KEY_DOWN))
                 delta.y += speed * dt;
-            camera().pan(delta);
+            cam_.pan(delta);
         }
 
     private:
         rlge::Tilemap* tilemap_ = nullptr;
+        rlge::Camera cam_;
     };
 }
 

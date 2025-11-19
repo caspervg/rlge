@@ -3,6 +3,16 @@
 #include <random>
 #include "events.hpp"
 
+namespace {
+    bool isOpposite(const snake::Direction a, const snake::Direction b) {
+        using snake::Direction;
+        return (a == Direction::Left && b == Direction::Right) ||
+               (a == Direction::Right && b == Direction::Left) ||
+               (a == Direction::Up && b == Direction::Down) ||
+               (a == Direction::Down && b == Direction::Up);
+    }
+}
+
 namespace snake {
 
     Game::Game(const Config& cfg, rlge::EventBus* bus)
@@ -27,15 +37,12 @@ namespace snake {
         spawnApple();
     }
 
-    void Game::setDirection(Direction dir) {
-        // Prevent immediate reversal.
-        if ((dir_ == Direction::Left && dir == Direction::Right) ||
-            (dir_ == Direction::Right && dir == Direction::Left) ||
-            (dir_ == Direction::Up && dir == Direction::Down) ||
-            (dir_ == Direction::Down && dir == Direction::Up)) {
+    void Game::setDirection(const Direction dir) {
+        const Direction lastDir = directionQueue_.empty() ? dir_ : directionQueue_.back();
+        if (dir == lastDir || isOpposite(lastDir, dir)) {
             return;
         }
-        dir_ = dir;
+        directionQueue_.push_back(dir);
     }
 
     void Game::update(float dt) {
@@ -59,6 +66,11 @@ namespace snake {
     void Game::step() {
         if (body_.empty())
             return;
+
+        if (!directionQueue_.empty()) {
+            dir_ = directionQueue_.front();
+            directionQueue_.pop_front();
+        }
 
         int nextX = body_.front().x;
         int nextY = body_.front().y;
