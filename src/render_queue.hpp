@@ -46,6 +46,8 @@ namespace rlge {
         size_t batchCount = 0;
         size_t drawCalls = 0;
         size_t customCommands = 0;
+        size_t viewsRendered = 0;
+        size_t executedDrawCalls = 0;
         float sortTimeMs = 0.0f;
         float flushTimeMs = 0.0f;
 
@@ -54,6 +56,8 @@ namespace rlge {
             batchCount = 0;
             drawCalls = 0;
             customCommands = 0;
+            viewsRendered = 0;
+            executedDrawCalls = 0;
             sortTimeMs = 0.0f;
             flushTimeMs = 0.0f;
         }
@@ -81,14 +85,14 @@ namespace rlge {
         void submitForeground(float z, std::function<void()> fn);
         void submitUI(std::function<void()> fn);
 
+        void beginFrame();
         void clear();
-        // Render world-space layers (Background, World, Foreground) with a given camera and viewport.
-        // Does not clear the queue so it can be called multiple times (for multiple cameras/views).
-        void flushWorld(const Camera2D& cam, const Rectangle& viewport);
-        // Render UI layer (screen-space). Clears the queue and stats.
+        // Prepare world-space data (sorting batches/commands) once per frame.
+        void prepareWorld();
+        // Render prepared world-space layers for a given camera and viewport.
+        void flushPreparedWorld(const Camera2D& cam, const Rectangle& viewport);
+        // Render UI layer (screen-space). Clears the queue.
         void flushUI();
-        // Legacy single-camera flush: world + UI in one call.
-        void flush(const Camera2D& cam);
 
         // Get performance stats
         const RenderStats& stats() const { return stats_; }
@@ -103,6 +107,7 @@ namespace rlge {
 
         // Stats
         RenderStats stats_;
+        bool worldPrepared_ = false;
 
         // Helper methods
         SpriteBatch& getBatch(RenderLayer layer, Texture2D texture);
