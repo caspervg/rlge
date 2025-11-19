@@ -116,7 +116,9 @@ public:
         ImGui::Text("Render Performance:");
         ImGui::Text("  Sprites: %zu", stats.spritesSubmitted);
         ImGui::Text("  Batches: %zu", stats.batchCount);
-        ImGui::Text("  Draw Calls: %zu", stats.drawCalls);
+        ImGui::Text("  Prepared Draw Calls: %zu", stats.drawCalls);
+        ImGui::Text("  Executed Draw Calls: %zu", stats.executedDrawCalls);
+        ImGui::Text("  Views Rendered: %zu", stats.viewsRendered);
         ImGui::Text("  Custom Cmds: %zu", stats.customCommands);
         ImGui::Text("  Sort Time: %.3f ms", stats.sortTimeMs);
         ImGui::Text("  Flush Time: %.3f ms", stats.flushTimeMs);

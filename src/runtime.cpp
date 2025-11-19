@@ -1,6 +1,9 @@
 #include "runtime.hpp"
 
+#include <algorithm>
+
 #include "imgui.h"
+#include "raylib.h"
 #include "rlImGui.h"
 
 namespace rlge {
@@ -17,6 +20,7 @@ namespace rlge {
     void Runtime::run() {
         running_ = true;
         while (running_ && !WindowShouldClose()) {
+            renderer_.beginFrame();
             const float dt = GetFrameTime();
 
             if (IsKeyPressed(debugKey_)) {
@@ -34,7 +38,8 @@ namespace rlge {
 
             scenes_.draw();
 
-            // Render world for each active view (camera + viewport)
+            renderer_.prepareWorld();
+
             for (const auto& view : views_) {
                 if (!view.camera)
                     continue;
@@ -42,7 +47,7 @@ namespace rlge {
                 BeginScissorMode(static_cast<int>(view.viewport.x), static_cast<int>(view.viewport.y),
                                  static_cast<int>(view.viewport.width), static_cast<int>(view.viewport.height));
 
-                renderer_.flushWorld(view.camera->cam2d(), view.viewport);
+                renderer_.flushPreparedWorld(view.camera->cam2d(), view.viewport);
 
                 EndScissorMode();
             }
@@ -80,6 +85,7 @@ namespace rlge {
     const GameServices& Runtime::services() const { return services_; }
 
     Window& Runtime::window() { return window_; }
+
     const Window& Runtime::window() const { return window_; }
 
     ViewId Runtime::addView(Camera& camera, const Rectangle& viewport) {
@@ -87,16 +93,18 @@ namespace rlge {
         views_.push_back(View{id, &camera, viewport});
         return id;
     }
+
     void Runtime::clearViews() { views_.clear(); }
 
     bool Runtime::removeView(ViewId id) {
-        const auto it = std::find_if(views_.begin(), views_.end(), [id](const View& v) { return v.id == id; });
+        const auto it = std::ranges::find_if(views_, [id](const View& v) { return v.id == id; });
         if (it != views_.end()) {
             views_.erase(it);
             return true;
         }
         return false;
     }
+
     View* Runtime::primaryView() {
         if (views_.empty())
             return nullptr;
@@ -108,8 +116,9 @@ namespace rlge {
             return nullptr;
         return &views_.front();
     }
+
     View* Runtime::view(ViewId id) {
-        const auto it = std::find_if(views_.begin(), views_.end(), [id](const View& v) { return v.id == id; });
+        const auto it = std::ranges::find_if(views_, [id](const View& v) { return v.id == id; });
         if (it != views_.end()) {
             return &(*it);
         }
@@ -117,7 +126,7 @@ namespace rlge {
     }
 
     const View* Runtime::view(ViewId id) const {
-        const auto it = std::find_if(views_.begin(), views_.end(), [id](const View& v) { return v.id == id; });
+        const auto it = std::ranges::find_if(views_, [id](const View& v) { return v.id == id; });
         if (it != views_.end()) {
             return &(*it);
         }
