@@ -5,6 +5,9 @@
 #include "entity.hpp"
 
 namespace rlge {
+    ViewHandle::ViewHandle(Runtime& r, const ViewId& view) : runtime_(r), id_(view) {}
+    ViewHandle::~ViewHandle() { runtime_.removeView(id_); }
+
     Scene::Scene(Runtime& r) :
         runtime_(r), ctx_{r.assetStore(), r.input(), r.renderer(), r.services().events(), r.services().audio()} {}
 
@@ -53,16 +56,19 @@ namespace rlge {
 
     const AudioManager& Scene::audio() const { return ctx_.audio; }
 
-    const View* Scene::primaryView() const {
-        return runtime_.primaryView();
+    void Scene::addView(Camera& camera, const Rectangle& viewport) {
+        const auto viewId = runtime_.addView(camera, viewport);
+        viewHandles_.push_back(std::make_unique<ViewHandle>(runtime_, viewId));
     }
+
+    const View* Scene::primaryView() const { return runtime_.primaryView(); }
 
     const std::vector<View>& Scene::views() const { return runtime_.views(); }
 
     void Scene::setSingleView(Camera& cam) {
-        runtime().clearViews();
+        viewHandles_.clear();
         const auto [x, y] = runtime().window().size();
-        runtime().addView(cam, Rectangle{0, 0, x, y});
+        addView(cam, Rectangle{0, 0, x, y});
     }
 
 

@@ -1,4 +1,4 @@
-#include "prefab.h"
+#include "prefab.hpp"
 
 namespace rlge {
     void PrefabFactory::registerPrefab(const std::string& name, Fn fn) {

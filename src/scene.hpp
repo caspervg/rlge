@@ -17,12 +17,23 @@ namespace rlge {
     class Runtime;
     class Entity;
 
+    using ViewId = std::uint32_t;
+
     struct GameContext {
         AssetStore& assets;
         Input& input;
         RenderQueue& renderer;
         EventBus& events;
         AudioManager& audio;
+    };
+
+    class ViewHandle {
+    public:
+        explicit ViewHandle(Runtime& r, const ViewId& view);
+        ~ViewHandle();
+    private:
+        Runtime& runtime_;
+        ViewId id_;
     };
 
     class Scene {
@@ -71,6 +82,7 @@ namespace rlge {
         AudioManager& audio();
         const AudioManager& audio() const;
 
+        void addView(Camera& camera, const Rectangle& viewport);
         [[nodiscard]] const View* primaryView() const;
         [[nodiscard]] const std::vector<View>& views() const;
 
@@ -81,6 +93,7 @@ namespace rlge {
         GameContext ctx_;
         EntityRegistry registry_;
         std::vector<std::unique_ptr<Entity>> entities_;
+        std::vector<std::unique_ptr<ViewHandle>> viewHandles_;
     };
 
     class SceneStack {

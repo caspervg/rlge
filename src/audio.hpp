@@ -21,6 +21,5 @@ namespace rlge {
         std::unordered_map<std::string, Sound> sounds_;
         std::unordered_map<std::string, Music> musics_;
         Music* current_ = nullptr;
-        bool loop_ = true;
     };
 }

@@ -1,5 +1,7 @@
 #include "collision.hpp"
 
+#include <algorithm>
+
 #include "entity.hpp"
 #include "transformer.hpp"
 
@@ -9,22 +11,40 @@ namespace rlge {
     }
 
     void CollisionSystem::unregisterCollider(Collider* c) {
-        for (size_t i = 0; i < colliders_.size(); ++i) {
-            if (colliders_[i] == c) {
-                colliders_[i] = colliders_.back();
-                colliders_.pop_back();
-                return;
-            }
+        if (updating_) {
+            pendingRemovals_.push_back(c);
+            return;
         }
+        std::erase(colliders_, c);
+        compact();
     }
 
-    void CollisionSystem::update(float) const {
+    void CollisionSystem::compact() {
+        std::erase(colliders_, nullptr);
+    }
+
+    void CollisionSystem::flushPendingRemovals() {
+        if (pendingRemovals_.empty())
+            return;
+        for (auto* c : pendingRemovals_) {
+            std::erase(colliders_, c);
+        }
+        pendingRemovals_.clear();
+        compact();
+    }
+
+    void CollisionSystem::update(float) {
+        flushPendingRemovals();
+        updating_ = true;
         const size_t n = colliders_.size();
         for (size_t i = 0; i < n; ++i) {
+            Collider* a = colliders_[i];
+            if (!a)
+                continue;
+
             for (size_t j = i + 1; j < n; ++j) {
-                Collider* a = colliders_[i];
                 Collider* b = colliders_[j];
-                if (!a || !b)
+                if (!b)
                     continue;
 
                 if (CheckCollisionRecs(a->worldBounds(), b->worldBounds())) {
@@ -35,6 +55,8 @@ namespace rlge {
                 }
             }
         }
+        updating_ = false;
+        flushPendingRemovals();
     }
 
     Collider::Collider(Entity& e,
@@ -64,4 +86,3 @@ namespace rlge {
     void Collider::setOnCollision(Callback cb) { onCollision_ = std::move(cb); }
     bool Collider::isTrigger() const { return trigger_; }
 }
-

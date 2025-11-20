@@ -30,7 +30,7 @@ namespace rlge {
         musics_[id] = LoadMusicStream(path.c_str());
     }
 
-    void AudioManager::playMusic(const std::string& id, bool loop) {
+    void AudioManager::playMusic(const std::string& id, const bool loop) {
         const auto it = musics_.find(id);
         if (it == musics_.end())
             return;
@@ -38,7 +38,7 @@ namespace rlge {
             stopMusic();
         }
         current_ = &it->second;
-        loop_ = loop;
+        current_->looping = loop;
         PlayMusicStream(*current_);
     }
 

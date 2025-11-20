@@ -12,10 +12,15 @@ namespace rlge {
     public:
         void registerCollider(Collider* c);
         void unregisterCollider(Collider* c);
-        void update(float) const;
+        void update(float);
 
     private:
         std::vector<Collider*> colliders_;
+        bool updating_ = false;
+        std::vector<Collider*> pendingRemovals_;
+
+        void compact();
+        void flushPendingRemovals();
     };
 
     class Collider : public Component {

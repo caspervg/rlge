@@ -12,7 +12,7 @@
 #include "collision.hpp"
 #include "events.hpp"
 #include "input.hpp"
-#include "prefab.h"
+#include "prefab.hpp"
 #include "render_queue.hpp"
 #include "scene.hpp"
 #include "tween.hpp"
@@ -21,8 +21,6 @@
 
 namespace rlge {
     class Scene;
-
-    using ViewId = std::uint32_t;
 
     struct View {
         ViewId id;
