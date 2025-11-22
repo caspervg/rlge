@@ -96,3 +96,7 @@ target_link_libraries(rlge_tilemap PRIVATE rlge raylib rlimgui imgui)
 
 add_executable(rlge_multiview examples/multiview/main.cpp)
 target_link_libraries(rlge_multiview PRIVATE rlge raylib rlimgui imgui)
+
+add_executable(rlge_platformer examples/platformer/main.cpp
+        examples/platformer/ui.cpp)
+target_link_libraries(rlge_platformer PRIVATE rlge raylib rlimgui imgui)
