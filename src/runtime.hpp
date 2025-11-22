@@ -1,6 +1,5 @@
 #pragma once
 #include <algorithm>
-#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -9,7 +8,6 @@
 #include "asset.hpp"
 #include "audio.hpp"
 #include "camera.hpp"
-#include "collision.hpp"
 #include "events.hpp"
 #include "input.hpp"
 #include "prefab.hpp"
@@ -17,6 +15,7 @@
 #include "scene.hpp"
 #include "tween.hpp"
 #include "window.hpp"
+#include "collision/collision_system.hpp"
 
 
 namespace rlge {

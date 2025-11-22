@@ -1,4 +1,5 @@
 #include "runtime.hpp"
+#include "collision/collision_system.hpp"
 
 #include <algorithm>
 
@@ -59,6 +60,7 @@ namespace rlge {
                 rlImGuiBegin();
                 ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
                 scenes_.drawDebug();
+                services_.collisions().debugOverlay();
                 rlImGuiEnd();
             }
 

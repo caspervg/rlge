@@ -70,10 +70,10 @@ target_include_directories(tileson INTERFACE ${tileson_SOURCE_DIR} ${tileson_SOU
 
 
 set(PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src/")
-file(GLOB RLGE_SOURCES "${PROJECT_INCLUDE}*.cpp")
+file(GLOB RLGE_SOURCES "${PROJECT_INCLUDE}*.cpp" "${PROJECT_INCLUDE}collision/*.cpp" "${PROJECT_INCLUDE}collision/shape/*.cpp")
 
 add_library(rlge STATIC ${RLGE_SOURCES})
-target_include_directories(rlge PUBLIC ${PROJECT_INCLUDE})
+target_include_directories(rlge PUBLIC ${PROJECT_INCLUDE} "${PROJECT_INClUDE}/collision/" "${PROJECT_INCLUDE}/collision/shape/")
 target_link_libraries(rlge PUBLIC raylib rlimgui tileson)
 
 # Example game executables
@@ -96,3 +96,6 @@ target_link_libraries(rlge_tilemap PRIVATE rlge raylib rlimgui imgui)
 
 add_executable(rlge_multiview examples/multiview/main.cpp)
 target_link_libraries(rlge_multiview PRIVATE rlge raylib rlimgui imgui)
+
+add_executable(rlge_collision_debug examples/collision_debug/main.cpp)
+target_link_libraries(rlge_collision_debug PRIVATE rlge raylib rlimgui imgui)
