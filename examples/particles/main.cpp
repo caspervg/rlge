@@ -1,13 +1,15 @@
+#include <algorithm>
 #include <utility>
 
 #include "debug.hpp"
-#include "runtime.hpp"
-#include "window.hpp"
 #include "particle_emitter.hpp"
+#include "runtime.hpp"
 #include "transformer.hpp"
+#include "window.hpp"
 
 #include "imgui.h"
 #include "raylib.h"
+#include "raymath.h"
 
 using namespace rlge;
 
@@ -45,12 +47,13 @@ public:
             .spread = 2.0f * PI,
             .gravity = {0.0f, 50.0f}
         };
+        mouseConfig_ = mouseCfg;
 
         camera_ = rlge::Camera();
         setSingleView(camera_);
 
-        emitterEntity_ = &spawn<ParticleEmitterEntity>(mouseCfg, [](const Particle& p) {
-            DrawCircleV(p.pos, p.size, p.color);
+        emitterEntity_ = &spawn<ParticleEmitterEntity>(mouseCfg, [this](const Particle& p) {
+            renderParticle(p, streaksEnabled_);
         });
         emitter_ = emitterEntity_ ? &emitterEntity_->emitter : nullptr;
 
@@ -93,7 +96,7 @@ public:
         }
     }
 
-    void update(float dt) override {
+    void update(const float dt) override {
         // Move emitter origin with mouse in world space for a more interactive demo.
         if (emitterEntity_) {
             const Vector2 mouse = GetMousePosition();
@@ -172,7 +175,7 @@ public:
         };
 
         if (ImGui::ColorEdit4("Start color", startCol)) {
-            Color newStart{
+            const Color newStart{
                 static_cast<unsigned char>(startCol[0] * 255.0f),
                 static_cast<unsigned char>(startCol[1] * 255.0f),
                 static_cast<unsigned char>(startCol[2] * 255.0f),
@@ -182,7 +185,7 @@ public:
         }
 
         if (ImGui::ColorEdit4("End color", endCol)) {
-            Color newEnd{
+            const Color newEnd{
                 static_cast<unsigned char>(endCol[0] * 255.0f),
                 static_cast<unsigned char>(endCol[1] * 255.0f),
                 static_cast<unsigned char>(endCol[2] * 255.0f),
@@ -196,17 +199,113 @@ public:
             emitter_->setGravity(gravity);
         }
 
+        ImGui::Checkbox("Velocity streaks", &streaksEnabled_);
+
+        ImGui::SliderInt("Burst count", &burstCount_, 0, 5000);
+
         ImGui::Separator();
-        ImGui::Text("Burst on click");
-        ImGui::SliderInt("Burst count", &burstCount_, 0, 1000);
-        if (ImGui::Button("Trigger burst now") && emitter_) {
-            emitter_->burst(burstCount_);
+        if (ImGui::Button("Preset: Smoke")) {
+            applyPresetSmoke();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Preset: Fireworks")) {
+            applyPresetFireworks();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Preset: Sparks")) {
+            applyPresetSparks();
         }
 
         ImGui::End();
     }
 
 private:
+    void renderParticle(const Particle& p, bool streak) {
+        if (!streak) {
+            DrawCircleV(p.pos, p.size, p.color);
+            return;
+        }
+        const float speed = Vector2Length(p.vel);
+        if (speed < 1e-3f) {
+            DrawCircleV(p.pos, p.size, p.color);
+            return;
+        }
+        const float len = std::max(4.0f, speed * 0.02f);
+        const Vector2 dir = Vector2Normalize(p.vel);
+        const Vector2 tail{p.pos.x - dir.x * len, p.pos.y - dir.y * len};
+        DrawLineEx(tail, p.pos, p.size * 0.8f, p.color);
+    }
+
+    void applyConfigToEmitter(const ParticleEmitterConfig& cfg) {
+        if (!emitter_)
+            return;
+        emitter_->setEmitRate(cfg.emitRate);
+        emitter_->setMaxParticles(cfg.maxParticles);
+        emitter_->setLifetimeRange(cfg.minLifetime, cfg.maxLifetime);
+        emitter_->setSpeedRange(cfg.minSpeed, cfg.maxSpeed);
+        emitter_->setSizeRange(cfg.minSize, cfg.maxSize);
+        emitter_->setSpread(cfg.spread);
+        emitter_->setDirection(cfg.direction);
+        emitter_->setGravity(cfg.gravity);
+        emitter_->setColorRange(cfg.startColor, cfg.endColor);
+    }
+
+    void applyPresetSmoke() {
+        ParticleEmitterConfig cfg = mouseConfig_;
+        cfg.emitRate = 180.0f;
+        cfg.minLifetime = 0.8f;
+        cfg.maxLifetime = 1.6f;
+        cfg.minSpeed = 10.0f;
+        cfg.maxSpeed = 40.0f;
+        cfg.minSize = 8.0f;
+        cfg.maxSize = 18.0f;
+        cfg.spread = PI;
+        cfg.direction = -PI * 0.5f;
+        cfg.gravity = {0.0f, -10.0f};
+        cfg.startColor = {160, 160, 160, 200};
+        cfg.endColor = {90, 90, 90, 10};
+        applyConfigToEmitter(cfg);
+        mouseConfig_ = cfg;
+        streaksEnabled_ = false;
+    }
+
+    void applyPresetFireworks() {
+        ParticleEmitterConfig cfg = mouseConfig_;
+        cfg.emitRate = 400.0f;
+        cfg.minLifetime = 0.6f;
+        cfg.maxLifetime = 1.2f;
+        cfg.minSpeed = 200.0f;
+        cfg.maxSpeed = 420.0f;
+        cfg.minSize = 3.0f;
+        cfg.maxSize = 6.0f;
+        cfg.spread = 2.0f * PI;
+        cfg.direction = 0.0f;
+        cfg.gravity = {0.0f, 120.0f};
+        cfg.startColor = {255, 220, 120, 255};
+        cfg.endColor = {255, 80, 40, 0};
+        applyConfigToEmitter(cfg);
+        mouseConfig_ = cfg;
+        streaksEnabled_ = false;
+    }
+
+    void applyPresetSparks() {
+        ParticleEmitterConfig cfg = mouseConfig_;
+        cfg.emitRate = 1200.0f;
+        cfg.minLifetime = 0.15f;
+        cfg.maxLifetime = 0.4f;
+        cfg.minSpeed = 250.0f;
+        cfg.maxSpeed = 600.0f;
+        cfg.minSize = 2.0f;
+        cfg.maxSize = 4.0f;
+        cfg.spread = PI * 0.35f;
+        cfg.direction = -PI * 0.5f;
+        cfg.gravity = {0.0f, 600.0f};
+        cfg.startColor = YELLOW;
+        cfg.endColor = Fade(ORANGE, 0.1f);
+        applyConfigToEmitter(cfg);
+        mouseConfig_ = cfg;
+        streaksEnabled_ = true;
+    }
     ParticleEmitterEntity* emitterEntity_{nullptr};
     ParticleEmitterEntity* rainEmitterEntity_{nullptr};
     ParticleEmitter* emitter_{nullptr};
@@ -214,10 +313,12 @@ private:
     FpsCounter* fps_{nullptr};
     rlge::Camera camera_;
     int burstCount_{150};
+    bool streaksEnabled_{false};
+    ParticleEmitterConfig mouseConfig_{};
 };
 
 int main() {
-    WindowConfig cfg{
+    constexpr WindowConfig cfg{
         .width = 1600,
         .height = 900,
         .fps = 144,
