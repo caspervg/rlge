@@ -123,20 +123,6 @@ namespace snake {
         });
     }
 
-    BorderTiles::BorderTiles(Scene& scene, Game& game, SpriteSheet& sheet) :
-        RenderEntity(scene) {
-        tiles_ = std::vector<std::unique_ptr<BorderTile>>();
-
-        for (auto y = 0; y < kTilesY; ++y) {
-            tiles_.push_back(std::make_unique<BorderTile>(scene, game, sheet, 0, y));
-            tiles_.push_back(std::make_unique<BorderTile>(scene, game, sheet, kTilesX - 1, y));
-        }
-        for (auto x = 1; x < kTilesX - 1; ++x) {
-            tiles_.push_back(std::make_unique<BorderTile>(scene, game, sheet, x, 0));
-            tiles_.push_back(std::make_unique<BorderTile>(scene, game, sheet, x, kTilesY - 1));
-        }
-    }
-
     BorderTile::BorderTile(Scene& scene, Game& game, SpriteSheet& sheet, int xg, int yg) :
         RenderEntity(scene)
         , sheet_(sheet), game_(game)
@@ -147,12 +133,6 @@ namespace snake {
         std::uniform_int_distribution<> sheetSpriteColRng_{12, 13};
         rotation_ = rotationRng_(*game.rng());
         spriteCol_ = sheetSpriteColRng_(*game.rng());
-    }
-
-    void BorderTiles::draw() {
-        for (const auto& tile : tiles_) {
-            tile->draw();
-        }
     }
 
     void BorderTile::draw() {
@@ -169,6 +149,26 @@ namespace snake {
             };
             DrawTexturePro(sheet_.texture(), src, dest, origin, 90.0f * rotation_, WHITE);
         });
+    }
+
+    BorderTiles::BorderTiles(Scene& scene, Game& game, SpriteSheet& sheet) :
+        RenderEntity(scene) {
+        tiles_ = std::vector<std::unique_ptr<BorderTile>>();
+
+        for (auto y = 0; y < kTilesY; ++y) {
+            tiles_.push_back(std::make_unique<BorderTile>(scene, game, sheet, 0, y));
+            tiles_.push_back(std::make_unique<BorderTile>(scene, game, sheet, kTilesX - 1, y));
+        }
+        for (auto x = 1; x < kTilesX - 1; ++x) {
+            tiles_.push_back(std::make_unique<BorderTile>(scene, game, sheet, x, 0));
+            tiles_.push_back(std::make_unique<BorderTile>(scene, game, sheet, x, kTilesY - 1));
+        }
+    }
+
+    void BorderTiles::draw() {
+        for (const auto& tile : tiles_) {
+            tile->draw();
+        }
     }
 
     AppleSprite::AppleSprite(Scene& scene, Game& game, SpriteSheet& sheet) :
@@ -197,7 +197,7 @@ namespace snake {
 
     int AppleSprite::randomSpriteRow() const {
         std::vector<int> samples;
-        std::sample(sheetSpriteRows_.begin(), sheetSpriteRows_.end(),
+        std::ranges::sample(sheetSpriteRows_,
                             std::back_inserter(samples), 1, *game_.rng());
         return samples.back();
     }
@@ -217,10 +217,12 @@ namespace snake {
 
     GameScene::GameScene(Runtime& r) :
         Scene(r)
-        , game_(Config{}, &r.services().events()) {}
+        , game_(Config{}, &r.services().gameEvents(), &sceneEvents()) {
+        forwardGameEvent<SnakeDied>();
+    }
 
     GameScene::~GameScene() {
-        auto& bus = events();
+        auto& bus = sceneEvents();
         if (appleSubId_ != 0) {
             bus.unsubscribe<AppleEaten>(appleSubId_);
         }
@@ -241,8 +243,8 @@ namespace snake {
 
         camera_ = rlge::Camera();
         camera_.setOffset({
-        snake::kTilesX * snake::kPixelsPerTile * snake::kMagnification / 2.0f,
-        snake::kTilesY * snake::kPixelsPerTile * snake::kMagnification / 2.0f
+            snake::kTilesX * snake::kPixelsPerTile * snake::kMagnification / 2.0f,
+            snake::kTilesY * snake::kPixelsPerTile * snake::kMagnification / 2.0f
         });
         setSingleView(camera_);
 
@@ -254,7 +256,7 @@ namespace snake {
         apple_ = &spawn<AppleSprite>(game_, *spriteSheet_);
         fps_ = &spawn<FpsCounter>();
 
-        auto& bus = events();
+        auto& bus = sceneEvents();
         appleSubId_ = bus.subscribe<AppleEaten>([this] (const AppleEaten& e) {
             audio().playSound("apple");
             score_ += e.amount;

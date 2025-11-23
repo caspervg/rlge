@@ -11,6 +11,8 @@
 #include "events.hpp"
 #include "input.hpp"
 #include "render_queue.hpp"
+#include "tween.hpp"
+#include "collision/collision_system.hpp"
 
 namespace rlge {
     struct View;
@@ -23,7 +25,7 @@ namespace rlge {
         AssetStore& assets;
         Input& input;
         RenderQueue& renderer;
-        EventBus& events;
+        EventBus& gameEvents;
         AudioManager& audio;
     };
 
@@ -31,6 +33,7 @@ namespace rlge {
     public:
         explicit ViewHandle(Runtime& r, const ViewId& view);
         ~ViewHandle();
+
     private:
         Runtime& runtime_;
         ViewId id_;
@@ -76,11 +79,20 @@ namespace rlge {
         RenderQueue& rq();
         const RenderQueue& rq() const;
 
-        EventBus& events();
-        const EventBus& events() const;
-
         AudioManager& audio();
         const AudioManager& audio() const;
+
+        CollisionSystem& collisions();
+        const CollisionSystem& collisions() const;
+
+        TweenSystem& tweens();
+        const TweenSystem& tweens() const;
+
+        EventBus& sceneEvents();
+        const EventBus& sceneEvents() const;
+
+        EventBus& gameEvents();
+        const EventBus& gameEvents() const;
 
         void addView(Camera& camera, const Rectangle& viewport);
         [[nodiscard]] const View* primaryView() const;
@@ -88,12 +100,26 @@ namespace rlge {
 
         void setSingleView(Camera& cam);
 
+        template <typename Event>
+        void forwardGameEvent() {
+            auto id = gameEvents().subscribe<Event>([this](const Event& e) {
+                sceneEvents_.publish(e); // Forward to scene bus
+            });
+            forwardedGameSubscriptions_.push_back([this, id] {
+                gameEvents().unsubscribe<Event>(id);
+            });
+        }
+
     private:
         Runtime& runtime_;
         GameContext ctx_;
+        CollisionSystem collisions_;
+        TweenSystem tweens_;
+        EventBus sceneEvents_;
         EntityRegistry registry_;
         std::vector<std::unique_ptr<Entity>> entities_;
         std::vector<std::unique_ptr<ViewHandle>> viewHandles_;
+        std::vector<std::function<void()>> forwardedGameSubscriptions_;
     };
 
     class SceneStack {

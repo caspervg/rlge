@@ -8,23 +8,39 @@ namespace rlge {
     ViewHandle::ViewHandle(Runtime& r, const ViewId& view) : runtime_(r), id_(view) {}
     ViewHandle::~ViewHandle() { runtime_.removeView(id_); }
 
-    Scene::Scene(Runtime& r) :
-        runtime_(r), ctx_{r.assetStore(), r.input(), r.renderer(), r.services().events(), r.services().audio()} {}
+    Scene::Scene(Runtime& r)
+        : runtime_(r)
+          , ctx_{r.assetStore(), r.input(), r.renderer(), r.services().gameEvents(), r.services().audio()}
+          , collisions_(CollisionSystem())
+          , tweens_(TweenSystem())
+    {}
 
-    Scene::~Scene() = default;
+    Scene::~Scene() {
+        for (auto& cleanup : forwardedGameSubscriptions_) {
+            cleanup();
+        }
+        entities_.clear();
+        viewHandles_.clear();
+        sceneEvents_.clear();
+    }
 
     void Scene::enter() {}
     void Scene::exit() {}
     void Scene::pause() {}
     void Scene::resume() {}
 
-    void Scene::update(float dt) {
-        for (auto& e : entities_)
+    void Scene::update(const float dt) {
+        tweens_.update(dt);
+
+        for (const auto& e : entities_)
             e->update(dt);
+
+        collisions_.update(dt);
+        sceneEvents_.dispatchQueued();
     }
 
     void Scene::draw() {
-        for (auto& e : entities_)
+        for (const auto& e : entities_)
             e->draw();
     }
 
@@ -48,13 +64,25 @@ namespace rlge {
 
     const RenderQueue& Scene::rq() const { return ctx_.renderer; }
 
-    EventBus& Scene::events() { return ctx_.events; }
-
-    const EventBus& Scene::events() const { return ctx_.events; }
-
     AudioManager& Scene::audio() { return ctx_.audio; }
 
     const AudioManager& Scene::audio() const { return ctx_.audio; }
+
+    CollisionSystem& Scene::collisions() { return collisions_; }
+
+    const CollisionSystem& Scene::collisions() const { return collisions_; }
+
+    TweenSystem& Scene::tweens() { return tweens_; }
+
+    const TweenSystem& Scene::tweens() const { return tweens_; }
+
+    EventBus& Scene::sceneEvents() { return sceneEvents_; }
+
+    const EventBus& Scene::sceneEvents() const { return sceneEvents_; }
+
+    EventBus& Scene::gameEvents() { return ctx_.gameEvents; }
+
+    const EventBus& Scene::gameEvents() const { return ctx_.gameEvents; }
 
     void Scene::addView(Camera& camera, const Rectangle& viewport) {
         const auto viewId = runtime_.addView(camera, viewport);
@@ -104,6 +132,7 @@ namespace rlge {
             if (auto* dbg = dynamic_cast<HasDebugOverlay*>(s.get())) {
                 dbg->debugOverlay();
             }
+            s->collisions().debugOverlay();
         }
     }
 } // namespace rlge

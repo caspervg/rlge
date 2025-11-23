@@ -47,7 +47,7 @@ public:
         // Simple local box around the origin of the entity
         constexpr Rectangle local{-16.0f, -16.0f, 32.0f, 32.0f};
 
-        auto& sys = scene().runtime().services().collisions();
+        auto& sys = scene().collisions();
         add<BoxCollider>(
             sys,
             ColliderType::Solid,
@@ -97,7 +97,7 @@ public:
         auto& tr = add<rlge::Transform>();
         tr.position = {350.0f, 200.0f};
 
-        auto& sys = scene().runtime().services().collisions();
+        auto& sys = scene().collisions();
         const Vector2 localCenter{0.0f, 0.0f};
         constexpr float radius = 24.0f;
         add<CircleCollider>(
@@ -134,7 +134,7 @@ public:
 
         const Rectangle local{-40.0f, -10.0f, 80.0f, 20.0f};
 
-        auto& sys = scene().runtime().services().collisions();
+        auto& sys = scene().collisions();
         add<BoxCollider>(
             sys,
             ColliderType::Solid,
@@ -171,7 +171,7 @@ public:
         auto& tr = add<rlge::Transform>();
         tr.position = {450.0f, 260.0f};
 
-        auto& sys = scene().runtime().services().collisions();
+        auto& sys = scene().collisions();
         std::vector<Vector2> localPoints{
             {-30.0f, -20.0f},
             { 40.0f, -10.0f},

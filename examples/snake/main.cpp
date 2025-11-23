@@ -8,7 +8,7 @@ using namespace rlge;
 int main() {
     snake::Config cfg;
 
-    WindowConfig wcfg{
+    const WindowConfig wcfg{
         .width = snake::kTilesX * snake::kPixelsPerTile * snake::kMagnification,
         .height = snake::kTilesY * snake::kPixelsPerTile * snake::kMagnification,
         .fps = 60,
@@ -23,7 +23,7 @@ int main() {
     runtime.input().bind("down", KEY_S);
     runtime.input().bind("enter", KEY_ENTER);
 
-    auto& bus = runtime.services().events();
+    auto& bus = runtime.services().gameEvents();
     bus.subscribe<snake::RestartGame>([&runtime](const snake::RestartGame& _) {
         runtime.popScene(); // pop GameOverScene
         runtime.popScene(); // pop old GameScene

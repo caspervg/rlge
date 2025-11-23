@@ -19,7 +19,7 @@ namespace rlge {
         }
 
         EventBus& events() {
-            return scene().events();
+            return scene().sceneEvents();
         }
 
         AudioManager& audio() {

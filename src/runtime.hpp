@@ -13,9 +13,7 @@
 #include "prefab.hpp"
 #include "render_queue.hpp"
 #include "scene.hpp"
-#include "tween.hpp"
 #include "window.hpp"
-#include "collision/collision_system.hpp"
 
 
 namespace rlge {
@@ -29,16 +27,12 @@ namespace rlge {
 
     class GameServices {
     public:
-        CollisionSystem& collisions() { return collisions_; }
-        EventBus& events() { return events_; }
-        TweenSystem& tweens() { return tweens_; }
+        EventBus& gameEvents() { return events_; }
         AudioManager& audio() { return audio_; }
         PrefabFactory& prefabs() { return prefabs_; }
 
     private:
-        CollisionSystem collisions_;
         EventBus events_;
-        TweenSystem tweens_;
         AudioManager audio_;
         PrefabFactory prefabs_;
 

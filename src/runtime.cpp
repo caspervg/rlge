@@ -28,11 +28,9 @@ namespace rlge {
                 debugEnabled_ = !debugEnabled_;
             }
 
-            services_.tweens().update(dt);
             scenes_.update(dt);
-            services_.collisions().update(dt);
             services_.audio().update();
-            services_.events().dispatchQueued();
+            services_.gameEvents().dispatchQueued();
 
             BeginDrawing();
             ClearBackground(BLACK);
@@ -60,7 +58,6 @@ namespace rlge {
                 rlImGuiBegin();
                 ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
                 scenes_.drawDebug();
-                services_.collisions().debugOverlay();
                 rlImGuiEnd();
             }
 

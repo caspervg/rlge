@@ -45,7 +45,7 @@ namespace snake {
             int y;
         };
 
-        Game(const Config& cfg, rlge::EventBus* bus = nullptr);
+        Game(const Config& cfg, rlge::EventBus* gameBus = nullptr, rlge::EventBus* sceneBus = nullptr);
 
         void setDirection(Direction dir);
         Direction direction() const {
@@ -88,7 +88,8 @@ namespace snake {
         std::default_random_engine rng_;
         std::uniform_int_distribution<> appleXRng_;
         std::uniform_int_distribution<> appleYRng_;
-        rlge::EventBus* bus_;
+        rlge::EventBus* gameBus_;
+        rlge::EventBus* sceneBus_;
 
         void step();
         void spawnApple();
