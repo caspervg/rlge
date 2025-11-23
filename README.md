@@ -1,34 +1,35 @@
-# RLGE — Raylib Lightweight Game Engine
+# RLGE - Raylib Lightweight Game Engine
 
-RLGE is a small C++23 game engine built on top of _raylib_, _ImGui_, and _rlImGui_. It focuses on straightforward 2D games with scenes, entities, components, an event bus, and a simple rendering queue.
+RLGE is a small C++23 2D game engine built on top of raylib, ImGui, and rlImGui. It provides a scene stack, entity/component model, event buses, a batched renderer, a collision system, and helper entities for getting simple games on screen quickly.
 
 This repository also contains example games/demos:
 
-- `examples/basic_game` — a minimal “move the sprite” scene.
-- `examples/snake` — a more complete Snake game showcasing scenes, events, and UI.
-- `examples/particles` — a tech demo to show the particle emission system.
-- `examples/tilemap_demo` — a simple orthogonal Tiled map rendered via the tilemap system.
-- `examples/multiview_demo` — a split-screen + minimap showcase using multiple cameras/views.
+- `examples/basic_game`: minimal moving-sprite scene with a stats overlay.
+- `examples/snake`: small game showing scenes, audio, and event flow.
+- `examples/particles`: configurable CPU particle emitters with live tuning.
+- `examples/tilemap`: orthogonal Tiled map rendering with flip flag support.
+- `examples/multiview`: split-screen + minimap rendering via multiple cameras.
+- `examples/collision_debug`: collider shapes, layer masks, and debug overlays.
 
 ---
 
 ## Features
 
-- Scene stack with enter/exit/pause/resume lifecycle.
-- Entity/component model (`Scene`, `Entity`, `Component`, `Transform`, sprites, tilemaps, etc.).
-- Event bus (`EventBus`) with publish/subscribe and queued events.
-- Camera system that can follow entities, pan/zoom/rotate, and convert between screen and world coordinates.
+- Scene stack with enter/exit/pause/resume; per-scene tween + collision systems and local event bus.
+- Entity/component model with helpers (`Transform`, sprites/animations, sprite sheets, tilemaps, particles, etc.).
+- Two event buses: scene-local and shared game-wide, with queued dispatch and forwarding helpers.
+- Camera system (follow/pan/zoom/rotate, screen <-> world helpers, view bounds) plus multi-view rendering.
 - Input binding system mapping named actions to keys.
-- Asset store for textures.
-- Tween system, collision system hooks, and a particle emitter.
-- Tilemap support using Tiled/JSON (via Tileson), with proper source-rect handling and per-tile flip flags.
-- Batched render queue with layers (`Background`, `World`, `Foreground`, `UI`) and z-sorting.
-- Multi-view rendering: the same world can be drawn through multiple cameras into different viewports (e.g. split-screen, minimap).
-- Optional debug overlays via ImGui.
+- Batched render queue with layers (`Background`, `World`, `Foreground`, `UI`), z-sorting, per-view culling, and render stats.
+- Collision system with layers/masks, triggers vs solids vs kinematic colliders, AABB/OBB/circle/polygon shapes, and optional ImGui debug overlay.
+- Asset store for textures, prefab factory for named entity constructors, and an audio manager for sounds/music.
+- Particle emitter entity with configurable spawn/render functions and helper spawn shapes.
+- Tilemap support using Tiled/JSON (via Tileson) with proper source-rect handling and per-tile flip flags.
+- Optional debug overlays via ImGui (toggle with `F1` in the examples).
 
 ## Requirements
 
-- CMake ≥ 3.25
+- CMake >= 3.25
 - A C++23-capable compiler
 - Git (for fetching dependencies)
 
@@ -48,105 +49,117 @@ This will produce the following executables:
 - `rlge_basic_game`
 - `rlge_particles`
 - `rlge_snake`
-- `rlge_tilemap_demo`
-- `rlge_multiview_demo`
+- `rlge_tilemap`
+- `rlge_multiview`
+- `rlge_collision_debug`
 
-On Windows, they will be under `build/` or a generator-specific subdirectory (e.g. `build/Debug`).
+On Windows, they will be under `build/` or a generator-specific subdirectory (for example `build/Debug`).
 
 ## Running the examples
 
-### Basic Game
+Each executable runs a focused scenario; use `F1` to toggle the ImGui overlay in scenes that provide one.
 
-The basic game example shows a moving sprite, a background, and an ImGui debug overlay.
+- `rlge_basic_game`: moving sprite with camera follow and render stats.
+- `rlge_snake`: two-scene flow, audio, and global game events.
+- `rlge_particles`: two emitters with live tuning for spawn/rates/colors.
+- `rlge_tilemap`: loads a Tiled map and renders it via the batched renderer.
+- `rlge_multiview`: two independent world views plus a static minimap.
+- `rlge_collision_debug`: move a collider through several shapes; enable collider drawing in the "Collisions" window.
 
-- Executable: `rlge_basic_game`
-- Input:
-  - `A` / `D` — move left/right
-  - `W` — rotate the sprite
+## Using RLGE in your own game
 
-### Snake Game
+### Bootstrapping a runtime
 
-The Snake example demonstrates a more complete setup with game logic, audio, the event bus, two scenes, and a game-over flow.
+```cpp
+rlge::WindowConfig cfg{
+    .width = 960,
+    .height = 540,
+    .fps = 60,
+    .title = "My Game"
+};
+rlge::Runtime runtime(cfg);
 
-- Executable: `rlge_snake`
-- Input:
-  - `W` / `A` / `S` / `D` — move the snake (left/right/up/down)
-  - `Enter` — restart from the Game Over screen
+runtime.input().bind("left", KEY_A);
+runtime.input().bind("right", KEY_D);
 
-### Particles Demo
+runtime.pushScene<MyScene>();
+runtime.run();
+```
 
-The particles example demonstrates a configurable particle emitter with pluggable spawn functions and render callbacks, plus a live ImGui debug UI to play with the particle parameters.
+### Scenes, views, and entities
 
-- Executable: `rlge_particles`
-- Input:
-  - Move the mouse to move the main emitter in world space.
-  - Press `F1` to toggle the ImGui debug overlay and tweak emitter parameters.
+- Derive from `Scene`, override lifecycle methods, and call `Scene::update(dt)` so tweens/entities/collisions run.
+- Use `setSingleView(camera)` for a full-screen camera or `runtime().addView(...)` to build split-screen/minimap layouts.
+- Spawn entities with `spawn<T>()`; add components like `Transform`, `Sprite`, `SpriteAnim`, `SheetSprite`, `ParticleEmitterEntity`, or colliders to them.
+- Scenes own local event buses (`sceneEvents()`), tween and collision systems, and auto-cleaned view handles.
 
-### Tilemap Demo
+```cpp
+class MyScene : public rlge::Scene {
+public:
+    explicit MyScene(rlge::Runtime& r) : Scene(r) {}
 
-Shows loading and rendering a small orthogonal Tiled map using RLGE’s `Tilemap` entity and the batched render queue. Demonstrates camera panning over a fixed map and UI text rendered via the UI render layer.
+    void enter() override {
+        camera_ = rlge::Camera();
+        setSingleView(camera_);
 
-- Executable: `rlge_tilemap_demo`
-- Input:
-  - Arrow keys — pan the camera over the tilemap
+        auto& tex = assets().loadTexture("player", "player.png");
+        auto& player = spawn<PlayerEntity>(tex);
+        player.get<rlge::Transform>()->position = {100.0f, 200.0f};
 
-### Multi-view / Split-screen + Minimap Demo
+        // Forward a global event into the scene-local bus if needed.
+        forwardGameEvent<MyEvent>();
+    }
 
-Demonstrates the multi-view camera system: two side-by-side world views (split-screen) plus a minimap rendered in the bottom center, all sharing the same world and tilemap.
+private:
+    rlge::Camera camera_;
+};
+```
 
-- Executable: `rlge_multiview_demo`
-- Input:
-  - Arrow keys — move the left camera
-  - `W` / `A` / `S` / `D` — move the right camera
+### Rendering
 
-## Using RLGE in your own game (overview)
+- Submit sprites via `RenderQueue::submitSprite(layer, z, texture, src, dest, origin, rotation, tint)`.
+- Use layers to control draw order and z to sort within a layer; world layers are flushed per view, UI once per frame.
+- `RenderEntity` is a convenience base that exposes `rq()`, `assets()`, `input()`, `audio()`, and `events()`.
+- Render stats (`rq().stats()`) are handy for debug overlays.
 
-At a high level, to build a new game on RLGE:
+### Events, assets, audio, and prefabs
 
-1. Create a `WindowConfig` and `Runtime` with your desired window size and title:
-   ```cpp
-   rlge::WindowConfig cfg{
-       .width = width,
-       .height = height,
-       .fps = 60,
-       .title = "My Game"
-   };
-   rlge::Runtime runtime(cfg);
-   ```
-2. Bind input actions:
-   ```cpp
-   runtime.input().bind("left", KEY_A);
-   runtime.input().bind("right", KEY_D);
-   ```
-3. Implement a `Scene` subclass for your game logic:
-   ```cpp
-   class MyScene : public rlge::Scene {
-   public:
-       explicit MyScene(rlge::Runtime& r) : Scene(r) {}
-       void enter() override {
-           // load assets, spawn entities
-       }
-       void update(float dt) override {
-           Scene::update(dt);
-           // game logic
-       }
-   };
-   ```
-4. Push your scene and run the runtime:
-   ```cpp
-   runtime.pushScene<MyScene>();
-   runtime.run();
-   ```
+- Scene-local events: `sceneEvents().publish/subscribe/enqueue`.
+- Game-wide events: `runtime.services().gameEvents()`; scenes can forward specific types with `forwardGameEvent<T>()`.
+- Assets: `assets().loadTexture(id, path)` and `assets().texture(id)`.
+- Audio: `audio().loadSound/playSound`, `audio().loadMusic/playMusic/stopMusic`, call `audio().update()` (runtime does this).
+- Prefabs: register entity constructors once (`runtime.services().prefabs().registerPrefab("enemy", fn)`) and instantiate by name.
 
-Look at `examples/basic_game/main.cpp`, `examples/snake`, `examples/particles/main.cpp`, `examples/tilemap_demo/main.cpp`, and `examples/multiview_demo/main.cpp` for concrete patterns.
+### Collisions
+
+- Access the per-scene system via `scene().collisions()`. Add colliders to entities:
+  ```cpp
+  add<rlge::BoxCollider>(scene().collisions(),
+                         rlge::ColliderType::Solid,
+                         rlge::ColliderLayerMask::LAYER_PLAYER,
+                         rlge::ColliderLayerMask::LAYER_WORLD,
+                         Rectangle{-8, -8, 16, 16},
+                         false /*trigger*/);
+  ```
+- Shapes: axis-aligned boxes, oriented boxes, circles, polygons. Configure trigger/solid/kinematic types and layer masks.
+- Register callbacks with `setOnCollision` for game logic; resolution is handled for non-trigger solids/kinematics.
+- Toggle the ImGui "Collisions" window (F1) to draw collider shapes/AABBs.
+
+### Particles, tweens, and tilemaps
+
+- `ParticleEmitterEntity` lets you supply spawn and render callbacks; helpers like `spawnInBox`/`spawnOnLine` build common patterns.
+- `tweens().add(Tween(duration, applyFn, easeFn))` for simple time-based animations (`easeLinear`, `easeOutQuad` included).
+- Load Tiled maps with `Tilemap::loadTMX(scene, texture, "map.tmj", "LayerName")`; flip flags and spacing/margins are handled automatically.
+
+Look at the examples for small, focused patterns that combine these systems.
 
 ## Attributions
 
 ### Libraries
 
-- [raylib](https://www.raylib.com/) — windowing, input, rendering (zlib License)
-- [Dear ImGui](https://github.com/ocornut/imgui) — immediate-mode GUI (MIT License)
-- [rlImGui](https://github.com/raylib-extras/rlImGui) — ImGui integration for raylib (zlib License)
+- [raylib](https://www.raylib.com/) - windowing, input, rendering (zlib License)
+- [Dear ImGui](https://github.com/ocornut/imgui) - immediate-mode GUI (MIT License)
+- [rlImGui](https://github.com/raylib-extras/rlImGui) - ImGui integration for raylib (zlib License)
 
 ### Assets
 
@@ -154,4 +167,3 @@ Look at `examples/basic_game/main.cpp`, `examples/snake`, `examples/particles/ma
 - Snake sprites: _[Snake Game Assets](https://cosme.itch.io/snake)_ by Cosme, from itch.io ([CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)).
 - Snake sound effects: Generated myself with a very basic Python script.
 - Snake background music: _[Snake around the Sun](https://freemusicarchive.org/music/crowander/circles/snake-around-the-sun/)_ by Crowander, from the Free Music Archive ([CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/)).
-
