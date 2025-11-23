@@ -23,7 +23,7 @@ This repository also contains example games/demos:
 - Batched render queue with layers (`Background`, `World`, `Foreground`, `UI`), z-sorting, per-view culling, and render stats.
 - Collision system with layers/masks, triggers vs solids vs kinematic colliders, AABB/OBB/circle/polygon shapes, and optional ImGui debug overlay.
 - Asset store for textures, prefab factory for named entity constructors, and an audio manager for sounds/music.
-- Particle emitter entity with configurable spawn/render functions and helper spawn shapes.
+- Particle emitter component with configurable spawn/render functions and helper spawn shapes.
 - Tilemap support using Tiled/JSON (via Tileson) with proper source-rect handling and per-tile flip flags.
 - Optional debug overlays via ImGui (toggle with `F1` in the examples).
 
@@ -90,7 +90,7 @@ runtime.run();
 
 - Derive from `Scene`, override lifecycle methods, and call `Scene::update(dt)` so tweens/entities/collisions run.
 - Use `setSingleView(camera)` for a full-screen camera or `runtime().addView(...)` to build split-screen/minimap layouts.
-- Spawn entities with `spawn<T>()`; add components like `Transform`, `Sprite`, `SpriteAnim`, `SheetSprite`, `ParticleEmitterEntity`, or colliders to them.
+- Spawn entities with `spawn<T>()`; add components like `Transform`, `Sprite`, `SpriteAnim`, `SheetSprite`, `ParticleEmitter`, or colliders to them.
 - Scenes own local event buses (`sceneEvents()`), tween and collision systems, and auto-cleaned view handles.
 
 ```cpp
@@ -147,7 +147,7 @@ private:
 
 ### Particles, tweens, and tilemaps
 
-- `ParticleEmitterEntity` lets you supply spawn and render callbacks; helpers like `spawnInBox`/`spawnOnLine` build common patterns.
+- `ParticleEmitter` (component) lets you supply spawn and render callbacks; helpers like `spawnInBox`/`spawnOnLine` build common patterns.
 - `tweens().add(Tween(duration, applyFn, easeFn))` for simple time-based animations (`easeLinear`, `easeOutQuad` included).
 - Load Tiled maps with `Tilemap::loadTMX(scene, texture, "map.tmj", "LayerName")`; flip flags and spacing/margins are handled automatically.
 

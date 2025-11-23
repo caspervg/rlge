@@ -1,12 +1,26 @@
+#include <utility>
+
 #include "debug.hpp"
 #include "runtime.hpp"
 #include "window.hpp"
 #include "particle_emitter.hpp"
+#include "transformer.hpp"
 
 #include "imgui.h"
 #include "raylib.h"
 
 using namespace rlge;
+
+class ParticleEmitterEntity final : public RenderEntity {
+public:
+    ParticleEmitterEntity(Scene& scene, ParticleEmitterConfig cfg, ParticleEmitter::RenderFn renderFn)
+        : RenderEntity(scene)
+        , emitter(add<ParticleEmitter>(cfg, std::move(renderFn))) {
+        add<rlge::Transform>();
+    }
+
+    ParticleEmitter& emitter;
+};
 
 class FpsCounter final : public RenderEntity {
 public:
@@ -35,9 +49,10 @@ public:
         camera_ = rlge::Camera();
         setSingleView(camera_);
 
-        emitter_ = &spawn<ParticleEmitter>(mouseCfg, [](const Particle& p) {
+        emitterEntity_ = &spawn<ParticleEmitterEntity>(mouseCfg, [](const Particle& p) {
             DrawCircleV(p.pos, p.size, p.color);
         });
+        emitter_ = emitterEntity_ ? &emitterEntity_->emitter : nullptr;
 
         ParticleEmitterConfig rainCfg{
             .localOffset = {0.0f, 0.0f},
@@ -51,11 +66,12 @@ public:
             .endColor = Fade(SKYBLUE, 0.1f)
         };
 
-        rainEmitter_ = &spawn<ParticleEmitter>(rainCfg, [](const Particle& p) {
+        rainEmitterEntity_ = &spawn<ParticleEmitterEntity>(rainCfg, [](const Particle& p) {
             // Simple raindrop: short line segment falling down.
             const Vector2 end{p.pos.x, p.pos.y + p.size * 2.0f};
             DrawLineV(p.pos, end, p.color);
         });
+        rainEmitter_ = rainEmitterEntity_ ? &rainEmitterEntity_->emitter : nullptr;
 
         fps_ = &spawn<FpsCounter>();
 
@@ -63,7 +79,7 @@ public:
             return;
 
         // Emit around the origin within a small box when using the mouse-following origin.
-        emitter_->setSpawnFn([](Vector2 origin) {
+        emitter_->setSpawnFn([](const Vector2 origin) {
             return spawnInBox(origin, 30.0f, 30.0f);
         });
 
@@ -79,11 +95,18 @@ public:
 
     void update(float dt) override {
         // Move emitter origin with mouse in world space for a more interactive demo.
-        if (emitter_) {
+        if (emitterEntity_) {
             const Vector2 mouse = GetMousePosition();
             const auto& cam = camera_.cam2d();
             const Vector2 worldMouse = GetScreenToWorld2D(mouse, cam);
-            emitter_->setLocalOffset(worldMouse);
+            if (auto* t = emitterEntity_->get<rlge::Transform>()) {
+                t->position = worldMouse;
+            }
+        }
+
+        // Burst on click for a one-shot effect at the mouse position.
+        if (emitter_ && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            emitter_->burst(burstCount_);
         }
 
         Scene::update(dt);
@@ -100,7 +123,7 @@ public:
             emitter_->setEmitRate(rate);
         }
 
-        int maxParticles = static_cast<int>(emitter_->maxParticles());
+        auto maxParticles = static_cast<int>(emitter_->maxParticles());
         if (ImGui::SliderInt("Max particles", &maxParticles, 0, 5000)) {
             emitter_->setMaxParticles(static_cast<std::size_t>(maxParticles));
         }
@@ -173,14 +196,24 @@ public:
             emitter_->setGravity(gravity);
         }
 
+        ImGui::Separator();
+        ImGui::Text("Burst on click");
+        ImGui::SliderInt("Burst count", &burstCount_, 0, 1000);
+        if (ImGui::Button("Trigger burst now") && emitter_) {
+            emitter_->burst(burstCount_);
+        }
+
         ImGui::End();
     }
 
 private:
+    ParticleEmitterEntity* emitterEntity_{nullptr};
+    ParticleEmitterEntity* rainEmitterEntity_{nullptr};
     ParticleEmitter* emitter_{nullptr};
     ParticleEmitter* rainEmitter_{nullptr};
     FpsCounter* fps_{nullptr};
     rlge::Camera camera_;
+    int burstCount_{150};
 };
 
 int main() {

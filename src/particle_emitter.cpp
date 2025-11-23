@@ -1,6 +1,7 @@
 #include "particle_emitter.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <cmath>
 
 #include "transformer.hpp"
@@ -37,14 +38,22 @@ namespace rlge {
         Component::update(dt);
         if (emitting_) {
             emitAccumulator_ += emitRate_ * dt;
-            while (emitAccumulator_ >= 1.0f && particles_.size() < maxParticles_) {
-                emitAccumulator_ -= 1.0f;
-                spawnParticle();
-            }
-
-            // Stop after burst if one-shot
-            if (oneShot_ && emitAccumulator_ >= 0.0f) {
-                emitting_ = false;
+            if (oneShot_) {
+                while (emitAccumulator_ >= 1.0f && particles_.size() < maxParticles_ && oneShotRemaining_ > 0) {
+                    emitAccumulator_ -= 1.0f;
+                    spawnParticle();
+                    if (oneShotRemaining_ > 0)
+                        --oneShotRemaining_;
+                }
+                if (oneShotRemaining_ == 0) {
+                    emitting_ = false;
+                    emitAccumulator_ = 0.0f;
+                }
+            } else {
+                while (emitAccumulator_ >= 1.0f && particles_.size() < maxParticles_) {
+                    emitAccumulator_ -= 1.0f;
+                    spawnParticle();
+                }
             }
         }
 
@@ -77,7 +86,7 @@ namespace rlge {
         if (!renderFn_)
             return;
 
-        auto rq = entity().scene().rq();
+        auto& rq = entity().scene().rq();
         rq.submitWorld([this] {
             if (!renderFn_)
                 return;
@@ -89,11 +98,23 @@ namespace rlge {
     }
 
     void ParticleEmitter::burst(int count) {
-        for (auto i = 0; i < count; ++i) {
+        if (count <= 0)
+            return;
+
+        int spawnCount = count;
+        if (oneShot_) {
+            spawnCount = static_cast<int>(std::min<std::size_t>(oneShotRemaining_, static_cast<std::size_t>(count)));
+        }
+
+        for (auto i = 0; i < spawnCount; ++i) {
             if (particles_.size() < maxParticles_) {
                 spawnParticle();
+                if (oneShot_ && oneShotRemaining_ > 0)
+                    --oneShotRemaining_;
             }
         }
+        if (oneShot_ && oneShotRemaining_ == 0)
+            emitting_ = false;
     }
 
     void ParticleEmitter::clear() {
@@ -104,6 +125,8 @@ namespace rlge {
         localOffset_ = cfg.localOffset;
         emitRate_ = cfg.emitRate;
         maxParticles_ = cfg.maxParticles;
+        oneShotCount_ = cfg.oneShotCount;
+        oneShotRemaining_ = cfg.oneShotCount;
         minLifetime_ = cfg.minLifetime;
         maxLifetime_ = cfg.maxLifetime;
         minSpeed_ = cfg.minSpeed;
@@ -116,6 +139,7 @@ namespace rlge {
         startColor_ = cfg.startColor;
         endColor_ = cfg.endColor;
         oneShot_ = cfg.oneShot;
+        enforceMaxParticles();
     }
 
     void ParticleEmitter::spawnParticle() {
@@ -124,6 +148,7 @@ namespace rlge {
 
         Particle p;
 
+        const Transform* transform = entity().get<Transform>();
         const Vector2 worldOrigin = getWorldOrigin();
         const Vector2 spawnPos = spawnFn_ ? spawnFn_(worldOrigin) : worldOrigin;
         p.pos = spawnPos;
@@ -134,14 +159,17 @@ namespace rlge {
 
         const float speed = lerp(minSpeed_, maxSpeed_, randUnit());
         const float local = (-spread_ * 0.5f) + spread_ * randUnit();
-        const float angle = direction_ + local;
+        const float angle = direction_ + (transform ? transform->rotation : 0.0f) + local;
 
         p.vel = {
             std::cos(angle) * speed,
             std::sin(angle) * speed
         };
 
-        p.size = lerp(minSize_, maxSize_, randUnit());
+        const float sizeScale = transform
+            ? std::max(std::abs(transform->scale.x), std::abs(transform->scale.y))
+            : 1.0f;
+        p.size = lerp(minSize_, maxSize_, randUnit()) * sizeScale;
         p.rotation = angle;
         p.color = startColor_;
 
@@ -150,9 +178,18 @@ namespace rlge {
 
     Vector2 ParticleEmitter::getWorldOrigin() const {
         if (auto* const t = entity().get<Transform>()) {
-            return t->position + localOffset_;
+            const Vector2 scaledOffset{localOffset_.x * t->scale.x, localOffset_.y * t->scale.y};
+            const Vector2 rotatedOffset = Vector2Rotate(scaledOffset, t->rotation);
+            return t->position + rotatedOffset;
         }
         return localOffset_;
+    }
+
+    void ParticleEmitter::enforceMaxParticles() {
+        if (particles_.size() <= maxParticles_)
+            return;
+        const auto toRemove = particles_.size() - maxParticles_;
+        particles_.erase(particles_.begin(), particles_.begin() + static_cast<std::ptrdiff_t>(toRemove));
     }
 
     Vector2 spawnOnLine(const Vector2 a, const Vector2 b) {

@@ -23,6 +23,7 @@ namespace rlge {
         Vector2 localOffset{0.0f, 0.0f};
         float emitRate{50.0f};
         std::size_t maxParticles{500};
+        std::size_t oneShotCount{0};
         float minLifetime{0.4f};
         float maxLifetime{1.0f};
         float minSpeed{50.0f};
@@ -56,7 +57,7 @@ namespace rlge {
         void setEmitRate(const float rate) { emitRate_ = rate; }
         [[nodiscard]] float emitRate() const { return emitRate_; }
 
-        void setMaxParticles(const std::size_t max) { maxParticles_ = max; }
+        void setMaxParticles(const std::size_t max) { maxParticles_ = max; enforceMaxParticles(); }
         [[nodiscard]] std::size_t maxParticles() const { return maxParticles_; }
 
         void setLifetimeRange(const float minL, const float maxL) {
@@ -98,11 +99,13 @@ namespace rlge {
 
         void setOneShot(const bool oneShot) { oneShot_ = oneShot; }
         [[nodiscard]] bool oneShot() const { return oneShot_; }
+        void setOneShotCount(std::size_t count) { oneShotCount_ = count; oneShotRemaining_ = count; }
+        [[nodiscard]] std::size_t oneShotCount() const { return oneShotCount_; }
 
         // Controls
-        void start() { emitting_ = true; }
+        void start() { emitting_ = true; emitAccumulator_ = 0.0f; oneShotRemaining_ = oneShotCount_; }
         void stop() { emitting_ = false; }
-        void burst(int count); // Emit 'count' particles immediately
+        void burst(int count); // Emit 'count' particles immediately (respects one-shot remaining)
         void clear(); // Remove all particles
 
         // State
@@ -119,6 +122,8 @@ namespace rlge {
 
         float emitRate_{50.0f};            // particles per second
         std::size_t maxParticles_{500};    // soft cap
+        std::size_t oneShotCount_{0};
+        std::size_t oneShotRemaining_{0};
 
         float minLifetime_{0.4f};
         float maxLifetime_{1.0f};
@@ -139,6 +144,7 @@ namespace rlge {
 
         void applyConfig(const ParticleEmitterConfig& cfg);
         void spawnParticle();
+        void enforceMaxParticles();
         [[nodiscard]] Vector2 getWorldOrigin() const;
     };
 
