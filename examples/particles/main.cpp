@@ -35,12 +35,12 @@ public:
         camera_ = rlge::Camera();
         setSingleView(camera_);
 
-        emitter_ = &spawn<ParticleEmitterEntity>(mouseCfg, [](const Particle& p) {
+        emitter_ = &spawn<ParticleEmitter>(mouseCfg, [](const Particle& p) {
             DrawCircleV(p.pos, p.size, p.color);
         });
 
         ParticleEmitterConfig rainCfg{
-            .origin = {0.0f, 0.0f},
+            .localOffset = {0.0f, 0.0f},
             .emitRate = 800.0f,
             .minLifetime = 1.0f,
             .maxLifetime = 3.5f,
@@ -51,7 +51,7 @@ public:
             .endColor = Fade(SKYBLUE, 0.1f)
         };
 
-        rainEmitter_ = &spawn<ParticleEmitterEntity>(rainCfg, [](const Particle& p) {
+        rainEmitter_ = &spawn<ParticleEmitter>(rainCfg, [](const Particle& p) {
             // Simple raindrop: short line segment falling down.
             const Vector2 end{p.pos.x, p.pos.y + p.size * 2.0f};
             DrawLineV(p.pos, end, p.color);
@@ -83,7 +83,7 @@ public:
             const Vector2 mouse = GetMousePosition();
             const auto& cam = camera_.cam2d();
             const Vector2 worldMouse = GetScreenToWorld2D(mouse, cam);
-            emitter_->setOrigin(worldMouse);
+            emitter_->setLocalOffset(worldMouse);
         }
 
         Scene::update(dt);
@@ -177,8 +177,8 @@ public:
     }
 
 private:
-    ParticleEmitterEntity* emitter_{nullptr};
-    ParticleEmitterEntity* rainEmitter_{nullptr};
+    ParticleEmitter* emitter_{nullptr};
+    ParticleEmitter* rainEmitter_{nullptr};
     FpsCounter* fps_{nullptr};
     rlge::Camera camera_;
 };

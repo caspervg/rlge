@@ -20,7 +20,7 @@ namespace rlge {
     };
 
     struct ParticleEmitterConfig {
-        Vector2 origin{0.0f, 0.0f};
+        Vector2 localOffset{0.0f, 0.0f};
         float emitRate{50.0f};
         std::size_t maxParticles{500};
         float minLifetime{0.4f};
@@ -34,29 +34,24 @@ namespace rlge {
         Vector2 gravity{0.0f, 50.0f};
         Color startColor{WHITE};
         Color endColor{Fade(WHITE, 0.0f)};
+        bool oneShot{false};
     };
 
-    // Simple CPU-side particle emitter implemented as a RenderEntity.
-    // - Keeps particles in a contiguous vector for good locality.
-    // - Uses a single render callback per emitter; the callback decides how to draw each particle.
-    class ParticleEmitterEntity : public RenderEntity {
+    class ParticleEmitter : public Component {
     public:
         using RenderFn = std::function<void(const Particle&)>;
         using SpawnFn = std::function<Vector2(Vector2 origin)>;
 
-        ParticleEmitterEntity(Scene& scene, const ParticleEmitterConfig& cfg, RenderFn renderFn);
-        ParticleEmitterEntity(Scene& scene, RenderFn renderFn);
-        ParticleEmitterEntity(Scene& scene);
+        ParticleEmitter(Entity& entity, const ParticleEmitterConfig& cfg, RenderFn renderFn);
+        ParticleEmitter(Entity& entity, RenderFn renderFn);
+        explicit ParticleEmitter(Entity& entity);
 
         void update(float dt) override;
         void draw() override;
 
-        void setSpawnFn(SpawnFn fn) { spawnFn_ = std::move(fn); }
-        [[nodiscard]] const SpawnFn& spawnFn() const { return spawnFn_; }
-
         // Configuration helpers
-        void setOrigin(const Vector2 origin) { origin_ = origin; }
-        [[nodiscard]] Vector2 origin() const { return origin_; }
+        void setLocalOffset(const Vector2 localOffset) { localOffset_ = localOffset; }
+        [[nodiscard]] Vector2 origin() const { return localOffset_; }
 
         void setEmitRate(const float rate) { emitRate_ = rate; }
         [[nodiscard]] float emitRate() const { return emitRate_; }
@@ -98,12 +93,29 @@ namespace rlge {
         [[nodiscard]] Color startColor() const { return startColor_; }
         [[nodiscard]] Color endColor() const { return endColor_; }
 
+        void setSpawnFn(SpawnFn fn) { spawnFn_ = std::move(fn); }
+        [[nodiscard]] const SpawnFn& spawnFn() const { return spawnFn_; }
+
+        void setOneShot(const bool oneShot) { oneShot_ = oneShot; }
+        [[nodiscard]] bool oneShot() const { return oneShot_; }
+
+        // Controls
+        void start() { emitting_ = true; }
+        void stop() { emitting_ = false; }
+        void burst(int count); // Emit 'count' particles immediately
+        void clear(); // Remove all particles
+
+        // State
+        [[nodiscard]] bool emitting() const { return emitting_; }
+        [[nodiscard]] bool isDone() const { return oneShot_ && !emitting_ && particles_.empty(); }
+        [[nodiscard]] std::size_t particleCount() const { return particles_.size(); }
+
     private:
         std::vector<Particle> particles_;
         RenderFn renderFn_;
         SpawnFn spawnFn_;
 
-        Vector2 origin_{0.0f, 0.0f};
+        Vector2 localOffset_{0.0f, 0.0f};
 
         float emitRate_{50.0f};            // particles per second
         std::size_t maxParticles_{500};    // soft cap
@@ -121,13 +133,16 @@ namespace rlge {
         Color startColor_{WHITE};
         Color endColor_{Fade(WHITE, 0.0f)};
 
+        bool oneShot_{false};
+        bool emitting_{true};
         float emitAccumulator_{0.0f};
 
         void applyConfig(const ParticleEmitterConfig& cfg);
         void spawnParticle();
+        [[nodiscard]] Vector2 getWorldOrigin() const;
     };
 
-    inline void ParticleEmitterEntity::setColorRange(Color start, Color end) {
+    inline void ParticleEmitter::setColorRange(const Color start, const Color end) {
         startColor_ = start;
         endColor_ = end;
     }

@@ -3,36 +3,105 @@
 #include <algorithm>
 #include <cmath>
 
+#include "transformer.hpp"
+
 namespace rlge {
 
     namespace {
-        inline float randUnit() {
+        float randUnit() {
             // Simple 0..1 helper using raylib's RNG.
             return static_cast<float>(GetRandomValue(0, 1000)) / 1000.0f;
         }
 
-        inline float lerp(float a, float b, float t) {
+        float lerp(const float a, const float b, const float t) {
             return a + (b - a) * t;
         }
     }
 
-    ParticleEmitterEntity::ParticleEmitterEntity(Scene& scene, const ParticleEmitterConfig& cfg, RenderFn renderFn)
-        : RenderEntity(scene)
+    ParticleEmitter::ParticleEmitter(Entity& entity, const ParticleEmitterConfig& cfg, RenderFn renderFn) :
+        Component(entity)
         , renderFn_(std::move(renderFn)) {
         applyConfig(cfg);
     }
 
-    ParticleEmitterEntity::ParticleEmitterEntity(Scene& scene, RenderFn renderFn)
-        : ParticleEmitterEntity(scene, ParticleEmitterConfig{}, std::move(renderFn)) {}
+    ParticleEmitter::ParticleEmitter(Entity& entity, RenderFn renderFn) :
+        ParticleEmitter(entity, ParticleEmitterConfig{}, std::move(renderFn)) {}
 
-    ParticleEmitterEntity::ParticleEmitterEntity(Scene& scene)
-        : ParticleEmitterEntity(
-            scene,
+    ParticleEmitter::ParticleEmitter(Entity& entity) :
+        ParticleEmitter(
+            entity,
             ParticleEmitterConfig{},
             [](const Particle& p) { DrawCircleV(p.pos, p.size, p.color); }) {}
 
-    void ParticleEmitterEntity::applyConfig(const ParticleEmitterConfig& cfg) {
-        origin_ = cfg.origin;
+    void ParticleEmitter::update(float dt) {
+        Component::update(dt);
+        if (emitting_) {
+            emitAccumulator_ += emitRate_ * dt;
+            while (emitAccumulator_ >= 1.0f && particles_.size() < maxParticles_) {
+                emitAccumulator_ -= 1.0f;
+                spawnParticle();
+            }
+
+            // Stop after burst if one-shot
+            if (oneShot_ && emitAccumulator_ >= 0.0f) {
+                emitting_ = false;
+            }
+        }
+
+        // Integrate and update particles.
+        for (auto& p : particles_) {
+            p.vel.x += gravity_.x * dt;
+            p.vel.y += gravity_.y * dt;
+            p.pos.x += p.vel.x * dt;
+            p.pos.y += p.vel.y * dt;
+            p.life -= dt;
+
+            const float t = 1.0f - (p.life / p.totalLife); // 0..1 as it ages
+
+            // Size over lifetime (shrink slightly towards end).
+            p.size = lerp(minSize_, maxSize_, 1.0f - t);
+
+            // Color over a lifetime.
+            const auto r = static_cast<unsigned char>(lerp(startColor_.r, endColor_.r, t));
+            const auto g = static_cast<unsigned char>(lerp(startColor_.g, endColor_.g, t));
+            const auto b = static_cast<unsigned char>(lerp(startColor_.b, endColor_.b, t));
+            const auto a = static_cast<unsigned char>(lerp(startColor_.a, endColor_.a, t));
+            p.color = {r, g, b, a};
+        }
+
+        // Remove dead particles.
+        std::erase_if(particles_,[](const Particle& p) { return p.life <= 0.0f; });
+    }
+
+    void ParticleEmitter::draw() {
+        if (!renderFn_)
+            return;
+
+        auto rq = entity().scene().rq();
+        rq.submitWorld([this] {
+            if (!renderFn_)
+                return;
+
+            for (const auto& p : particles_) {
+                renderFn_(p);
+            }
+        });
+    }
+
+    void ParticleEmitter::burst(int count) {
+        for (auto i = 0; i < count; ++i) {
+            if (particles_.size() < maxParticles_) {
+                spawnParticle();
+            }
+        }
+    }
+
+    void ParticleEmitter::clear() {
+        particles_.clear();
+    }
+
+    void ParticleEmitter::applyConfig(const ParticleEmitterConfig& cfg) {
+        localOffset_ = cfg.localOffset;
         emitRate_ = cfg.emitRate;
         maxParticles_ = cfg.maxParticles;
         minLifetime_ = cfg.minLifetime;
@@ -46,16 +115,17 @@ namespace rlge {
         gravity_ = cfg.gravity;
         startColor_ = cfg.startColor;
         endColor_ = cfg.endColor;
+        oneShot_ = cfg.oneShot;
     }
 
-    void ParticleEmitterEntity::spawnParticle() {
+    void ParticleEmitter::spawnParticle() {
         if (particles_.size() >= maxParticles_)
             return;
 
         Particle p;
 
-        const Vector2 base = origin_;
-        const Vector2 spawnPos = spawnFn_ ? spawnFn_(base) : base;
+        const Vector2 worldOrigin = getWorldOrigin();
+        const Vector2 spawnPos = spawnFn_ ? spawnFn_(worldOrigin) : worldOrigin;
         p.pos = spawnPos;
 
         const float life = lerp(minLifetime_, maxLifetime_, randUnit());
@@ -78,53 +148,11 @@ namespace rlge {
         particles_.push_back(p);
     }
 
-    void ParticleEmitterEntity::update(float dt) {
-        RenderEntity::update(dt);
-
-        // Spawn new particles based on emit rate.
-        emitAccumulator_ += emitRate_ * dt;
-        while (emitAccumulator_ >= 1.0f && particles_.size() < maxParticles_) {
-            emitAccumulator_ -= 1.0f;
-            spawnParticle();
+    Vector2 ParticleEmitter::getWorldOrigin() const {
+        if (auto* const t = entity().get<Transform>()) {
+            return t->position + localOffset_;
         }
-
-        // Integrate and update particles.
-        for (auto& p : particles_) {
-            p.vel.x += gravity_.x * dt;
-            p.vel.y += gravity_.y * dt;
-            p.pos.x += p.vel.x * dt;
-            p.pos.y += p.vel.y * dt;
-            p.life -= dt;
-
-            const float t = 1.0f - (p.life / p.totalLife); // 0..1 as it ages
-
-            // Size over lifetime (shrink slightly towards end).
-            p.size = lerp(minSize_, maxSize_, 1.0f - t);
-
-            // Color over lifetime.
-            const unsigned char r = static_cast<unsigned char>(lerp(static_cast<float>(startColor_.r), static_cast<float>(endColor_.r), t));
-            const unsigned char g = static_cast<unsigned char>(lerp(static_cast<float>(startColor_.g), static_cast<float>(endColor_.g), t));
-            const unsigned char b = static_cast<unsigned char>(lerp(static_cast<float>(startColor_.b), static_cast<float>(endColor_.b), t));
-            const unsigned char a = static_cast<unsigned char>(lerp(static_cast<float>(startColor_.a), static_cast<float>(endColor_.a), t));
-            p.color = { r, g, b, a };
-        }
-
-        // Remove dead particles.
-        particles_.erase(
-            std::remove_if(particles_.begin(), particles_.end(),
-                           [](const Particle& p) { return p.life <= 0.0f; }),
-            particles_.end());
-    }
-
-    void ParticleEmitterEntity::draw() {
-        rq().submitWorld([this] {
-            if (!renderFn_)
-                return;
-
-            for (const auto& p : particles_) {
-                renderFn_(p);
-            }
-        });
+        return localOffset_;
     }
 
     Vector2 spawnOnLine(const Vector2 a, const Vector2 b) {
