@@ -15,7 +15,7 @@ namespace rlge {
     public:
         virtual ~Entity();
 
-        EntityId id() const;
+        [[nodiscard]] EntityId id() const;
 
         virtual void update(float dt);
         virtual void draw();

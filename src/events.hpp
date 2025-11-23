@@ -33,7 +33,7 @@ namespace rlge {
         // Unsubscribe a previously registered handler.
         template <typename Event>
         void unsubscribe(SubscriptionId id) {
-            auto it = handlers_.find(std::type_index(typeid(Event)));
+            const auto it = handlers_.find(std::type_index(typeid(Event)));
             if (it == handlers_.end())
                 return;
             auto* base = it->second.get();
@@ -50,7 +50,7 @@ namespace rlge {
         // Immediately deliver an event to all subscribers of its type.
         template <typename Event>
         void publish(const Event& ev) {
-            auto it = handlers_.find(std::type_index(typeid(Event)));
+            const auto it = handlers_.find(std::type_index(typeid(Event)));
             if (it == handlers_.end())
                 return;
             auto* base = it->second.get();
@@ -73,7 +73,7 @@ namespace rlge {
         void dispatchQueued() {
             if (queue_.empty())
                 return;
-            auto current = std::move(queue_);
+            const auto current = std::move(queue_);
             queue_.clear();
             for (auto& fn : current) {
                 if (fn)
@@ -92,7 +92,7 @@ namespace rlge {
         };
 
         template <typename Event>
-        struct HandlerList : IHandlerList {
+        struct HandlerList final : IHandlerList {
             struct Entry {
                 SubscriptionId id;
                 Handler<Event> fn;

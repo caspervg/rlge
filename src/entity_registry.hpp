@@ -12,7 +12,7 @@ namespace rlge {
     struct EntityId {
         uint32_t index = 0;
         uint32_t generation = 0;
-        bool valid() const { return generation != 0; }
+        [[nodiscard]] bool valid() const { return generation != 0; }
         bool operator==(const EntityId&) const = default;
     };
 
@@ -42,7 +42,7 @@ namespace rlge {
             free_.push_back(id.index);
         }
 
-        Entity* get(EntityId id) const {
+        [[nodiscard]] Entity* get(EntityId id) const {
             if (!alive(id))
                 return nullptr;
             return entities_[id.index];
@@ -53,7 +53,7 @@ namespace rlge {
         std::vector<uint32_t> generations_;
         std::vector<uint32_t> free_;
 
-        bool alive(const EntityId id) const {
+        [[nodiscard]] bool alive(const EntityId id) const {
             return id.index < generations_.size()
                 && generations_[id.index] == id.generation
                 && entities_[id.index] != nullptr;
