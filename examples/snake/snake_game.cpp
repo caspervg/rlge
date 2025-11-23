@@ -111,7 +111,7 @@ namespace snake {
         if (ateApple) {
             ++score_;
             if (sceneBus_) {
-                sceneBus_->enqueue(AppleEaten{1});
+                sceneBus_->enqueue(AppleEaten{1, appleX_, appleY_, tileCenter(appleX_, appleY_)});
             }
             spawnApple();
             moveInterval_ *= 0.97f; // Speed up a little each time

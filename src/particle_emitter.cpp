@@ -1,7 +1,6 @@
 #include "particle_emitter.hpp"
 
 #include <algorithm>
-#include <cstddef>
 #include <cmath>
 
 #include "transformer.hpp"
@@ -19,45 +18,45 @@ namespace rlge {
         }
     }
 
-    ParticleEmitter::ParticleEmitter(Entity& entity, const ParticleEmitterConfig& cfg, RenderFn renderFn) :
+    ParticleEmitter::ParticleEmitter(Entity& entity, RenderFn renderFn) :
         Component(entity)
-        , renderFn_(std::move(renderFn)) {
-        applyConfig(cfg);
+        , renderFn_(std::move(renderFn)) {}
+
+    void ParticleEmitter::applyConfig(const ContinuousEmitterConfig& cfg) {
+        localOffset_ = cfg.localOffset;
+        maxParticles_ = cfg.maxParticles;
+        minLifetime_ = cfg.minLifetime;
+        maxLifetime_ = cfg.maxLifetime;
+        minSpeed_ = cfg.minSpeed;
+        maxSpeed_ = cfg.maxSpeed;
+        minSize_ = cfg.minSize;
+        maxSize_ = cfg.maxSize;
+        spread_ = cfg.spread;
+        direction_ = cfg.direction;
+        gravity_ = cfg.gravity;
+        startColor_ = cfg.startColor;
+        endColor_ = cfg.endColor;
+        enforceMaxParticles();
     }
 
-    ParticleEmitter::ParticleEmitter(Entity& entity, RenderFn renderFn) :
-        ParticleEmitter(entity, ParticleEmitterConfig{}, std::move(renderFn)) {}
+    void ParticleEmitter::applyConfig(const BurstEmitterConfig& cfg) {
+        localOffset_ = cfg.localOffset;
+        maxParticles_ = cfg.maxParticles;
+        minLifetime_ = cfg.minLifetime;
+        maxLifetime_ = cfg.maxLifetime;
+        minSpeed_ = cfg.minSpeed;
+        maxSpeed_ = cfg.maxSpeed;
+        minSize_ = cfg.minSize;
+        maxSize_ = cfg.maxSize;
+        spread_ = cfg.spread;
+        direction_ = cfg.direction;
+        gravity_ = cfg.gravity;
+        startColor_ = cfg.startColor;
+        endColor_ = cfg.endColor;
+        enforceMaxParticles();
+    }
 
-    ParticleEmitter::ParticleEmitter(Entity& entity) :
-        ParticleEmitter(
-            entity,
-            ParticleEmitterConfig{},
-            [](const Particle& p) { DrawCircleV(p.pos, p.size, p.color); }) {}
-
-    void ParticleEmitter::update(float dt) {
-        Component::update(dt);
-        if (emitting_) {
-            emitAccumulator_ += emitRate_ * dt;
-            if (oneShot_) {
-                while (emitAccumulator_ >= 1.0f && particles_.size() < maxParticles_ && oneShotRemaining_ > 0) {
-                    emitAccumulator_ -= 1.0f;
-                    spawnParticle();
-                    if (oneShotRemaining_ > 0)
-                        --oneShotRemaining_;
-                }
-                if (oneShotRemaining_ == 0) {
-                    emitting_ = false;
-                    emitAccumulator_ = 0.0f;
-                }
-            } else {
-                while (emitAccumulator_ >= 1.0f && particles_.size() < maxParticles_) {
-                    emitAccumulator_ -= 1.0f;
-                    spawnParticle();
-                }
-            }
-        }
-
-        // Integrate and update particles.
+    void ParticleEmitter::integrateParticles(const float dt) {
         for (auto& p : particles_) {
             p.vel.x += gravity_.x * dt;
             p.vel.y += gravity_.y * dt;
@@ -78,11 +77,10 @@ namespace rlge {
             p.color = {r, g, b, a};
         }
 
-        // Remove dead particles.
         std::erase_if(particles_,[](const Particle& p) { return p.life <= 0.0f; });
     }
 
-    void ParticleEmitter::draw() {
+    void ParticleEmitter::drawParticles() {
         if (!renderFn_)
             return;
 
@@ -95,51 +93,6 @@ namespace rlge {
                 renderFn_(p);
             }
         });
-    }
-
-    void ParticleEmitter::burst(int count) {
-        if (count <= 0)
-            return;
-
-        int spawnCount = count;
-        if (oneShot_) {
-            spawnCount = static_cast<int>(std::min<std::size_t>(oneShotRemaining_, static_cast<std::size_t>(count)));
-        }
-
-        for (auto i = 0; i < spawnCount; ++i) {
-            if (particles_.size() < maxParticles_) {
-                spawnParticle();
-                if (oneShot_ && oneShotRemaining_ > 0)
-                    --oneShotRemaining_;
-            }
-        }
-        if (oneShot_ && oneShotRemaining_ == 0)
-            emitting_ = false;
-    }
-
-    void ParticleEmitter::clear() {
-        particles_.clear();
-    }
-
-    void ParticleEmitter::applyConfig(const ParticleEmitterConfig& cfg) {
-        localOffset_ = cfg.localOffset;
-        emitRate_ = cfg.emitRate;
-        maxParticles_ = cfg.maxParticles;
-        oneShotCount_ = cfg.oneShotCount;
-        oneShotRemaining_ = cfg.oneShotCount;
-        minLifetime_ = cfg.minLifetime;
-        maxLifetime_ = cfg.maxLifetime;
-        minSpeed_ = cfg.minSpeed;
-        maxSpeed_ = cfg.maxSpeed;
-        minSize_ = cfg.minSize;
-        maxSize_ = cfg.maxSize;
-        spread_ = cfg.spread;
-        direction_ = cfg.direction;
-        gravity_ = cfg.gravity;
-        startColor_ = cfg.startColor;
-        endColor_ = cfg.endColor;
-        oneShot_ = cfg.oneShot;
-        enforceMaxParticles();
     }
 
     void ParticleEmitter::spawnParticle() {
@@ -176,6 +129,13 @@ namespace rlge {
         particles_.push_back(p);
     }
 
+    void ParticleEmitter::enforceMaxParticles() {
+        if (particles_.size() <= maxParticles_)
+            return;
+        const auto toRemove = particles_.size() - maxParticles_;
+        particles_.erase(particles_.begin(), particles_.begin() + static_cast<std::ptrdiff_t>(toRemove));
+    }
+
     Vector2 ParticleEmitter::getWorldOrigin() const {
         if (auto* const t = entity().get<Transform>()) {
             const Vector2 scaledOffset{localOffset_.x * t->scale.x, localOffset_.y * t->scale.y};
@@ -185,11 +145,88 @@ namespace rlge {
         return localOffset_;
     }
 
-    void ParticleEmitter::enforceMaxParticles() {
-        if (particles_.size() <= maxParticles_)
-            return;
-        const auto toRemove = particles_.size() - maxParticles_;
-        particles_.erase(particles_.begin(), particles_.begin() + static_cast<std::ptrdiff_t>(toRemove));
+    // Continuous emitter
+    ContinuousParticleEmitter::ContinuousParticleEmitter(Entity& entity, const ContinuousEmitterConfig& cfg, RenderFn renderFn) :
+        ParticleEmitter(entity, std::move(renderFn)) {
+        applyConfig(cfg);
+    }
+
+    ContinuousParticleEmitter::ContinuousParticleEmitter(Entity& entity, RenderFn renderFn) :
+        ContinuousParticleEmitter(entity, ContinuousEmitterConfig{}, std::move(renderFn)) {}
+
+    ContinuousParticleEmitter::ContinuousParticleEmitter(Entity& entity) :
+        ContinuousParticleEmitter(
+            entity,
+            ContinuousEmitterConfig{},
+            [](const Particle& p) { DrawCircleV(p.pos, p.size, p.color); }) {}
+
+    void ContinuousParticleEmitter::update(const float dt) {
+        Component::update(dt);
+        if (emitting_) {
+            emitAccumulator_ += emitRate_ * dt;
+            while (emitAccumulator_ >= 1.0f && particles_.size() < maxParticles_) {
+                emitAccumulator_ -= 1.0f;
+                spawnParticle();
+            }
+        }
+
+        integrateParticles(dt);
+    }
+
+    void ContinuousParticleEmitter::draw() {
+        drawParticles();
+    }
+
+    void ContinuousParticleEmitter::clear() {
+        particles_.clear();
+    }
+
+    // Burst emitter
+    BurstParticleEmitter::BurstParticleEmitter(Entity& entity, const BurstEmitterConfig& cfg, RenderFn renderFn) :
+        ParticleEmitter(entity, std::move(renderFn)) {
+        setConfig(cfg);
+    }
+
+    BurstParticleEmitter::BurstParticleEmitter(Entity& entity, RenderFn renderFn) :
+        BurstParticleEmitter(entity, BurstEmitterConfig{}, std::move(renderFn)) {}
+
+    BurstParticleEmitter::BurstParticleEmitter(Entity& entity) :
+        BurstParticleEmitter(
+            entity,
+            BurstEmitterConfig{},
+            [](const Particle& p) { DrawCircleV(p.pos, p.size, p.color); }) {}
+
+    void BurstParticleEmitter::update(const float dt) {
+        Component::update(dt);
+        integrateParticles(dt);
+        if (particles_.empty()) {
+            bursting_ = false;
+        }
+    }
+
+    void BurstParticleEmitter::draw() {
+        drawParticles();
+    }
+
+    void BurstParticleEmitter::setConfig(const BurstEmitterConfig& cfg) {
+        applyConfig(cfg);
+    }
+
+    void BurstParticleEmitter::burst(const std::size_t count) {
+        bursting_ = true;
+        const auto desired = static_cast<std::size_t>(count > 0 ? count : burstCount_);
+        for (std::size_t i = 0; i < desired; ++i) {
+            if (particles_.size() < maxParticles_) {
+                spawnParticle();
+            }
+        }
+    }
+
+    void BurstParticleEmitter::burst() { burst(burstCount_); }
+
+    void BurstParticleEmitter::clear() {
+        particles_.clear();
+        bursting_ = false;
     }
 
     Vector2 spawnOnLine(const Vector2 a, const Vector2 b) {

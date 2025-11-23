@@ -32,6 +32,9 @@ namespace snake {
 
     struct AppleEaten {
         int amount = 1;
+        int gridX = 0;
+        int gridY = 0;
+        Vector2 worldPos = {0.f, 0.f};
     };
 
     struct SnakeDied {};

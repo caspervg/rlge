@@ -19,11 +19,10 @@ namespace rlge {
         Color color{WHITE};
     };
 
-    struct ParticleEmitterConfig {
+    struct ContinuousEmitterConfig {
         Vector2 localOffset{0.0f, 0.0f};
         float emitRate{50.0f};
         std::size_t maxParticles{500};
-        std::size_t oneShotCount{0};
         float minLifetime{0.4f};
         float maxLifetime{1.0f};
         float minSpeed{50.0f};
@@ -35,7 +34,22 @@ namespace rlge {
         Vector2 gravity{0.0f, 50.0f};
         Color startColor{WHITE};
         Color endColor{Fade(WHITE, 0.0f)};
-        bool oneShot{false};
+    };
+
+    struct BurstEmitterConfig {
+        Vector2 localOffset{0.0f, 0.0f};
+        std::size_t maxParticles{200};
+        float minLifetime{0.2f};
+        float maxLifetime{0.7f};
+        float minSpeed{80.0f};
+        float maxSpeed{180.0f};
+        float minSize{2.0f};
+        float maxSize{6.0f};
+        float spread{3.14159265f};
+        float direction{0.0f};
+        Vector2 gravity{0.0f, 50.0f};
+        Color startColor{WHITE};
+        Color endColor{Fade(WHITE, 0.0f)};
     };
 
     class ParticleEmitter : public Component {
@@ -43,87 +57,51 @@ namespace rlge {
         using RenderFn = std::function<void(const Particle&)>;
         using SpawnFn = std::function<Vector2(Vector2 origin)>;
 
-        ParticleEmitter(Entity& entity, const ParticleEmitterConfig& cfg, RenderFn renderFn);
         ParticleEmitter(Entity& entity, RenderFn renderFn);
-        explicit ParticleEmitter(Entity& entity);
+        ~ParticleEmitter() override = default;
 
-        void update(float dt) override;
-        void draw() override;
-
-        // Configuration helpers
-        void setLocalOffset(const Vector2 localOffset) { localOffset_ = localOffset; }
+        void setLocalOffset(Vector2 localOffset) { localOffset_ = localOffset; }
         [[nodiscard]] Vector2 origin() const { return localOffset_; }
 
-        void setEmitRate(const float rate) { emitRate_ = rate; }
-        [[nodiscard]] float emitRate() const { return emitRate_; }
-
-        void setMaxParticles(const std::size_t max) { maxParticles_ = max; enforceMaxParticles(); }
+        void setMaxParticles(std::size_t max) { maxParticles_ = max; enforceMaxParticles(); }
         [[nodiscard]] std::size_t maxParticles() const { return maxParticles_; }
 
-        void setLifetimeRange(const float minL, const float maxL) {
-            minLifetime_ = minL;
-            maxLifetime_ = maxL;
-        }
+        void setLifetimeRange(float minL, float maxL) { minLifetime_ = minL; maxLifetime_ = maxL; }
         [[nodiscard]] float minLifetime() const { return minLifetime_; }
         [[nodiscard]] float maxLifetime() const { return maxLifetime_; }
 
-        void setSpeedRange(const float minS, const float maxS) {
-            minSpeed_ = minS;
-            maxSpeed_ = maxS;
-        }
+        void setSpeedRange(float minS, float maxS) { minSpeed_ = minS; maxSpeed_ = maxS; }
         [[nodiscard]] float minSpeed() const { return minSpeed_; }
         [[nodiscard]] float maxSpeed() const { return maxSpeed_; }
 
-        void setSizeRange(const float minS, const float maxS) {
-            minSize_ = minS;
-            maxSize_ = maxS;
-        }
+        void setSizeRange(float minS, float maxS) { minSize_ = minS; maxSize_ = maxS; }
         [[nodiscard]] float minSize() const { return minSize_; }
         [[nodiscard]] float maxSize() const { return maxSize_; }
 
-        void setSpread(const float radians) { spread_ = radians; }
+        void setSpread(float radians) { spread_ = radians; }
         [[nodiscard]] float spread() const { return spread_; }
 
-        void setDirection(const float radians) { direction_ = radians; }
+        void setDirection(float radians) { direction_ = radians; }
         [[nodiscard]] float direction() const { return direction_; }
 
-        void setGravity(const Vector2 g) { gravity_ = g; }
+        void setGravity(Vector2 g) { gravity_ = g; }
         [[nodiscard]] Vector2 gravity() const { return gravity_; }
 
         void setColorRange(Color start, Color end);
         [[nodiscard]] Color startColor() const { return startColor_; }
         [[nodiscard]] Color endColor() const { return endColor_; }
 
-        void setSpawnFn(SpawnFn fn) { spawnFn_ = std::move(fn); }
+        virtual void setSpawnFn(SpawnFn fn) { spawnFn_ = std::move(fn); }
         [[nodiscard]] const SpawnFn& spawnFn() const { return spawnFn_; }
 
-        void setOneShot(const bool oneShot) { oneShot_ = oneShot; }
-        [[nodiscard]] bool oneShot() const { return oneShot_; }
-        void setOneShotCount(std::size_t count) { oneShotCount_ = count; oneShotRemaining_ = count; }
-        [[nodiscard]] std::size_t oneShotCount() const { return oneShotCount_; }
-
-        // Controls
-        void start() { emitting_ = true; emitAccumulator_ = 0.0f; oneShotRemaining_ = oneShotCount_; }
-        void stop() { emitting_ = false; }
-        void burst(int count); // Emit 'count' particles immediately (respects one-shot remaining)
-        void clear(); // Remove all particles
-
-        // State
-        [[nodiscard]] bool emitting() const { return emitting_; }
-        [[nodiscard]] bool isDone() const { return oneShot_ && !emitting_ && particles_.empty(); }
-        [[nodiscard]] std::size_t particleCount() const { return particles_.size(); }
-
-    private:
+    protected:
         std::vector<Particle> particles_;
         RenderFn renderFn_;
         SpawnFn spawnFn_;
 
         Vector2 localOffset_{0.0f, 0.0f};
 
-        float emitRate_{50.0f};            // particles per second
         std::size_t maxParticles_{500};    // soft cap
-        std::size_t oneShotCount_{0};
-        std::size_t oneShotRemaining_{0};
 
         float minLifetime_{0.4f};
         float maxLifetime_{1.0f};
@@ -138,14 +116,71 @@ namespace rlge {
         Color startColor_{WHITE};
         Color endColor_{Fade(WHITE, 0.0f)};
 
-        bool oneShot_{false};
-        bool emitting_{true};
-        float emitAccumulator_{0.0f};
-
-        void applyConfig(const ParticleEmitterConfig& cfg);
+        void applyConfig(const ContinuousEmitterConfig& cfg);
+        void applyConfig(const BurstEmitterConfig& cfg);
+        void integrateParticles(float dt);
+        void drawParticles();
         void spawnParticle();
         void enforceMaxParticles();
         [[nodiscard]] Vector2 getWorldOrigin() const;
+    };
+
+    // Continuous emitter: emits over time at a rate
+    class ContinuousParticleEmitter : public ParticleEmitter {
+    public:
+        using RenderFn = std::function<void(const Particle&)>;
+        using SpawnFn = std::function<Vector2(Vector2 origin)>;
+
+        ContinuousParticleEmitter(Entity& entity, const ContinuousEmitterConfig& cfg, RenderFn renderFn);
+        ContinuousParticleEmitter(Entity& entity, RenderFn renderFn);
+        explicit ContinuousParticleEmitter(Entity& entity);
+
+        void update(float dt) override;
+        void draw() override;
+
+        void setEmitRate(const float rate) { emitRate_ = rate; }
+        [[nodiscard]] float emitRate() const { return emitRate_; }
+
+        // Controls
+        void start() { emitting_ = true; emitAccumulator_ = 0.0f; }
+        void stop() { emitting_ = false; }
+        void clear(); // Remove all particles
+
+        // State
+        [[nodiscard]] bool emitting() const { return emitting_; }
+        [[nodiscard]] std::size_t particleCount() const { return particles_.size(); }
+
+    private:
+        float emitRate_{50.0f};            // particles per second
+        bool emitting_{true};
+        float emitAccumulator_{0.0f};
+    };
+
+    class BurstParticleEmitter : public ParticleEmitter {
+    public:
+        using RenderFn = std::function<void(const Particle&)>;
+        using SpawnFn = std::function<Vector2(Vector2 origin)>;
+
+        BurstParticleEmitter(Entity& entity, const BurstEmitterConfig& cfg, RenderFn renderFn);
+        BurstParticleEmitter(Entity& entity, RenderFn renderFn);
+        explicit BurstParticleEmitter(Entity& entity);
+
+        void update(float dt) override;
+        void draw() override;
+
+        void setBurstCount(std::size_t c) { burstCount_ = c; }
+        [[nodiscard]] std::size_t burstCount() const { return burstCount_; }
+
+        void setConfig(const BurstEmitterConfig& cfg);
+
+        void burst(std::size_t count);
+        void burst();
+        void clear();
+        [[nodiscard]] bool isDone() const { return particles_.empty() && !bursting_; }
+
+    private:
+        std::size_t burstCount_{30};
+        bool bursting_{false};
     };
 
     inline void ParticleEmitter::setColorRange(const Color start, const Color end) {

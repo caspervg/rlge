@@ -8,6 +8,7 @@
 #include "window.hpp"
 
 #include "imgui.h"
+#include "particle_fx.hpp"
 #include "raylib.h"
 #include "raymath.h"
 
@@ -15,13 +16,13 @@ using namespace rlge;
 
 class ParticleEmitterEntity final : public RenderEntity {
 public:
-    ParticleEmitterEntity(Scene& scene, ParticleEmitterConfig cfg, ParticleEmitter::RenderFn renderFn)
+    ParticleEmitterEntity(Scene& scene, ContinuousEmitterConfig cfg, ContinuousParticleEmitter::RenderFn renderFn)
         : RenderEntity(scene)
-        , emitter(add<ParticleEmitter>(cfg, std::move(renderFn))) {
+        , emitter(add<ContinuousParticleEmitter>(cfg, std::move(renderFn))) {
         add<rlge::Transform>();
     }
 
-    ParticleEmitter& emitter;
+    ContinuousParticleEmitter& emitter;
 };
 
 class FpsCounter final : public RenderEntity {
@@ -42,7 +43,7 @@ public:
         Scene(r) {}
 
     void enter() override {
-        ParticleEmitterConfig mouseCfg{
+        ContinuousEmitterConfig mouseCfg{
             .emitRate = 250.0f,
             .spread = 2.0f * PI,
             .gravity = {0.0f, 50.0f}
@@ -57,7 +58,7 @@ public:
         });
         emitter_ = emitterEntity_ ? &emitterEntity_->emitter : nullptr;
 
-        ParticleEmitterConfig rainCfg{
+        ContinuousEmitterConfig rainCfg{
             .localOffset = {0.0f, 0.0f},
             .emitRate = 800.0f,
             .minLifetime = 1.0f,
@@ -107,9 +108,28 @@ public:
             }
         }
 
-        // Burst on click for a one-shot effect at the mouse position.
-        if (emitter_ && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-            emitter_->burst(burstCount_);
+        // Burst on click for a one-shot effect at the mouse position using a burst emitter helper.
+        if (emitterEntity_ && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            BurstEmitterConfig burstCfg;
+            burstCfg.maxParticles = static_cast<std::size_t>(burstCount_ * 2);
+            burstCfg.minLifetime = emitter_->minLifetime();
+            burstCfg.maxLifetime = emitter_->maxLifetime();
+            burstCfg.minSpeed = emitter_->minSpeed();
+            burstCfg.maxSpeed = emitter_->maxSpeed();
+            burstCfg.minSize = emitter_->minSize();
+            burstCfg.maxSize = emitter_->maxSize();
+            burstCfg.spread = emitter_->spread();
+            burstCfg.direction = emitter_->direction();
+            burstCfg.gravity = emitter_->gravity();
+            burstCfg.startColor = emitter_->startColor();
+            burstCfg.endColor = emitter_->endColor();
+            spawnBurstEmitter(
+                *this,
+                emitterEntity_->get<rlge::Transform>()->position,
+                burstCount_,
+                burstCfg,
+                [this](const Particle& p) { renderParticle(p, streaksEnabled_); },
+                emitter_->spawnFn());
         }
 
         Scene::update(dt);
@@ -236,7 +256,7 @@ private:
         DrawLineEx(tail, p.pos, p.size * 0.8f, p.color);
     }
 
-    void applyConfigToEmitter(const ParticleEmitterConfig& cfg) {
+    void applyConfigToEmitter(const ContinuousEmitterConfig& cfg) {
         if (!emitter_)
             return;
         emitter_->setEmitRate(cfg.emitRate);
@@ -251,7 +271,7 @@ private:
     }
 
     void applyPresetSmoke() {
-        ParticleEmitterConfig cfg = mouseConfig_;
+        ContinuousEmitterConfig cfg = mouseConfig_;
         cfg.emitRate = 180.0f;
         cfg.minLifetime = 0.8f;
         cfg.maxLifetime = 1.6f;
@@ -270,7 +290,7 @@ private:
     }
 
     void applyPresetFireworks() {
-        ParticleEmitterConfig cfg = mouseConfig_;
+        ContinuousEmitterConfig cfg = mouseConfig_;
         cfg.emitRate = 400.0f;
         cfg.minLifetime = 0.6f;
         cfg.maxLifetime = 1.2f;
@@ -289,7 +309,7 @@ private:
     }
 
     void applyPresetSparks() {
-        ParticleEmitterConfig cfg = mouseConfig_;
+        ContinuousEmitterConfig cfg = mouseConfig_;
         cfg.emitRate = 1200.0f;
         cfg.minLifetime = 0.15f;
         cfg.maxLifetime = 0.4f;
@@ -308,13 +328,13 @@ private:
     }
     ParticleEmitterEntity* emitterEntity_{nullptr};
     ParticleEmitterEntity* rainEmitterEntity_{nullptr};
-    ParticleEmitter* emitter_{nullptr};
-    ParticleEmitter* rainEmitter_{nullptr};
+    ContinuousParticleEmitter* emitter_{nullptr};
+    ContinuousParticleEmitter* rainEmitter_{nullptr};
     FpsCounter* fps_{nullptr};
     rlge::Camera camera_;
     int burstCount_{150};
     bool streaksEnabled_{false};
-    ParticleEmitterConfig mouseConfig_{};
+    ContinuousEmitterConfig mouseConfig_{};
 };
 
 int main() {

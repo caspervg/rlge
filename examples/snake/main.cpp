@@ -11,7 +11,7 @@ int main() {
     const WindowConfig wcfg{
         .width = snake::kTilesX * snake::kPixelsPerTile * snake::kMagnification,
         .height = snake::kTilesY * snake::kPixelsPerTile * snake::kMagnification,
-        .fps = 60,
+        .fps = 144,
         .title = "RLGE Snake"
     };
     Runtime runtime(wcfg);

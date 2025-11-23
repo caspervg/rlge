@@ -9,6 +9,8 @@
 #include <random>
 
 #include "imgui.h"
+#include "particle_emitter.hpp"
+#include "particle_fx.hpp"
 #include "rlgl.h"
 #include "runtime.hpp"
 #include "transformer.hpp"
@@ -255,6 +257,28 @@ namespace snake {
         snake_ = &spawn<SnakeHead>(game_, *spriteSheet_);
         apple_ = &spawn<AppleSprite>(game_, *spriteSheet_);
         fps_ = &spawn<FpsCounter>();
+        // Particle emitter component on the snake head.
+        if (snake_) {
+            deathFx_ = &snake_->add<rlge::BurstParticleEmitter>(rlge::BurstEmitterConfig{}, [](const rlge::Particle& p) {
+                // Velocity-aligned streak for death sparks.
+                const float speed = Vector2Length(p.vel);
+                if (speed < 1e-3f) {
+                    DrawCircleV(p.pos, p.size, p.color);
+                    return;
+                }
+                const float len = std::max(6.0f, speed * 0.01f);
+                const Vector2 dir = Vector2Normalize(p.vel);
+                const Vector2 tail{p.pos.x - dir.x * len, p.pos.y - dir.y * len};
+                DrawLineEx(tail, p.pos, p.size * 0.7f, p.color);
+            });
+            deathFx_->setBurstCount(80);
+            deathFx_->setLifetimeRange(0.2f, 0.5f);
+            deathFx_->setSpeedRange(200.0f, 520.0f);
+            deathFx_->setSizeRange(2.0f, 5.0f);
+            deathFx_->setSpread(2.0f * PI);
+            deathFx_->setGravity({0.0f, 550.0f});
+            deathFx_->setColorRange({255, 120, 60, 255}, Fade(ORANGE, 0.0f));
+        }
 
         auto& bus = sceneEvents();
         appleSubId_ = bus.subscribe<AppleEaten>([this] (const AppleEaten& e) {
@@ -263,35 +287,77 @@ namespace snake {
             if (apple_) {
                 apple_->changeSprite();
             }
+            // Spawn a transient burst at the eaten apple's position.
+            BurstEmitterConfig fxCfg;
+            fxCfg.maxParticles = 60;
+            fxCfg.minLifetime = 0.25f;
+            fxCfg.maxLifetime = 0.6f;
+            fxCfg.minSpeed = 40.0f;
+            fxCfg.maxSpeed = 120.0f;
+            fxCfg.minSize = 2.0f;
+            fxCfg.maxSize = 6.0f;
+            fxCfg.spread = 2.0f * PI;
+            fxCfg.gravity = {0.0f, -60.0f};
+            fxCfg.startColor = GREEN;
+            fxCfg.endColor = Fade(LIME, 0.0f);
+            spawnBurstEmitter(
+                *this,
+                game_.appleWorldPos(),
+                40,
+                fxCfg,
+                [](const rlge::Particle& p) { DrawCircleV(p.pos, p.size, p.color); },
+                [](const Vector2 origin) {
+                    return spawnInBox(origin, static_cast<float>(kTilePixels) * 0.25f, static_cast<float>(kTilePixels) * 0.25f);
+                });
         });
         diedSubId_ = bus.subscribe<SnakeDied>([this] (const SnakeDied& e) {
+            if (deathPending_)
+                return;
             audio().playSound("game_over");
+            if (deathFx_) {
+                deathFx_->burst(deathFx_->burstCount());
+            }
             if (scoreboard_) {
                 scoreboard_->toggleVisibility();
             }
-            runtime().pushScene<GameOverScene>(score_);
+            deathPending_ = true;
+            deathTimer_ = 0.75f;
         });
     }
 
-    void GameScene::update(float dt) {
+    void GameScene::update(const float dt) {
         // Translate input into game directions.
-        const auto& input = this->input();
-        if (input.pressed("left")) {
-            game_.setDirection(Direction::Left);
-        }
-        else if (input.pressed("right")) {
-            game_.setDirection(Direction::Right);
-        }
-        else if (input.pressed("up")) {
-            game_.setDirection(Direction::Up);
-        }
-        else if (input.pressed("down")) {
-            game_.setDirection(Direction::Down);
-        }
+        if (!deathPending_) {
+            const auto& input = this->input();
+            if (input.pressed("left")) {
+                game_.setDirection(Direction::Left);
+            }
+            else if (input.pressed("right")) {
+                game_.setDirection(Direction::Right);
+            }
+            else if (input.pressed("up")) {
+                game_.setDirection(Direction::Up);
+            }
+            else if (input.pressed("down")) {
+                game_.setDirection(Direction::Down);
+            }
 
-        game_.update(dt);
+            game_.update(dt);
+        } else {
+            deathTimer_ -= dt;
+            if (deathTimer_ <= 0.0f) {
+                deathPending_ = false;
+                runtime().pushScene<GameOverScene>(score_);
+                return;
+            }
+        }
 
         Scene::update(dt);
+
+        // Auto-clear state once burst is done.
+        if (deathFx_ && deathFx_->isDone()) {
+            deathFx_->clear();
+        }
     }
 
     void GameScene::exit() {

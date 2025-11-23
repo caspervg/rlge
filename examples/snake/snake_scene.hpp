@@ -6,6 +6,7 @@
 #include "render_entity.hpp"
 #include "snake_game.hpp"
 #include "sprite_sheet.hpp"
+#include "particle_emitter.hpp"
 
 struct ImGuiContext; // forward-declare to avoid including imgui.h here
 
@@ -131,6 +132,7 @@ namespace snake {
         BorderTiles* borders_{nullptr};
         AppleSprite* apple_{nullptr};
         FpsCounter* fps_{nullptr};
+        rlge::BurstParticleEmitter* deathFx_{nullptr};
 
         rlge::Camera camera_;
 
@@ -138,6 +140,8 @@ namespace snake {
         rlge::EventBus::SubscriptionId appleSubId_{0};
         rlge::EventBus::SubscriptionId diedSubId_{0};
         int score_ = 0;
+        bool deathPending_{false};
+        float deathTimer_{0.0f};
     };
 
 } // namespace snake
