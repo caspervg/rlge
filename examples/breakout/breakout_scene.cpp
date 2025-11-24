@@ -82,8 +82,6 @@ namespace breakout {
 
         void onCollision(const CollisionEvent& event) {
             // Only apply spin on first contact, not during sustained collision
-            return;;
-            std::println("Paddle hit {}", event.colliderB->entity().id().index);
             if (auto* ballPhysics = event.colliderB->entity().get<PhysicsBody>()) {
                 auto* tr = get<rlge::Transform>();
                 auto* ballTr = event.colliderB->entity().get<rlge::Transform>();
@@ -99,9 +97,7 @@ namespace breakout {
                     sinf(angle) * speed,
                     -fabsf(cosf(angle) * speed) // Force negative (upward)
                 };
-                ballPhysics->setVelocity(newVel);;
-                std::println("Ball hit paddle at offset {:.2f}, new velocity: ({:.2f}, {:.2f})",
-                             hitOffset, newVel.x, newVel.y);
+                ballPhysics->setVelocity(newVel);
             }
         }
 

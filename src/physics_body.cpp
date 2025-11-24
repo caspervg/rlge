@@ -1,6 +1,7 @@
 #include "physics_body.hpp"
 
 #include <print>
+#include <algorithm>
 
 #include "transformer.hpp"
 
@@ -79,10 +80,20 @@ namespace rlge {
     }
 
     void PhysicsBody::reflectOffNormal(const Vector2& normal) {
-        velocity_ = Vector2Subtract(
-            velocity_,
-            Vector2Scale(normal, 2.0f * Vector2DotProduct(velocity_, normal))
+        // Split velocity into normal and tangential components.
+        const float vn = Vector2DotProduct(velocity_, normal);
+        const Vector2 vNorm = Vector2Scale(normal, vn);
+        const Vector2 vTang = Vector2Subtract(velocity_, vNorm);
+
+        // Apply restitution on the normal component (bounce) and friction on a tangential component (slide loss).
+        const float e = std::clamp(restitution_, 0.0f, 1.5f); // allow slight >1 for lively bounces if desired
+        const float f = std::clamp(friction_, 0.0f, 1.0f);
+
+        const Vector2 newV = Vector2Add(
+            Vector2Scale(vTang, 1.0f - f),
+            Vector2Scale(vNorm, -e)
         );
+        velocity_ = newV;
     }
 
     void PhysicsBody::applyForce(const Vector2& force) {

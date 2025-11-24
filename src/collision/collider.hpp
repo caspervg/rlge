@@ -117,8 +117,10 @@ namespace rlge {
             if (!alive_ || !m.colliding || trigger_)
                 return;
             const auto t = entity().get<Transform>();
-            t->position.x -= m.normal.x * m.depth * 0.5f;
-            t->position.y -= m.normal.y * m.depth * 0.5f;
+            if (!t)
+                return;
+            t->position.x += m.normal.x * m.depth;
+            t->position.y += m.normal.y * m.depth;
         };
 
         void setOnCollisionEnter(CollisionCallback cb) {

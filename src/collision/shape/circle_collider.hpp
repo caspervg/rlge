@@ -26,7 +26,11 @@ namespace rlge {
         }
 
         [[nodiscard]] CollisionManifold collideWith(const BoxCollider& b) const override {
-            return narrow_phase::boxCircle(b, *this);
+            auto m = narrow_phase::boxCircle(b, *this);
+            // Ensure normals always point from collider A (this circle) toward collider B (the box)
+            m.normal = Vector2Negate(m.normal);
+            m.contactPoint = center() - Vector2Scale(m.normal, radius());
+            return m;
         }
 
         [[nodiscard]] CollisionManifold collideWith(const CircleCollider& c) const override {
@@ -34,18 +38,24 @@ namespace rlge {
         }
 
         [[nodiscard]] CollisionManifold collideWith(const ObbCollider& o) const override {
-            return narrow_phase::obbCircle(o, *this);
+            auto m = narrow_phase::obbCircle(o, *this);
+            m.normal = Vector2Negate(m.normal);
+            m.contactPoint = center() - Vector2Scale(m.normal, radius());
+            return m;
         }
 
         [[nodiscard]] CollisionManifold collideWith(const PolygonCollider& p) const override {
-            return narrow_phase::polyCircle(p, *this);
+            auto m = narrow_phase::polyCircle(p, *this);
+            m.normal = Vector2Negate(m.normal);
+            m.contactPoint = center() - Vector2Scale(m.normal, radius());
+            return m;
         }
 
         [[nodiscard]] Rectangle axisAlignedWorldBounds() const override {
             auto const t = entity().get<Transform>();
-            const auto x = t->position.x + center_.x;
-            const auto y = t->position.y + center_.y;
-            return {x - radius_, y - radius_, radius_ * 2, radius_ * 2};
+            const auto baseCenter = t ? t->position + center_ : center_;
+            const auto r = t ? radius_ * t->scale.x : radius_;
+            return {baseCenter.x - r, baseCenter.y - r, r * 2.0f, r * 2.0f};
         }
 
         [[nodiscard]] Vector2 center() const {

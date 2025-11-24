@@ -184,12 +184,13 @@ namespace rlge::narrow_phase {
 
         if (depthX < depthY) {
             m.depth = depthX;
-            m.normal = {A.x < B.x ? -1.f : 1.f, 0.f};
+            // Normal should point from A toward B
+            m.normal = {A.x < B.x ? 1.f : -1.f, 0.f};
             m.contactPoint = {A.x < B.x ? B.x : A.x, (A.y + A.y + A.height) / 2.0f};
         }
         else {
             m.depth = depthY;
-            m.normal = {0.f, A.y < B.y ? -1.f : 1.f};
+            m.normal = {0.f, A.y < B.y ? 1.f : -1.f};
             m.contactPoint = {(A.x + A.x + A.width) / 2.0f, A.y < B.y ? B.y : A.y};
         }
 
@@ -219,9 +220,6 @@ namespace rlge::narrow_phase {
 
         const auto dist = sqrtf(dSq);
 
-        // Contact point is on the circle surface
-        m.contactPoint = center - Vector2Scale(m.normal, radius);
-
         if (dist == 0.0f) {
             // Circle center is inside the box, choose the shallowest axis
             const auto left = center.x - b.x;
@@ -244,6 +242,9 @@ namespace rlge::narrow_phase {
             m.depth = radius - dist;
             m.normal = diff / dist;
         }
+
+        // Contact point lies on the circle surface along the collision normal
+        m.contactPoint = center - Vector2Scale(m.normal, radius);
         m.colliding = true;
         return m;
     }

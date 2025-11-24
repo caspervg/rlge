@@ -51,10 +51,20 @@ namespace rlge {
                     // Broad phase collision check does not succeed, no need for narrow phase.
                     continue;
 
-                const auto m = a->testAgainst(*b);
+                auto m = a->testAgainst(*b);
                 if (!m.colliding)
                     // Narrow phase collision check does not succeed
                     continue;
+
+                // Ensure manifold normal points from collider A toward collider B
+                const auto centerOf = [](const Rectangle& r) {
+                    return Vector2{r.x + r.width * 0.5f, r.y + r.height * 0.5f};
+                };
+                const Vector2 dirAB = Vector2Subtract(centerOf(b->axisAlignedWorldBounds()),
+                                                      centerOf(a->axisAlignedWorldBounds()));
+                if (Vector2DotProduct(m.normal, dirAB) < 0.0f) {
+                    m.normal = Vector2Negate(m.normal);
+                }
 
                 // Collision detected
                 CollisionPair cp = {a, b};
@@ -146,13 +156,14 @@ namespace rlge {
     }
 
     void CollisionResponseSystem::processEntity_(Entity& entity, const CollisionEvent& event) const {
-        // Always handle PhysicsBody if present
-        if (auto* physics = entity.get<PhysicsBody>()) {
-            physics->onCollision(event);
-        }
-
+        // Run user handlers first so they can override velocities before physics reacts
         for (const auto& handler : handlers_) {
             handler(entity, event);
+        }
+
+        // Then apply default physics response
+        if (auto* physics = entity.get<PhysicsBody>()) {
+            physics->onCollision(event);
         }
     }
 
@@ -194,14 +205,14 @@ namespace rlge {
         if (solidA && solidB) {
             if (!triggerA) {
                 CollisionManifold ma = manifold;
-                ma.depth += epsilon * 0.5f;  // Split epsilon between both
+                ma.depth = manifold.depth * 0.5f + epsilon * 0.5f;  // Split penetration between both
                 a->resolve(ma);
             }
             if (!triggerB) {
-                CollisionManifold flipped = manifold;
-                flipped.depth -= epsilon * 0.5f;
-                flipped.normal = Vector2Negate(flipped.normal);
-                b->resolve(flipped);
+                CollisionManifold mb = manifold;
+                mb.depth = manifold.depth * 0.5f + epsilon * 0.5f;
+                mb.normal = Vector2Negate(mb.normal);
+                b->resolve(mb);
             }
         }
 
