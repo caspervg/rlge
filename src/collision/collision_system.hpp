@@ -19,14 +19,22 @@ namespace rlge {
             Collider* a;
             Collider* b;
 
-            bool operator==(const CollisionPair& other) const { return a == other.a && b == other.b; } // || a == other.b && b == other.a; }
+            // Constructor ensures canonical ordering: a <= b
+            CollisionPair(Collider* first, Collider* second) {
+                auto [min, max] = std::minmax(first, second);
+                a = min;
+                b = max;
+            }
+
+            bool operator==(const CollisionPair& other) const {
+                // With canonical ordering, simple equality check is sufficient
+                return a == other.a && b == other.b;
+            }
 
             bool operator<(const CollisionPair& other) const {
-                // Normalize so (A,B) == (B,A)
-                auto [minA, maxA] = std::minmax(a, b);
-                auto [minB, maxB] = std::minmax(other.a, other.b);
-                if (minA != minB) return minA < minB;
-                return maxA < maxB;
+                // With canonical ordering, simple comparison is sufficient
+                if (a != other.a) return a < other.a;
+                return b < other.b;
             }
         };
 
