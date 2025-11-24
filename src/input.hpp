@@ -184,44 +184,100 @@ namespace rlge {
         }
 
         // Axis binding for key pairs (e.g., A/D for horizontal movement)
+        // Can coexist with gamepad axis binding - keyboard acts as fallback
         void bindAxis(ActionEnum action, KeyCode negative, KeyCode positive) {
             auto& binding = axisBindings_[action];
             binding.keyBinding = AxisKeyBinding{negative, positive};
         }
 
         // Axis binding for gamepad axis
+        // Can coexist with keyboard binding - gamepad takes priority when active
         void bindAxis(ActionEnum action, int gamepadId, GamepadAxis axis) {
             auto& binding = axisBindings_[action];
             binding.gamepadBinding = AxisGamepadBinding{gamepadId, axis};
         }
 
-        // Set dead zone for an axis
+        // Set dead zone for an axis (default 0.1)
         void setAxisDeadZone(ActionEnum action, float deadZone) {
             axisBindings_[action].deadZone = deadZone;
         }
 
-        // Query if action button is currently held down
+        // Query if action button is currently held down (checks keyboard, mouse, and gamepad)
         bool down(ActionEnum action) const {
-            const auto it = keyBindings_.find(action);
-            if (it == keyBindings_.end())
-                return false;
-            return IsKeyDown(static_cast<int>(it->second.key));
+            // Check keyboard
+            const auto keyIt = keyBindings_.find(action);
+            if (keyIt != keyBindings_.end() && IsKeyDown(static_cast<int>(keyIt->second.key))) {
+                return true;
+            }
+            
+            // Check mouse
+            const auto mouseIt = mouseBindings_.find(action);
+            if (mouseIt != mouseBindings_.end() && IsMouseButtonDown(static_cast<int>(mouseIt->second.button))) {
+                return true;
+            }
+            
+            // Check gamepad
+            const auto gamepadIt = gamepadBindings_.find(action);
+            if (gamepadIt != gamepadBindings_.end()) {
+                if (IsGamepadAvailable(gamepadIt->second.gamepadId) &&
+                    IsGamepadButtonDown(gamepadIt->second.gamepadId, toRaylibGamepadButton(gamepadIt->second.button))) {
+                    return true;
+                }
+            }
+            
+            return false;
         }
 
-        // Query if action button was just pressed this frame
+        // Query if action button was just pressed this frame (checks keyboard, mouse, and gamepad)
         bool pressed(ActionEnum action) const {
-            const auto it = keyBindings_.find(action);
-            if (it == keyBindings_.end())
-                return false;
-            return IsKeyPressed(static_cast<int>(it->second.key));
+            // Check keyboard
+            const auto keyIt = keyBindings_.find(action);
+            if (keyIt != keyBindings_.end() && IsKeyPressed(static_cast<int>(keyIt->second.key))) {
+                return true;
+            }
+            
+            // Check mouse
+            const auto mouseIt = mouseBindings_.find(action);
+            if (mouseIt != mouseBindings_.end() && IsMouseButtonPressed(static_cast<int>(mouseIt->second.button))) {
+                return true;
+            }
+            
+            // Check gamepad
+            const auto gamepadIt = gamepadBindings_.find(action);
+            if (gamepadIt != gamepadBindings_.end()) {
+                if (IsGamepadAvailable(gamepadIt->second.gamepadId) &&
+                    IsGamepadButtonPressed(gamepadIt->second.gamepadId, toRaylibGamepadButton(gamepadIt->second.button))) {
+                    return true;
+                }
+            }
+            
+            return false;
         }
 
-        // Query if action button was just released this frame
+        // Query if action button was just released this frame (checks keyboard, mouse, and gamepad)
         bool released(ActionEnum action) const {
-            const auto it = keyBindings_.find(action);
-            if (it == keyBindings_.end())
-                return false;
-            return IsKeyReleased(static_cast<int>(it->second.key));
+            // Check keyboard
+            const auto keyIt = keyBindings_.find(action);
+            if (keyIt != keyBindings_.end() && IsKeyReleased(static_cast<int>(keyIt->second.key))) {
+                return true;
+            }
+            
+            // Check mouse
+            const auto mouseIt = mouseBindings_.find(action);
+            if (mouseIt != mouseBindings_.end() && IsMouseButtonReleased(static_cast<int>(mouseIt->second.button))) {
+                return true;
+            }
+            
+            // Check gamepad
+            const auto gamepadIt = gamepadBindings_.find(action);
+            if (gamepadIt != gamepadBindings_.end()) {
+                if (IsGamepadAvailable(gamepadIt->second.gamepadId) &&
+                    IsGamepadButtonReleased(gamepadIt->second.gamepadId, toRaylibGamepadButton(gamepadIt->second.button))) {
+                    return true;
+                }
+            }
+            
+            return false;
         }
 
         // Query if mouse button for action is down
@@ -270,6 +326,7 @@ namespace rlge {
         }
 
         // Get axis value for action (-1.0 to 1.0)
+        // Returns keyboard value by default, but gamepad overrides when axis exceeds dead zone
         float axisValue(ActionEnum action) const {
             const auto it = axisBindings_.find(action);
             if (it == axisBindings_.end())
@@ -278,7 +335,7 @@ namespace rlge {
             const auto& binding = it->second;
             float value = 0.0f;
 
-            // Check key binding first
+            // Check keyboard binding first (provides fallback)
             if (binding.keyBinding.has_value()) {
                 const auto& keyBinding = binding.keyBinding.value();
                 if (IsKeyDown(static_cast<int>(keyBinding.negative))) {
@@ -289,7 +346,7 @@ namespace rlge {
                 }
             }
 
-            // Check gamepad binding (only overrides if axis exceeds dead zone)
+            // Gamepad takes priority if axis exceeds dead zone (allows keyboard fallback)
             if (binding.gamepadBinding.has_value()) {
                 const auto& gamepadBinding = binding.gamepadBinding.value();
                 if (IsGamepadAvailable(gamepadBinding.gamepadId)) {
@@ -298,7 +355,7 @@ namespace rlge {
                         toRaylibGamepadAxis(gamepadBinding.axis)
                     );
                     
-                    // Only use gamepad value if it exceeds dead zone
+                    // Replace keyboard value only if gamepad axis is active (exceeds dead zone)
                     if (std::abs(axisVal) > binding.deadZone) {
                         value = axisVal;
                     }

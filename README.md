@@ -19,7 +19,7 @@ This repository also contains example games/demos:
 - Entity/component model with helpers (`Transform`, sprites/animations, sprite sheets, tilemaps, particles, etc.).
 - Two event buses: scene-local and shared game-wide, with queued dispatch and forwarding helpers.
 - Camera system (follow/pan/zoom/rotate, screen <-> world helpers, view bounds) plus multi-view rendering.
-- **Type-safe Input system** with support for keyboard, mouse, gamepad, and analog axes (see [INPUT_API_EXAMPLES.md](INPUT_API_EXAMPLES.md)).
+- **Type-safe Input system** with support for keyboard, mouse, gamepad, and analog axes.
 - Batched render queue with layers (`Background`, `World`, `Foreground`, `UI`), z-sorting, per-view culling, and render stats.
 - Collision system with layers/masks, triggers vs solids vs kinematic colliders, AABB/OBB/circle/polygon shapes, and optional ImGui debug overlay.
 - Asset store for textures, prefab factory for named entity constructors, and an audio manager for sounds/music.
@@ -79,15 +79,35 @@ rlge::WindowConfig cfg{
 };
 rlge::Runtime runtime(cfg);
 
-// Type-safe input bindings
+// Type-safe input bindings (keyboard, mouse, gamepad supported)
 runtime.input().bind(rlge::Action::MoveLeft, rlge::KeyCode::A);
 runtime.input().bind(rlge::Action::MoveRight, rlge::KeyCode::D);
+runtime.input().bind(rlge::Action::Jump, rlge::KeyCode::Space);
+
+// Mouse and gamepad bindings
+runtime.input().bindMouse(rlge::Action::Fire, rlge::MouseButton::Left);
+runtime.input().bindGamepad(rlge::Action::Jump, 0, rlge::GamepadButton::A);
 
 runtime.pushScene<MyScene>();
 runtime.run();
 ```
 
-For more input examples including mouse, gamepad, and axis support, see [INPUT_API_EXAMPLES.md](INPUT_API_EXAMPLES.md).
+### Input system
+
+The Input class is template-based, allowing custom action enums:
+
+```cpp
+// Use default actions
+runtime.input().bind(rlge::Action::MoveLeft, rlge::KeyCode::A);
+if (input.down(rlge::Action::MoveLeft)) { ... }
+
+// Or define your own
+enum class MyAction { Shoot, Reload, Sprint };
+rlge::Input<MyAction> customInput;
+customInput.bind(MyAction::Shoot, rlge::KeyCode::Space);
+```
+
+Query input with `down()` (held), `pressed()` (just pressed), or `released()` (just released). Supports keyboard, mouse (`bindMouse`, `mouseDown`, `mousePressed`, `mousePosition`), gamepad (`bindGamepad`, `gamepadDown`, `gamepadPressed`), and analog axes (`bindAxis`, `axisValue`, `setAxisDeadZone`).
 
 ### Scenes, views, and entities
 
