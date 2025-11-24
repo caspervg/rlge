@@ -62,8 +62,8 @@ namespace rlge {
         AssetStore& assetStore();
         const AssetStore& assetStore() const;
 
-        Input& input();
-        const Input& input() const;
+        Input<>& input();
+        const Input<>& input() const;
 
         RenderQueue& renderer();
         const RenderQueue& renderer() const;
@@ -92,7 +92,7 @@ namespace rlge {
         KeyboardKey debugKey_ = KEY_F1;
         Window window_;
         AssetStore assets_;
-        Input input_;
+        Input<> input_;
         GameServices services_;
         RenderQueue renderer_;
         SceneStack scenes_;

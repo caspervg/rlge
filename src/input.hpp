@@ -164,53 +164,149 @@ namespace rlge {
         RightTrigger
     };
 
-    // Input class with type-safe bindings
+    // Template Input class - allows users to define their own Action enum
+    template<typename ActionEnum = Action>
     class Input {
     public:
         // Keyboard binding
-        void bind(Action action, KeyCode key);
+        void bind(ActionEnum action, KeyCode key) {
+            keyBindings_[action] = KeyBinding{key};
+        }
 
         // Mouse binding
-        void bindMouse(Action action, MouseButton button);
+        void bindMouse(ActionEnum action, MouseButton button) {
+            mouseBindings_[action] = MouseBinding{button};
+        }
 
         // Gamepad binding
-        void bindGamepad(Action action, int gamepadId, GamepadButton button);
+        void bindGamepad(ActionEnum action, int gamepadId, GamepadButton button) {
+            gamepadBindings_[action] = GamepadBinding{gamepadId, button};
+        }
 
         // Axis binding for key pairs (e.g., A/D for horizontal movement)
-        void bindAxis(Action action, KeyCode negative, KeyCode positive);
+        void bindAxis(ActionEnum action, KeyCode negative, KeyCode positive) {
+            auto& binding = axisBindings_[action];
+            binding.keyBinding = AxisKeyBinding{negative, positive};
+        }
 
         // Axis binding for gamepad axis
-        void bindAxis(Action action, int gamepadId, GamepadAxis axis);
+        void bindAxis(ActionEnum action, int gamepadId, GamepadAxis axis) {
+            auto& binding = axisBindings_[action];
+            binding.gamepadBinding = AxisGamepadBinding{gamepadId, axis};
+        }
 
         // Set dead zone for an axis
-        void setAxisDeadZone(Action action, float deadZone);
+        void setAxisDeadZone(ActionEnum action, float deadZone) {
+            axisBindings_[action].deadZone = deadZone;
+        }
 
         // Query if action button is currently held down
-        bool down(Action action) const;
+        bool down(ActionEnum action) const {
+            const auto it = keyBindings_.find(action);
+            if (it == keyBindings_.end())
+                return false;
+            return IsKeyDown(static_cast<int>(it->second.key));
+        }
 
         // Query if action button was just pressed this frame
-        bool pressed(Action action) const;
+        bool pressed(ActionEnum action) const {
+            const auto it = keyBindings_.find(action);
+            if (it == keyBindings_.end())
+                return false;
+            return IsKeyPressed(static_cast<int>(it->second.key));
+        }
 
         // Query if action button was just released this frame
-        bool released(Action action) const;
+        bool released(ActionEnum action) const {
+            const auto it = keyBindings_.find(action);
+            if (it == keyBindings_.end())
+                return false;
+            return IsKeyReleased(static_cast<int>(it->second.key));
+        }
 
         // Query if mouse button for action is down
-        bool mouseDown(Action action) const;
+        bool mouseDown(ActionEnum action) const {
+            const auto it = mouseBindings_.find(action);
+            if (it == mouseBindings_.end())
+                return false;
+            return IsMouseButtonDown(static_cast<int>(it->second.button));
+        }
 
         // Query if mouse button for action was just pressed
-        bool mousePressed(Action action) const;
+        bool mousePressed(ActionEnum action) const {
+            const auto it = mouseBindings_.find(action);
+            if (it == mouseBindings_.end())
+                return false;
+            return IsMouseButtonPressed(static_cast<int>(it->second.button));
+        }
 
         // Get mouse position
-        Vector2 mousePosition() const;
+        Vector2 mousePosition() const {
+            return GetMousePosition();
+        }
 
         // Query if gamepad button for action is down
-        bool gamepadDown(Action action) const;
+        bool gamepadDown(ActionEnum action) const {
+            const auto it = gamepadBindings_.find(action);
+            if (it == gamepadBindings_.end())
+                return false;
+            
+            if (!IsGamepadAvailable(it->second.gamepadId))
+                return false;
+            
+            return IsGamepadButtonDown(it->second.gamepadId, toRaylibGamepadButton(it->second.button));
+        }
 
         // Query if gamepad button for action was just pressed
-        bool gamepadPressed(Action action) const;
+        bool gamepadPressed(ActionEnum action) const {
+            const auto it = gamepadBindings_.find(action);
+            if (it == gamepadBindings_.end())
+                return false;
+            
+            if (!IsGamepadAvailable(it->second.gamepadId))
+                return false;
+            
+            return IsGamepadButtonPressed(it->second.gamepadId, toRaylibGamepadButton(it->second.button));
+        }
 
         // Get axis value for action (-1.0 to 1.0)
-        float axisValue(Action action) const;
+        float axisValue(ActionEnum action) const {
+            const auto it = axisBindings_.find(action);
+            if (it == axisBindings_.end())
+                return 0.0f;
+
+            const auto& binding = it->second;
+            float value = 0.0f;
+
+            // Check key binding first
+            if (binding.keyBinding.has_value()) {
+                const auto& keyBinding = binding.keyBinding.value();
+                if (IsKeyDown(static_cast<int>(keyBinding.negative))) {
+                    value -= 1.0f;
+                }
+                if (IsKeyDown(static_cast<int>(keyBinding.positive))) {
+                    value += 1.0f;
+                }
+            }
+
+            // Check gamepad binding (only overrides if axis exceeds dead zone)
+            if (binding.gamepadBinding.has_value()) {
+                const auto& gamepadBinding = binding.gamepadBinding.value();
+                if (IsGamepadAvailable(gamepadBinding.gamepadId)) {
+                    float axisVal = GetGamepadAxisMovement(
+                        gamepadBinding.gamepadId,
+                        toRaylibGamepadAxis(gamepadBinding.axis)
+                    );
+                    
+                    // Only use gamepad value if it exceeds dead zone
+                    if (std::abs(axisVal) > binding.deadZone) {
+                        value = axisVal;
+                    }
+                }
+            }
+
+            return value;
+        }
 
     private:
         struct KeyBinding {
@@ -242,16 +338,47 @@ namespace rlge {
             float deadZone = 0.1f;
         };
 
-        std::unordered_map<Action, KeyBinding> keyBindings_;
-        std::unordered_map<Action, MouseBinding> mouseBindings_;
-        std::unordered_map<Action, GamepadBinding> gamepadBindings_;
-        std::unordered_map<Action, AxisBinding> axisBindings_;
+        std::unordered_map<ActionEnum, KeyBinding> keyBindings_;
+        std::unordered_map<ActionEnum, MouseBinding> mouseBindings_;
+        std::unordered_map<ActionEnum, GamepadBinding> gamepadBindings_;
+        std::unordered_map<ActionEnum, AxisBinding> axisBindings_;
 
         // Helper to convert GamepadButton to Raylib constant
-        int toRaylibGamepadButton(GamepadButton button) const;
+        int toRaylibGamepadButton(GamepadButton button) const {
+            switch (button) {
+                case GamepadButton::A: return GAMEPAD_BUTTON_RIGHT_FACE_DOWN;
+                case GamepadButton::B: return GAMEPAD_BUTTON_RIGHT_FACE_RIGHT;
+                case GamepadButton::X: return GAMEPAD_BUTTON_RIGHT_FACE_LEFT;
+                case GamepadButton::Y: return GAMEPAD_BUTTON_RIGHT_FACE_UP;
+                case GamepadButton::LeftBumper: return GAMEPAD_BUTTON_LEFT_TRIGGER_1;
+                case GamepadButton::RightBumper: return GAMEPAD_BUTTON_RIGHT_TRIGGER_1;
+                case GamepadButton::Back: return GAMEPAD_BUTTON_MIDDLE_LEFT;
+                case GamepadButton::Start: return GAMEPAD_BUTTON_MIDDLE_RIGHT;
+                case GamepadButton::LeftThumb: return GAMEPAD_BUTTON_LEFT_THUMB;
+                case GamepadButton::RightThumb: return GAMEPAD_BUTTON_RIGHT_THUMB;
+                case GamepadButton::DPadUp: return GAMEPAD_BUTTON_LEFT_FACE_UP;
+                case GamepadButton::DPadRight: return GAMEPAD_BUTTON_LEFT_FACE_RIGHT;
+                case GamepadButton::DPadDown: return GAMEPAD_BUTTON_LEFT_FACE_DOWN;
+                case GamepadButton::DPadLeft: return GAMEPAD_BUTTON_LEFT_FACE_LEFT;
+                default: return GAMEPAD_BUTTON_UNKNOWN;
+            }
+        }
 
         // Helper to convert GamepadAxis to Raylib constant
-        int toRaylibGamepadAxis(GamepadAxis axis) const;
+        int toRaylibGamepadAxis(GamepadAxis axis) const {
+            switch (axis) {
+                case GamepadAxis::LeftX: return GAMEPAD_AXIS_LEFT_X;
+                case GamepadAxis::LeftY: return GAMEPAD_AXIS_LEFT_Y;
+                case GamepadAxis::RightX: return GAMEPAD_AXIS_RIGHT_X;
+                case GamepadAxis::RightY: return GAMEPAD_AXIS_RIGHT_Y;
+                case GamepadAxis::LeftTrigger: return GAMEPAD_AXIS_LEFT_TRIGGER;
+                case GamepadAxis::RightTrigger: return GAMEPAD_AXIS_RIGHT_TRIGGER;
+                default: return GAMEPAD_AXIS_LEFT_X;
+            }
+        }
     };
+
+    // Type alias using the default Action enum for convenience
+    using DefaultInput = Input<Action>;
 
 }

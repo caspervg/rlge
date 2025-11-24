@@ -73,9 +73,9 @@ namespace rlge {
 
     const AssetStore& Runtime::assetStore() const { return assets_; }
 
-    Input& Runtime::input() { return input_; }
+    Input<>& Runtime::input() { return input_; }
 
-    const Input& Runtime::input() const { return input_; }
+    const Input<>& Runtime::input() const { return input_; }
 
     RenderQueue& Runtime::renderer() { return renderer_; }
 

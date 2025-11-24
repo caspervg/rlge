@@ -104,7 +104,36 @@ float vertical = input.axisValue(rlge::Action::MoveUp);
 
 ## Using Custom Actions
 
-You can define your own Action enum for game-specific actions. However, for simplicity in a learning context, the default Action enum provides common actions:
+The Input class is a template that allows you to define your own Action enum for game-specific actions:
+
+```cpp
+// Define your own action enum
+enum class MyGameAction {
+    Shoot,
+    Reload,
+    Sprint,
+    UseItem,
+    ToggleInventory
+};
+
+// Use it with the Input template
+rlge::Input<MyGameAction> customInput;
+
+// Bind custom actions
+customInput.bind(MyGameAction::Shoot, rlge::KeyCode::Space);
+customInput.bind(MyGameAction::Reload, rlge::KeyCode::R);
+customInput.bind(MyGameAction::Sprint, rlge::KeyCode::LeftShift);
+
+// Use in gameplay
+if (customInput.down(MyGameAction::Shoot)) {
+    fireBullet();
+}
+if (customInput.pressed(MyGameAction::Reload)) {
+    reloadWeapon();
+}
+```
+
+However, for simplicity in a learning context, the default Action enum (used by `Input<>` or `Input<Action>`) provides common actions:
 
 - `Action::MoveLeft`
 - `Action::MoveRight`
@@ -116,6 +145,8 @@ You can define your own Action enum for game-specific actions. However, for simp
 - `Action::Menu`
 - `Action::Confirm`
 - `Action::Cancel`
+
+The engine uses `Input<>` (equivalent to `Input<Action>`) by default in Runtime and Scene.
 
 ## Complete Example Scene
 
