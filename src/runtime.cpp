@@ -43,6 +43,8 @@ namespace rlge {
                 if (!view.camera)
                     continue;
 
+                view.camera->update(dt);
+
                 BeginScissorMode(static_cast<int>(view.viewport.x), static_cast<int>(view.viewport.y),
                                  static_cast<int>(view.viewport.width), static_cast<int>(view.viewport.height));
 

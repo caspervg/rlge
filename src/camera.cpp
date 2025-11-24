@@ -1,5 +1,10 @@
 #include "camera.hpp"
 
+#include <algorithm>
+#include <cmath>
+
+#include "raymath.h"
+
 namespace rlge {
     Camera::Camera() {
         cam_.target = {0, 0};
@@ -27,6 +32,11 @@ namespace rlge {
         cam_.target.y += delta.y;
     }
     void Camera::pan(const float dx, const float dy) { pan({dx, dy}); }
+
+    void Camera::update(const float dt) {
+        updateShake_(dt);
+        cam_.offset = Vector2Add(cam_.offset, shakeOffset_);
+    }
 
     Vector2 Camera::screenToWorld(const Vector2 screen) const {
         return GetScreenToWorld2D(screen, cam_);
@@ -68,6 +78,10 @@ namespace rlge {
         };
     }
 
+    Vector2 Camera::getShakeOffset() const {
+        return shakeOffset_;
+    }
+
     bool Camera::isVisible(const Vector2 point) const {
         const auto bounds = getViewBounds();
         return CheckCollisionPointRec(point, bounds);
@@ -77,4 +91,29 @@ namespace rlge {
         const auto bounds = getViewBounds();
         return CheckCollisionRecs(rect, bounds);
     }
+
+    void Camera::shake(const float intensity, const float duration) {
+        shakeIntensity_ = std::max(shakeIntensity_, intensity);
+        shakeDuration_ = duration;
+        shakeTimer_ = 0.0f;
+    }
+
+    void Camera::updateShake_(const float dt) {
+        if (shakeTimer_ >= shakeDuration_) {
+            shakeOffset_ = {0.0f, 0.0f};
+            cam_.offset = originalOffset_;
+            return;
+        }
+
+        shakeTimer_ += dt;
+
+        // Decay over time
+        auto const progress = shakeTimer_ / shakeDuration_;
+        auto const currentIntensity = shakeIntensity_ * (1.0f - progress);
+        shakeOffset_ = {
+            shakeIntensity_ * 2.0f * (0.5f - GetRandomValue(0, currentIntensity)) * std::sin(progress * PI),
+            shakeIntensity_ * 2.0f * (0.5f - GetRandomValue(0, currentIntensity)) * std::sin(progress * PI)
+        };
+    }
+
 }

@@ -241,6 +241,7 @@ namespace breakout {
             // Subscribe to game events
             gameEvents().subscribe<BrickDestroyed>([this](const BrickDestroyed& e) {
                 score_ += e.points;
+                camera_.shake(0.25f, 0.1f);  // intensity, duration
             });
 
             gameEvents().subscribe<BallLost>([this](const BallLost&) {
