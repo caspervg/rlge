@@ -26,7 +26,7 @@ namespace rlge {
             return scene().audio();
         }
 
-        Input& input() {
+        Input<>& input() {
             return scene().input();
         }
 
