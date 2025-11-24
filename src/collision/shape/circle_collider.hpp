@@ -16,7 +16,7 @@ namespace rlge {
                        const ColliderType type,
                        const ColliderLayerMask layer,
                        const ColliderLayerMask mask,
-                       const Vector2& center,
+                       const Vector2 center,
                        const float radius,
                        const bool trigger = true) :
             Collider(e, system, type, layer, mask, trigger), center_(center), radius_(radius) {}

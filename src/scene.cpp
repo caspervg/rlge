@@ -12,6 +12,7 @@ namespace rlge {
         : runtime_(r)
           , ctx_{r.assetStore(), r.input(), r.renderer(), r.services().gameEvents(), r.services().audio()}
           , collisions_(CollisionSystem())
+          , collisionResponses_(CollisionResponseSystem())
           , tweens_(TweenSystem())
     {}
 
@@ -36,6 +37,7 @@ namespace rlge {
             e->update(dt);
 
         collisions_.update(dt);
+        collisionResponses_.update(*this);
         sceneEvents_.dispatchQueued();
     }
 
@@ -71,6 +73,10 @@ namespace rlge {
     CollisionSystem& Scene::collisions() { return collisions_; }
 
     const CollisionSystem& Scene::collisions() const { return collisions_; }
+
+    CollisionResponseSystem& Scene::collisionResponses() { return collisionResponses_; }
+
+    const CollisionResponseSystem& Scene::collisionResponses() const { return collisionResponses_; }
 
     TweenSystem& Scene::tweens() { return tweens_; }
 

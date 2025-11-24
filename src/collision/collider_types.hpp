@@ -22,15 +22,38 @@ namespace rlge {
         LAYER_BULLET = 1u << 4,
     };
 
-    [[nodiscard]] inline std::uint32_t operator&(ColliderLayerMask a, ColliderLayerMask b) {
+    [[nodiscard]] inline uint32_t operator&(ColliderLayerMask a, ColliderLayerMask b) {
         return static_cast<std::uint32_t>(a) & static_cast<std::uint32_t>(b);
+    }
+
+    [[nodiscard]] inline uint32_t operator|(ColliderLayerMask a, ColliderLayerMask b) {
+        return static_cast<std::uint32_t>(a) | static_cast<std::uint32_t>(b);
+    }
+
+    [[nodiscard]] inline ColliderLayerMask toLayerMask(std::uint32_t mask) {
+        return static_cast<ColliderLayerMask>(mask);
     }
 
     struct CollisionManifold {
         bool colliding = false;
         Vector2 normal{0.0f, 0.0f};
         float depth = 0.0f;
+        Vector2 contactPoint{0.0f, 0.0f};
     };
 
-    using CollisionCallback = std::function<void(const Collider*)>;
+    enum class CollisionState {
+        None,   // Not colliding (should not be used)
+        Enter,  // First frame of collision
+        Stay,   // Ongoing collision
+        Exit    // Was colliding last frame, but not anymore
+    };
+
+    struct CollisionEvent {
+        Collider* colliderA = nullptr;
+        Collider* colliderB = nullptr;
+        CollisionManifold manifold;
+        CollisionState state = CollisionState::None;
+    };
+
+    using CollisionCallback = std::function<void(const CollisionEvent&)>;
 }

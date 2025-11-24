@@ -185,11 +185,14 @@ namespace rlge::narrow_phase {
         if (depthX < depthY) {
             m.depth = depthX;
             m.normal = {A.x < B.x ? -1.f : 1.f, 0.f};
+            m.contactPoint = {A.x < B.x ? B.x : A.x, (A.y + A.y + A.height) / 2.0f};
         }
         else {
             m.depth = depthY;
             m.normal = {0.f, A.y < B.y ? -1.f : 1.f};
+            m.contactPoint = {(A.x + A.x + A.width) / 2.0f, A.y < B.y ? B.y : A.y};
         }
+
         m.colliding = true;
         return m;
     }
@@ -215,6 +218,10 @@ namespace rlge::narrow_phase {
         }
 
         const auto dist = sqrtf(dSq);
+
+        // Contact point is on the circle surface
+        m.contactPoint = closest;
+
         if (dist == 0.0f) {
             // Circle center is inside the box, choose the shallowest axis
             const auto left = center.x - b.x;
@@ -261,9 +268,11 @@ namespace rlge::narrow_phase {
             // Overlapping perfectly
             m.depth = rSum;
             m.normal = {1.0f, 0.0f};
+            m.contactPoint = pa; // Arbitrary as they are concentric
         } else {
             m.depth = rSum - dist;
             m.normal = d / dist;
+            m.contactPoint = pa + Vector2Scale(m.normal, a.radius());
         }
 
         m.colliding = true;
@@ -384,27 +393,77 @@ namespace rlge::narrow_phase {
     }
 
     CollisionManifold polyPoly(const PolygonCollider& a, const PolygonCollider& b) {
-        return polygonCollisionFromPoints(a.points(), b.points());
+        auto m = polygonCollisionFromPoints(a.points(), b.points());
+
+        if (m.colliding) {
+            // Set the midpoint between the two polygon centers as an approximate contact point
+            const auto cA = polygonCenter(a.points());
+            const auto cB = polygonCenter(b.points());
+            m.contactPoint = Vector2Scale(Vector2Add(cA, cB), 0.5f);
+        }
+
+        return m;
     }
 
     CollisionManifold polyCircle(const PolygonCollider& p, const CircleCollider& c) {
-        return polygonCircleFromPoints(p.points(), c);
+        auto m = polygonCircleFromPoints(p.points(), c);
+
+        if (m.colliding) {
+            // Contact point is on the circle surface, along the normal
+            const auto cC = c.center();
+            m.contactPoint = cC - Vector2Scale(m.normal, c.radius());
+        }
+
+        return m;
     }
 
     CollisionManifold polyBox(const PolygonCollider& p, const BoxCollider& b) {
-        // We want the manifold normal to point from the box to the polygon
-        // for the common case where the box is the moving collider. By
-        // feeding the box points as the first argument, the SAT helper
-        // orients the normal from box -> poly.
-        return polygonCollisionFromPoints(b.points(), p.points());
+        auto m = polygonCollisionFromPoints(b.points(), p.points());
+
+        if (m.colliding) {
+            // Midpoint between centroids, similar to poly-poly
+            const auto cA = polygonCenter(p.points());
+            const auto cB = polygonCenter(b.points());
+            m.contactPoint = Vector2Scale(Vector2Add(cA, cB), 0.5f);
+        }
+
+        return m;
     }
 
     CollisionManifold obbPolygon(const ObbCollider& obb, const PolygonCollider& p) {
-        return polygonCollisionFromPoints(obb.points(), p.points());
+        auto m = polygonCollisionFromPoints(obb.points(), p.points());
+
+        if (m.colliding) {
+            const auto cObb = polygonCenter(obb.points());
+            const auto cPoly = polygonCenter(p.points());
+            m.contactPoint = Vector2Scale(Vector2Add(cObb, cPoly), 0.5f);
+        }
+
+        return m;
     }
 
     CollisionManifold obbCircle(const ObbCollider& obb, const CircleCollider& c) {
-        return polygonCircleFromPoints(obb.points(), c);
+        auto m = polygonCircleFromPoints(obb.points(), c);
+
+        if (m.colliding) {
+            const auto cC = c.center();
+            const auto cO = polygonCenter(obb.points());
+            m.contactPoint = cC - Vector2Scale(m.normal, c.radius());
+        }
+
+        return m;
+    }
+
+    CollisionManifold oobObb(const ObbCollider& a, const ObbCollider& b) {
+        auto m = polygonCollisionFromPoints(a.points(), b.points());
+
+        if (m.colliding) {
+            const auto cA = polygonCenter(a.points());
+            const auto cB = polygonCenter(b.points());
+            m.contactPoint = Vector2Scale(Vector2Add(cA, cB), 0.5f);
+        }
+
+        return m;
     }
 
 }

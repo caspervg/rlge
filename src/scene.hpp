@@ -85,6 +85,9 @@ namespace rlge {
         CollisionSystem& collisions();
         const CollisionSystem& collisions() const;
 
+        CollisionResponseSystem& collisionResponses();
+        const CollisionResponseSystem& collisionResponses() const;
+
         TweenSystem& tweens();
         const TweenSystem& tweens() const;
 
@@ -114,6 +117,7 @@ namespace rlge {
         Runtime& runtime_;
         GameContext ctx_;
         CollisionSystem collisions_;
+        CollisionResponseSystem collisionResponses_;
         TweenSystem tweens_;
         EventBus sceneEvents_;
         EntityRegistry registry_;

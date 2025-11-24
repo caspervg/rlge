@@ -1,8 +1,14 @@
 #include "collision_system.hpp"
+
+#include <print>
+
 #include "collider.hpp"
+#include "entity.hpp"
 #include "imgui.h"
+#include "physics_body.hpp"
 #include "raylib.h"
 #include "raymath.h"
+#include "scene.hpp"
 
 namespace rlge {
 
@@ -21,7 +27,11 @@ namespace rlge {
 
     void CollisionSystem::update(float) {
         flushPendingRemovals_();
+        std::vector<CollisionEvent> newCollisions;
+        collisionEvents_.clear();
+        collisionPairsThisFrame_ = {};
         updating_ = true;
+
         const size_t n = colliders_.size();
         for (size_t i = 0; i < n; ++i) {
             Collider* a = colliders_[i];
@@ -41,19 +51,40 @@ namespace rlge {
                     // Broad phase collision check does not succeed, no need for narrow phase.
                     continue;
 
-                auto m = a->testAgainst(*b);
+                const auto m = a->testAgainst(*b);
                 if (!m.colliding)
                     // Narrow phase collision check does not succeed
                     continue;
 
-                a->onCollision(b);
-                b->onCollision(a);
+                // Collision detected
+                CollisionPair cp = {a, b};
+                if (collisionPairsThisFrame_.contains(cp)) {
+                    continue;   // Already processed
+                }
+                collisionPairsThisFrame_.insert(cp);
 
-                resolve_(a, b, m);
+                const auto wasColliding = collisionPairsLastFrame_.contains(cp);
+                const auto state = wasColliding ? CollisionState::Stay : CollisionState::Enter;
+
+                newCollisions.push_back({a, b, m, state});
             }
         }
+
+        for (const auto& lastPair : collisionPairsLastFrame_) {
+            if (!collisionPairsThisFrame_.contains(lastPair)) {
+                newCollisions.push_back({lastPair.a, lastPair.b, {}, CollisionState::Exit});
+            }
+        }
+
+        collisionEvents_ = std::move(newCollisions);
+        collisionPairsLastFrame_ = std::move(collisionPairsThisFrame_);
+
         updating_ = false;
         flushPendingRemovals_();
+    }
+
+    const std::vector<CollisionEvent>& CollisionSystem::collisionEvents() const {
+        return collisionEvents_;
     }
 
     void CollisionSystem::setDebug(const bool debug) {
@@ -81,12 +112,49 @@ namespace rlge {
             return;
         for (auto* c : pendingRemovals_) {
             std::erase(colliders_, c);
+
+            // Remove all pairs involving this collider from last frame's state
+            std::erase_if(collisionPairsLastFrame_, [c](const CollisionPair& pair) {
+                return pair.a == c || pair.b == c;
+            });
         }
         pendingRemovals_.clear();
         compact_();
     }
 
-    void CollisionSystem::resolve_(Collider* a, Collider* b, const CollisionManifold& manifold) {
+    void CollisionResponseSystem::addHandler(CollisionResponseHandler handler) {
+        handlers_.push_back(std::move(handler));
+    }
+
+    void CollisionResponseSystem::update(Scene& scene) {
+        auto& collisions = scene.collisions().collisionEvents();
+
+        for (const auto& event : collisions) {
+            // Resolve potential penetration
+            resolve_(event.colliderA, event.colliderB, event.manifold);
+
+            // Process collider A
+            processEntity_(event.colliderA->entity(), event);
+
+            // Process collider B, with flipped normal
+            CollisionEvent flipped = event;
+            flipped.manifold.normal = Vector2Negate(flipped.manifold.normal);
+            processEntity_(event.colliderB->entity(), flipped);
+        }
+    }
+
+    void CollisionResponseSystem::processEntity_(Entity& entity, const CollisionEvent& event) {
+        // Always handle PhysicsBody if present
+        if (auto* physics = entity.get<PhysicsBody>()) {
+            physics->onCollision(event);
+        }
+
+        for (const auto& handler : handlers_) {
+            handler(entity, event);
+        }
+    }
+
+    void CollisionResponseSystem::resolve_(Collider* a, Collider* b, const CollisionManifold& manifold) {
         const auto typeA = a->type();
         const auto typeB = b->type();
 
@@ -104,23 +172,20 @@ namespace rlge {
 
         // Static / kinematic vs. solid: move only the solid collider fully out of penetration.
         if (kinA && solidB && !triggerB) {
-            CollisionManifold mb = manifold;
-            // For B we normally flip the normal; do the same here but double the depth
-            mb.normal = Vector2Negate(mb.normal);
-            mb.depth *= 2.0f; // default resolve moves by depth * 0.5
-            b->resolve(mb);
+            b->resolve(manifold);
             return;
         }
 
         if (kinB && solidA && !triggerA) {
             CollisionManifold ma = manifold;
-            ma.depth *= 2.0f; // default resolve moves by depth * 0.5
+            ma.normal = Vector2Negate(ma.normal);
             a->resolve(ma);
             return;
         }
 
         // Solid vs. solid: symmetric resolution as before.
         if (solidA && solidB) {
+            std::println("solidA vs solidB");
             if (!triggerA) {
                 a->resolve(manifold);
             }

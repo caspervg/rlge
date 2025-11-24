@@ -4,8 +4,8 @@
 #include <utility>
 #include <vector>
 
-#include "entity_registry.hpp"
 #include "component.hpp"
+#include "entity_registry.hpp"
 
 namespace rlge {
     class Scene;

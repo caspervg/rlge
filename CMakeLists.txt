@@ -99,3 +99,6 @@ target_link_libraries(rlge_multiview PRIVATE rlge raylib rlimgui imgui)
 
 add_executable(rlge_collision_debug examples/collision_debug/main.cpp)
 target_link_libraries(rlge_collision_debug PRIVATE rlge raylib rlimgui imgui)
+
+add_executable(rlge_breakout examples/breakout/main.cpp)
+target_link_libraries(rlge_breakout PRIVATE rlge raylib rlimgui imgui)

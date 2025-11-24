@@ -57,15 +57,15 @@ namespace rlge {
             , layer_(layer)
             , mask_(mask)
             , trigger_(trigger) {
-            system_.registerCollider(this);
+            registerCollider();
         }
 
         ~Collider() override {
-            system_.unregisterCollider(this);
+            unregisterCollider();
         };
 
         void draw() override {
-            if (!system_.debug())
+            if (!system_.debug() || !alive_)
                 return;
 
             const auto shapeColor = applyTriggerStyle(colorForLayer(layer_), trigger_);
@@ -103,23 +103,48 @@ namespace rlge {
         [[nodiscard]] ColliderLayerMask layer() const { return layer_; }
         [[nodiscard]] ColliderLayerMask mask() const { return mask_; }
 
+        void registerCollider() {
+            alive_ = true;
+            system_.registerCollider(this);
+        }
+
+        void unregisterCollider() {
+            alive_ = false;
+            system_.unregisterCollider(this);
+        }
+
         virtual void resolve(const CollisionManifold& m) {
-            if (!m.colliding || trigger_)
+            if (!alive_ || !m.colliding || trigger_)
                 return;
             const auto t = entity().get<Transform>();
             t->position.x -= m.normal.x * m.depth * 0.5f;
             t->position.y -= m.normal.y * m.depth * 0.5f;
         };
 
-        void setOnCollision(CollisionCallback cb) {
-            onCollision_ = std::move(cb);
+        void setOnCollisionEnter(CollisionCallback cb) {
+            onCollisionEnter_ = std::move(cb);
         }
 
-        [[nodiscard]] CollisionCallback getOnCollision() const { return onCollision_; }
+        void setOnCollisionExit(CollisionCallback cb) {
+            onCollisionExit_ = std::move(cb);
+        }
 
-        void onCollision(const Collider* other) const {
-            if (onCollision_) {
-                onCollision_(other);
+        void setOnCollisionStay(CollisionCallback cb) {
+            onCollisionStay_ = std::move(cb);
+        }
+
+        [[nodiscard]] CollisionCallback getOnCollision() const { return onCollisionEnter_; }
+
+        void onCollision(const CollisionEvent& e) const {
+            if (!alive_)
+                return;
+
+            if (e.state == CollisionState::Enter && onCollisionEnter_) {
+                onCollisionEnter_(e);
+            } else if (e.state == CollisionState::Stay && onCollisionStay_) {
+                onCollisionStay_(e);
+            } else if (e.state == CollisionState::Exit && onCollisionExit_) {
+                onCollisionExit_(e);
             }
         }
 
@@ -131,6 +156,9 @@ namespace rlge {
         ColliderLayerMask layer_;
         ColliderLayerMask mask_;
         bool trigger_;
-        CollisionCallback onCollision_;
+        bool alive_ = false;
+        CollisionCallback onCollisionEnter_;
+        CollisionCallback onCollisionExit_;
+        CollisionCallback onCollisionStay_;
     };
 }
