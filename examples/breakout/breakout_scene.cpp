@@ -81,7 +81,6 @@ namespace breakout {
         }
 
         void onCollision(const CollisionEvent& event) {
-            // Only apply spin on first contact, not during sustained collision
             if (auto* ballPhysics = event.colliderB->entity().get<PhysicsBody>()) {
                 auto* tr = get<rlge::Transform>();
                 auto* ballTr = event.colliderB->entity().get<rlge::Transform>();

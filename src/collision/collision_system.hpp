@@ -19,7 +19,13 @@ namespace rlge {
             Collider* a;
             Collider* b;
 
-            bool operator==(const CollisionPair& other) const { return a == other.a && b == other.b; } // || a == other.b && b == other.a; }
+            CollisionPair(Collider* colliderA, Collider* colliderB) {
+                auto [minC, maxC] = std::minmax(colliderA, colliderB);
+                a = minC;
+                b = maxC;
+            }
+
+            bool operator==(const CollisionPair& other) const { return a == other.a && b == other.b; }
 
             bool operator<(const CollisionPair& other) const {
                 // Normalize so (A,B) == (B,A)

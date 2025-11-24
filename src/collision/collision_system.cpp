@@ -145,6 +145,9 @@ namespace rlge {
 
             // Process collider B, with flipped normal
             CollisionEvent flipped = event;
+            Collider* temp = event.colliderA;
+            flipped.colliderA = event.colliderB;
+            flipped.colliderB = temp;
             flipped.manifold.normal = Vector2Negate(flipped.manifold.normal);
             processEntity_(event.colliderB->entity(), flipped);
 
