@@ -22,7 +22,7 @@ namespace rlge {
     float Camera::zoom() const { return cam_.zoom; }
     void Camera::setRotation(const float r) { cam_.rotation = r; }
     float Camera::rotation() const { return cam_.rotation; }
-    void Camera::setOffset(const Vector2 o) { cam_.offset = o; }
+    void Camera::setOffset(const Vector2 o) { cam_.offset = o; originalOffset_ = o; }
     Vector2 Camera::offset() const { return cam_.offset; }
     void Camera::setTarget(const Vector2 t) { cam_.target = t; }
     Vector2 Camera::target() const { return cam_.target; }

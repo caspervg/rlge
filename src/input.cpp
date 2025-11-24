@@ -1,24 +1,17 @@
 #include "input.hpp"
 
-#include "raylib.h"
-
-namespace rlge {
-    void Input::bind(const std::string& action, int key) {
-        keys_[action] = key;
-    }
-
-    bool Input::down(const std::string& action) const {
-        const auto it = keys_.find(action);
-        if (it == keys_.end())
-            return false;
-        return IsKeyDown(it->second);
-    }
-
-    bool Input::pressed(const std::string& action) const {
-        const auto it = keys_.find(action);
-        if (it == keys_.end())
-            return false;
-        return IsKeyPressed(it->second);
-    }
-}
+// This file is intentionally mostly empty.
+// The Input class is now a template with all implementation in the header (input.hpp).
+// This allows users to define their own Action enum types.
+// 
+// Example usage with custom actions:
+//
+// enum class MyGameAction {
+//     Shoot,
+//     Reload,
+//     Sprint
+// };
+//
+// rlge::Input<MyGameAction> input;
+// input.bind(MyGameAction::Shoot, rlge::KeyCode::Space);
 

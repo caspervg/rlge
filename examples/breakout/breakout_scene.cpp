@@ -64,12 +64,16 @@ namespace breakout {
             if (!tr)
                 return;
 
-            if (input().down("left")) {
+            if (input().down(Action::MoveLeft)) {
                 tr->position.x -= moveSpeed * dt;
             }
-            if (input().down("right")) {
+            if (input().down(Action::MoveRight)) {
                 tr->position.x += moveSpeed * dt;
             }
+
+            tr->position.x += input().axisValue(Action::MoveLeft) * moveSpeed * dt;
+            tr->position.x -= input().axisValue(Action::MoveRight) * moveSpeed * dt;
+
 
             const float halfWidth = g_cfg.paddleWidth / 2.0f;
             if (tr->position.x < halfWidth) {

@@ -58,9 +58,9 @@ namespace rlge {
 
     const AssetStore& Scene::assets() const { return ctx_.assets; }
 
-    Input& Scene::input() { return ctx_.input; }
+    Input<>& Scene::input() { return ctx_.input; }
 
-    const Input& Scene::input() const { return ctx_.input; }
+    const Input<>& Scene::input() const { return ctx_.input; }
 
     RenderQueue& Scene::rq() { return ctx_.renderer; }
 

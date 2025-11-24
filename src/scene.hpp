@@ -23,7 +23,7 @@ namespace rlge {
 
     struct GameContext {
         AssetStore& assets;
-        Input& input;
+        Input<>& input;
         RenderQueue& renderer;
         EventBus& gameEvents;
         AudioManager& audio;
@@ -73,8 +73,8 @@ namespace rlge {
         AssetStore& assets();
         const AssetStore& assets() const;
 
-        Input& input();
-        const Input& input() const;
+        Input<>& input();
+        const Input<>& input() const;
 
         RenderQueue& rq();
         const RenderQueue& rq() const;
