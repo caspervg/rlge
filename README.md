@@ -19,7 +19,7 @@ This repository also contains example games/demos:
 - Entity/component model with helpers (`Transform`, sprites/animations, sprite sheets, tilemaps, particles, etc.).
 - Two event buses: scene-local and shared game-wide, with queued dispatch and forwarding helpers.
 - Camera system (follow/pan/zoom/rotate, screen <-> world helpers, view bounds) plus multi-view rendering.
-- Input binding system mapping named actions to keys.
+- **Type-safe Input system** with support for keyboard, mouse, gamepad, and analog axes (see [INPUT_API_EXAMPLES.md](INPUT_API_EXAMPLES.md)).
 - Batched render queue with layers (`Background`, `World`, `Foreground`, `UI`), z-sorting, per-view culling, and render stats.
 - Collision system with layers/masks, triggers vs solids vs kinematic colliders, AABB/OBB/circle/polygon shapes, and optional ImGui debug overlay.
 - Asset store for textures, prefab factory for named entity constructors, and an audio manager for sounds/music.
@@ -79,12 +79,15 @@ rlge::WindowConfig cfg{
 };
 rlge::Runtime runtime(cfg);
 
-runtime.input().bind("left", KEY_A);
-runtime.input().bind("right", KEY_D);
+// Type-safe input bindings
+runtime.input().bind(rlge::Action::MoveLeft, rlge::KeyCode::A);
+runtime.input().bind(rlge::Action::MoveRight, rlge::KeyCode::D);
 
 runtime.pushScene<MyScene>();
 runtime.run();
 ```
+
+For more input examples including mouse, gamepad, and axis support, see [INPUT_API_EXAMPLES.md](INPUT_API_EXAMPLES.md).
 
 ### Scenes, views, and entities
 
