@@ -5,7 +5,6 @@
 #include "game_over_scene.h"
 
 #include <format>
-#include <print>
 #include <random>
 
 #include "imgui.h"
@@ -259,7 +258,7 @@ namespace snake {
         fps_ = &spawn<FpsCounter>();
         // Particle emitter component on the snake head.
         if (snake_) {
-            deathFx_ = &snake_->add<rlge::BurstParticleEmitter>(rlge::BurstEmitterConfig{}, [](const rlge::Particle& p) {
+            deathFx_ = &snake_->add<BurstParticleEmitter>(BurstEmitterConfig{}, [](const rlge::Particle& p) {
                 // Velocity-aligned streak for death sparks.
                 const float speed = Vector2Length(p.vel);
                 if (speed < 1e-3f) {

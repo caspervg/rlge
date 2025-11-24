@@ -64,10 +64,10 @@ namespace breakout {
             if (!tr)
                 return;
 
-            if (input().down(rlge::Action::MoveLeft)) {
+            if (input().down(Action::MoveLeft)) {
                 tr->position.x -= moveSpeed * dt;
             }
-            if (input().down(rlge::Action::MoveRight)) {
+            if (input().down(Action::MoveRight)) {
                 tr->position.x += moveSpeed * dt;
             }
 
