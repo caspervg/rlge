@@ -329,16 +329,16 @@ namespace snake {
         // Translate input into game directions.
         if (!deathPending_) {
             const auto& input = this->input();
-            if (input.pressed("left")) {
+            if (input.pressed(rlge::Action::MoveLeft)) {
                 game_.setDirection(Direction::Left);
             }
-            else if (input.pressed("right")) {
+            else if (input.pressed(rlge::Action::MoveRight)) {
                 game_.setDirection(Direction::Right);
             }
-            else if (input.pressed("up")) {
+            else if (input.pressed(rlge::Action::MoveUp)) {
                 game_.setDirection(Direction::Up);
             }
-            else if (input.pressed("down")) {
+            else if (input.pressed(rlge::Action::MoveDown)) {
                 game_.setDirection(Direction::Down);
             }
 

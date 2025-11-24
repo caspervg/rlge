@@ -16,12 +16,12 @@ int main() {
     };
     Runtime runtime(wcfg);
 
-    // Basic input bindings
-    runtime.input().bind("left", KEY_A);
-    runtime.input().bind("right", KEY_D);
-    runtime.input().bind("up", KEY_W);
-    runtime.input().bind("down", KEY_S);
-    runtime.input().bind("enter", KEY_ENTER);
+    // Basic input bindings using type-safe enums
+    runtime.input().bind(rlge::Action::MoveLeft, rlge::KeyCode::A);
+    runtime.input().bind(rlge::Action::MoveRight, rlge::KeyCode::D);
+    runtime.input().bind(rlge::Action::MoveUp, rlge::KeyCode::W);
+    runtime.input().bind(rlge::Action::MoveDown, rlge::KeyCode::S);
+    runtime.input().bind(rlge::Action::Confirm, rlge::KeyCode::Enter);
 
     auto& bus = runtime.services().gameEvents();
     bus.subscribe<snake::RestartGame>([&runtime](const snake::RestartGame& _) {

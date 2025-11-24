@@ -64,11 +64,11 @@ public:
         if (!tr)
             return;
 
-        if (input.down("left"))
+        if (input.down(rlge::Action::MoveLeft))
             tr->position.x -= speed_ * dt;
-        if (input.down("right"))
+        if (input.down(rlge::Action::MoveRight))
             tr->position.x += speed_ * dt;
-        if (input.down("up"))
+        if (input.down(rlge::Action::MoveUp))
             tr->rotation += speed_ * dt;
     }
 
@@ -154,10 +154,10 @@ int main() {
     };
     Runtime runtime(cfg);
 
-    // Basic input bindings
-    runtime.input().bind("left", KEY_A);
-    runtime.input().bind("right", KEY_D);
-    runtime.input().bind("up", KEY_W);
+    // Basic input bindings using type-safe enums
+    runtime.input().bind(rlge::Action::MoveLeft, rlge::KeyCode::A);
+    runtime.input().bind(rlge::Action::MoveRight, rlge::KeyCode::D);
+    runtime.input().bind(rlge::Action::MoveUp, rlge::KeyCode::W);
 
     // Start with our game scene
     runtime.pushScene<GameScene>();
