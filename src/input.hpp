@@ -401,7 +401,7 @@ namespace rlge {
         std::unordered_map<ActionEnum, AxisBinding> axisBindings_;
 
         // Helper to convert GamepadButton to Raylib constant
-        int toRaylibGamepadButton(GamepadButton button) const {
+        [[nodiscard]] static int toRaylibGamepadButton(const GamepadButton button) {
             switch (button) {
                 case GamepadButton::A: return GAMEPAD_BUTTON_RIGHT_FACE_DOWN;
                 case GamepadButton::B: return GAMEPAD_BUTTON_RIGHT_FACE_RIGHT;
@@ -422,7 +422,7 @@ namespace rlge {
         }
 
         // Helper to convert GamepadAxis to Raylib constant
-        int toRaylibGamepadAxis(GamepadAxis axis) const {
+       [[nodiscard]] static int toRaylibGamepadAxis(const GamepadAxis axis)  {
             switch (axis) {
                 case GamepadAxis::LeftX: return GAMEPAD_AXIS_LEFT_X;
                 case GamepadAxis::LeftY: return GAMEPAD_AXIS_LEFT_Y;
