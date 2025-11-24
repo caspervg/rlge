@@ -20,6 +20,8 @@ int main() {
     runtime.input().bind(rlge::Action::MoveUp, rlge::KeyCode::W);
     runtime.input().bind(rlge::Action::MoveDown, rlge::KeyCode::S);
     runtime.input().bind(rlge::Action::Confirm, rlge::KeyCode::Enter);
+    runtime.input().bindAxis(Action::MoveLeft, 0, rlge::GamepadAxis::LeftX);
+    runtime.input().bindAxis(Action::MoveRight, 0, rlge::GamepadAxis::RightX);
 
     auto& bus = runtime.services().gameEvents();
     // bus.subscribe<snake::RestartGame>([&runtime](const snake::RestartGame& _) {
