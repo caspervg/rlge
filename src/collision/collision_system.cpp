@@ -130,9 +130,6 @@ namespace rlge {
         auto& collisions = scene.collisions().collisionEvents();
 
         for (const auto& event : collisions) {
-            // Resolve potential penetration
-            resolve_(event.colliderA, event.colliderB, event.manifold);
-
             // Process collider A
             processEntity_(event.colliderA->entity(), event);
 
@@ -140,10 +137,15 @@ namespace rlge {
             CollisionEvent flipped = event;
             flipped.manifold.normal = Vector2Negate(flipped.manifold.normal);
             processEntity_(event.colliderB->entity(), flipped);
+
+            // Resolve potential penetration
+            if (event.state != CollisionState::Exit) {
+                resolve_(event.colliderA, event.colliderB, event.manifold);
+            }
         }
     }
 
-    void CollisionResponseSystem::processEntity_(Entity& entity, const CollisionEvent& event) {
+    void CollisionResponseSystem::processEntity_(Entity& entity, const CollisionEvent& event) const {
         // Always handle PhysicsBody if present
         if (auto* physics = entity.get<PhysicsBody>()) {
             physics->onCollision(event);
@@ -170,27 +172,34 @@ namespace rlge {
         const bool kinA   = (typeA == ColliderType::Kinematic);
         const bool kinB   = (typeB == ColliderType::Kinematic);
 
+        constexpr auto epsilon = 1.0f;
+
         // Static / kinematic vs. solid: move only the solid collider fully out of penetration.
         if (kinA && solidB && !triggerB) {
-            b->resolve(manifold);
+            CollisionManifold ma = manifold;
+            ma.depth += epsilon;;
+            b->resolve(ma);
             return;
         }
 
         if (kinB && solidA && !triggerA) {
             CollisionManifold ma = manifold;
             ma.normal = Vector2Negate(ma.normal);
+            ma.depth += epsilon;
             a->resolve(ma);
             return;
         }
 
         // Solid vs. solid: symmetric resolution as before.
         if (solidA && solidB) {
-            std::println("solidA vs solidB");
             if (!triggerA) {
-                a->resolve(manifold);
+                CollisionManifold ma = manifold;
+                ma.depth += epsilon * 0.5f;  // Split epsilon between both
+                a->resolve(ma);
             }
             if (!triggerB) {
                 CollisionManifold flipped = manifold;
+                flipped.depth -= epsilon * 0.5f;
                 flipped.normal = Vector2Negate(flipped.normal);
                 b->resolve(flipped);
             }

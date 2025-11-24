@@ -73,7 +73,9 @@ namespace rlge {
             groundInfo_.collider = event.colliderB;
         }
 
-        reflectOffNormal(event.manifold.normal);
+        if (event.state == CollisionState::Enter) {
+            reflectOffNormal(event.manifold.normal);
+        }
     }
 
     void PhysicsBody::reflectOffNormal(const Vector2& normal) {

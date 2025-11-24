@@ -80,6 +80,31 @@ namespace breakout {
             }
         }
 
+        void onCollision(const CollisionEvent& event) {
+            // Only apply spin on first contact, not during sustained collision
+            return;;
+            std::println("Paddle hit {}", event.colliderB->entity().id().index);
+            if (auto* ballPhysics = event.colliderB->entity().get<PhysicsBody>()) {
+                auto* tr = get<rlge::Transform>();
+                auto* ballTr = event.colliderB->entity().get<rlge::Transform>();
+
+                // Calculate hit position (-1.0 to 1.0)
+                float hitOffset = (ballTr->position.x - tr->position.x) / (g_cfg.paddleWidth / 2.0f);
+
+                // Modify ball angle based on hit position
+                float angle = hitOffset * 60.0f * DEG2RAD; // Max 60 degree deflection
+                float speed = Vector2Length(ballPhysics->velocity());
+
+                Vector2 newVel = {
+                    sinf(angle) * speed,
+                    -fabsf(cosf(angle) * speed) // Force negative (upward)
+                };
+                ballPhysics->setVelocity(newVel);;
+                std::println("Ball hit paddle at offset {:.2f}, new velocity: ({:.2f}, {:.2f})",
+                             hitOffset, newVel.x, newVel.y);
+            }
+        }
+
         void draw() override {
             RenderEntity::draw();
 
@@ -236,12 +261,15 @@ namespace breakout {
                 if (auto* brick = dynamic_cast<Brick*>(&entity)) {
                     brick->onCollision(event);
                 }
+                if (auto* paddle = dynamic_cast<Paddle*>(&entity)) {
+                    paddle->onCollision(event);
+                }
             });
 
             // Subscribe to game events
             gameEvents().subscribe<BrickDestroyed>([this](const BrickDestroyed& e) {
                 score_ += e.points;
-                camera_.shake(0.25f, 0.1f);  // intensity, duration
+                camera_.shake(0.25f, 0.1f); // intensity, duration
             });
 
             gameEvents().subscribe<BallLost>([this](const BallLost&) {

@@ -61,7 +61,7 @@ namespace rlge {
         void update(Scene& scene);
 
     private:
-        void processEntity_(Entity& e, const CollisionEvent& event);
+        void processEntity_(Entity& entity, const CollisionEvent& event) const;
         void resolve_(Collider* a, Collider* b, const CollisionManifold& manifold);
 
     private:

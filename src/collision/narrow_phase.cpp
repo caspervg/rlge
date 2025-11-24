@@ -220,7 +220,7 @@ namespace rlge::narrow_phase {
         const auto dist = sqrtf(dSq);
 
         // Contact point is on the circle surface
-        m.contactPoint = closest;
+        m.contactPoint = center - Vector2Scale(m.normal, radius);
 
         if (dist == 0.0f) {
             // Circle center is inside the box, choose the shallowest axis
@@ -234,10 +234,10 @@ namespace rlge::narrow_phase {
 
             if (minX < minY) {
                 m.normal = (left < right) ? Vector2{-1.f, 0.f} : Vector2{1.f, 0.f};
-                m.depth = minX;
+                m.depth = minX + radius;
             } else {
                 m.normal = (top < bottom) ? Vector2{0.f, -1.f} : Vector2{0.f, 1.f};
-                m.depth = minY;
+                m.depth = minY + radius;
             }
         } else {
             // Partial overlap
