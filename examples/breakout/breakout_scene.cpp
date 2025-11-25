@@ -1,5 +1,7 @@
 #include "breakout_scene.hpp"
 
+#include <ostream>
+
 #include "breakout_game.hpp"
 #include "circle_collider.hpp"
 #include "runtime.hpp"
@@ -36,8 +38,17 @@ namespace breakout {
 
         // Wire up event handlers
         collisionResponses().addHandler([this](Entity& entity, const CollisionEvent& event) { handleCollisionResponse_(entity, event); });
-        gameEvents().subscribe<BrickDestroyed>([this](const BrickDestroyed& e) { handleBrickDestroyed_(e); });
-        gameEvents().subscribe<BallLost>([this](const BallLost& e) { handleBallLost_(e); });
+        brickDestroyedHandlerId_ = gameEvents().subscribe<BrickDestroyed>([this](const BrickDestroyed& e) { handleBrickDestroyed_(e); });
+        ballLostHandlerId_ = gameEvents().subscribe<BallLost>([this](const BallLost& e) { handleBallLost_(e); });
+    }
+
+    void BreakoutScene::exit() {
+        gameEvents().unsubscribe<BrickDestroyed>(brickDestroyedHandlerId_);
+        gameEvents().unsubscribe<BallLost>(ballLostHandlerId_);
+    }
+
+    void BreakoutScene::resetBall_() {
+        ball_ = &spawn<Ball>();
     }
 
     void BreakoutScene::handleCollisionResponse_(Entity& entity, const CollisionEvent& event) {
@@ -57,10 +68,11 @@ namespace breakout {
     void BreakoutScene::handleBallLost_(const BallLost& e) {
         lives_--;
         if (lives_ <= 0) {
-            gameEvents().enqueue(GameWon{});
+            gameEvents().enqueue(GameLost{score_});
         }
         else {
-            // resetBall();
+            std::println("Remaining lives: {}", lives_);
+            resetBall_();
         }
     }
 } // namespace breakout

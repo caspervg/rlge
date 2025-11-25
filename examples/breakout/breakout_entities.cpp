@@ -145,8 +145,9 @@ namespace breakout {
             return;
 
         // The ball fell off
-        if (tr->position.y > g_cfg.height) {
-            scene().gameEvents().enqueue(BallLost{});
+        if (tr->position.y > g_cfg.height && !outOfFrame_) {
+            outOfFrame_ = true;
+            scene().gameEvents().publish(BallLost{});
         }
     }
 

@@ -46,5 +46,6 @@ namespace breakout {
     private:
         PhysicsBody* physics_{nullptr};
         CircleCollider* col_{nullptr};
+        bool outOfFrame_ = false;
     };
 }

@@ -12,8 +12,10 @@ namespace breakout {
         explicit BreakoutScene(Runtime& r);
 
         void enter() override;
+        void exit() override;
 
     private:
+        void resetBall_();
         void handleCollisionResponse_(Entity& entity, const CollisionEvent& event);
         void handleBrickDestroyed_(const BrickDestroyed& e);
         void handleBallLost_(const BallLost& e);
@@ -28,5 +30,9 @@ namespace breakout {
         Wall* rightWall_{nullptr};
         Wall* topWall_{nullptr};
         std::vector<Brick*> bricks_;
+        EventBus::SubscriptionId collisionHandlerId_{0};
+        EventBus::SubscriptionId ballLostHandlerId_{0};
+        EventBus::SubscriptionId brickDestroyedHandlerId_{0};
+
     };
 }

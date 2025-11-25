@@ -1,4 +1,5 @@
 #include "breakout_scene.hpp"
+#include "game_over_scene.h"
 #include "runtime.hpp"
 #include "window.hpp"
 
@@ -14,20 +15,22 @@ int main() {
     Runtime runtime(wcfg);
 
     // Basic input bindings using type-safe enums
-    runtime.input().bind(rlge::Action::MoveLeft, rlge::KeyCode::A);
-    runtime.input().bind(rlge::Action::MoveRight, rlge::KeyCode::D);
-    runtime.input().bind(rlge::Action::MoveUp, rlge::KeyCode::W);
-    runtime.input().bind(rlge::Action::MoveDown, rlge::KeyCode::S);
-    runtime.input().bind(rlge::Action::Confirm, rlge::KeyCode::Enter);
+    runtime.input().bind(Action::MoveLeft, KeyCode::A);
+    runtime.input().bind(Action::MoveRight, KeyCode::D);
+    runtime.input().bind(Action::Confirm, KeyCode::Enter);
     runtime.input().bindAxis(Action::MoveLeft, 0, rlge::GamepadAxis::LeftX);
     runtime.input().bindAxis(Action::MoveRight, 0, rlge::GamepadAxis::RightX);
 
     auto& bus = runtime.services().gameEvents();
-    // bus.subscribe<snake::RestartGame>([&runtime](const snake::RestartGame& _) {
-    //     runtime.popScene(); // pop GameOverScene
-    //     runtime.popScene(); // pop old GameScene
-    //     runtime.pushScene<snake::GameScene>();
-    // });
+    bus.subscribe<breakout::RestartGame>([&runtime](const breakout::RestartGame& _) {
+        runtime.popScene(); // pop GameOverScene
+        runtime.popScene(); // pop old BreakoutScene
+        runtime.pushScene<breakout::BreakoutScene>();
+    });
+    bus.subscribe<breakout::GameLost>([&runtime](const breakout::GameLost& e) {
+        runtime.popScene(); // pop BreakoutScene
+        runtime.pushScene<breakout::GameOverScene>(e.finalScore);
+    });
 
     runtime.pushScene<breakout::BreakoutScene>();
     runtime.run();
