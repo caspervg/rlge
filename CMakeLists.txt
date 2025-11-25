@@ -86,6 +86,8 @@ target_link_libraries(rlge_particles PRIVATE rlge raylib rlimgui imgui)
 add_executable(rlge_snake
         examples/snake/main.cpp
         examples/snake/snake_game.cpp
+        examples/snake/snake_fx.cpp
+        examples/snake/snake_view.cpp
         examples/snake/snake_scene.cpp
         examples/snake/game_over_scene.cpp
         examples/snake/game_over_scene.h)
