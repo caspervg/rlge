@@ -168,7 +168,7 @@ namespace rlge {
         void update(float dt) override;
         void draw() override;
 
-        void setBurstCount(std::size_t c) { burstCount_ = c; }
+        void setBurstCount(const std::size_t c) { burstCount_ = c; }
         [[nodiscard]] std::size_t burstCount() const { return burstCount_; }
 
         void setConfig(const BurstEmitterConfig& cfg);
