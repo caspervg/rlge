@@ -94,7 +94,7 @@ namespace snake {
         // Self collision: check against body except the current tail,
         // which will move forward if we don't grow this step.
         const int lastIndex = static_cast<int>(body_.size()) - 1;
-        for (int i = 0; i < lastIndex; ++i) {
+        for (auto i = 0; i < lastIndex; ++i) {
             if (body_[i].x == nextX && body_[i].y == nextY) {
                 if (gameBus_) {
                     gameBus_->enqueue(SnakeDied{});
