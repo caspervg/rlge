@@ -1,5 +1,4 @@
-#include "breakout_game.hpp"
-#include "breakout_scene.cpp"
+#include "breakout_scene.hpp"
 #include "runtime.hpp"
 #include "window.hpp"
 
