@@ -10,6 +10,7 @@
 #include "entity_registry.hpp"
 #include "events.hpp"
 #include "input.hpp"
+#include "render_layer.hpp"
 #include "render_queue.hpp"
 #include "tween.hpp"
 #include "collision/collision_system.hpp"
@@ -25,6 +26,7 @@ namespace rlge {
         AssetStore& assets;
         Input<>& input;
         RenderQueue& renderer;
+        LayerRegistry& layers;
         EventBus& gameEvents;
         AudioManager& audio;
     };
@@ -78,6 +80,9 @@ namespace rlge {
 
         RenderQueue& rq();
         const RenderQueue& rq() const;
+
+        LayerRegistry& layers();
+        const LayerRegistry& layers() const;
 
         AudioManager& audio();
         const AudioManager& audio() const;

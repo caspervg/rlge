@@ -67,13 +67,13 @@ public:
         const auto& in = scene().input();
         constexpr auto speed = 150.0f;
 
-        if (in.down("left"))
+        if (in.down(Action::MoveLeft))
             tr->position.x -= speed * dt;
-        if (in.down("right"))
+        if (in.down(Action::MoveRight))
             tr->position.x += speed * dt;
-        if (in.down("up"))
+        if (in.down(Action::MoveUp))
             tr->position.y -= speed * dt;
-        if (in.down("down"))
+        if (in.down(Action::MoveDown))
             tr->position.y += speed * dt;
     }
 
@@ -254,10 +254,10 @@ int main() {
 
     Runtime runtime(cfg);
 
-    runtime.input().bind("left", KEY_A);
-    runtime.input().bind("right", KEY_D);
-    runtime.input().bind("up", KEY_W);
-    runtime.input().bind("down", KEY_S);
+    runtime.input().bind(Action::MoveLeft, KeyCode::A);
+    runtime.input().bind(Action::MoveRight, KeyCode::D);
+    runtime.input().bind(Action::MoveUp, KeyCode::W);
+    runtime.input().bind(Action::MoveDown, KeyCode::S);
 
     runtime.pushScene<CollisionDemoScene>();
     runtime.run();

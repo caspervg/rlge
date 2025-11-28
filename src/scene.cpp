@@ -10,7 +10,7 @@ namespace rlge {
 
     Scene::Scene(Runtime& r)
         : runtime_(r)
-          , ctx_{r.assetStore(), r.input(), r.renderer(), r.services().gameEvents(), r.services().audio()}
+          , ctx_{r.assetStore(), r.input(), r.renderer(), r.layers(), r.services().gameEvents(), r.services().audio()}
           , collisions_(CollisionSystem())
           , collisionResponses_(CollisionResponseSystem())
           , tweens_(TweenSystem())
@@ -65,6 +65,10 @@ namespace rlge {
     RenderQueue& Scene::rq() { return ctx_.renderer; }
 
     const RenderQueue& Scene::rq() const { return ctx_.renderer; }
+
+    LayerRegistry& Scene::layers() { return ctx_.layers; }
+
+    const LayerRegistry& Scene::layers() const { return ctx_.layers; }
 
     AudioManager& Scene::audio() { return ctx_.audio; }
 

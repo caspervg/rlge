@@ -6,6 +6,7 @@
 
 #include "entity.hpp"
 #include "raylib.h"
+#include "render_layer.hpp"
 
 namespace rlge {
     class Scene;
@@ -27,14 +28,20 @@ namespace rlge {
                 std::vector<TileCell> tiles,
                 int margin = 0,
                 int spacing = 0,
-                int columns = 0);
+                int columns = 0,
+                LayerId layer = InvalidLayerId);
 
         static Tilemap& loadTMX(Scene& scene,
                                  Texture2D& tex,
                                  const std::filesystem::path& path,
-                                 const std::string& layerName = "");
+                                 const std::string& layerName = "",
+                                 LayerId layer = InvalidLayerId);
 
         void draw() override;
+
+        // Set the render layer
+        void setLayer(LayerId layer) { layer_ = layer; }
+        LayerId layer() const { return layer_; }
 
         // Dimensions in tiles
         int mapWidth() const { return width_; }
@@ -54,5 +61,6 @@ namespace rlge {
         int margin_;
         int spacing_;
         int columns_;
+        LayerId layer_;
     };
 }

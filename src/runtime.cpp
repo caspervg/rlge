@@ -8,7 +8,13 @@
 #include "rlImGui.h"
 
 namespace rlge {
-    Runtime::Runtime(const WindowConfig& cfg) : window_(cfg) { rlImGuiSetup(true); }
+    Runtime::Runtime(const WindowConfig& cfg)
+        : window_(cfg)
+        , layers_()
+        , renderer_(layers_) {
+        layers_.createDefaults();
+        rlImGuiSetup(true);
+    }
 
     Runtime::~Runtime() {
         scenes_ = SceneStack{};
@@ -84,6 +90,10 @@ namespace rlge {
     GameServices& Runtime::services() { return services_; }
 
     const GameServices& Runtime::services() const { return services_; }
+
+    LayerRegistry& Runtime::layers() { return layers_; }
+
+    const LayerRegistry& Runtime::layers() const { return layers_; }
 
     Window& Runtime::window() { return window_; }
 

@@ -4,16 +4,24 @@
 #include <chrono>
 
 namespace rlge {
-    RenderQueue::RenderQueue() {
+    RenderQueue::RenderQueue(LayerRegistry& layers)
+        : layers_(&layers) {
         commands_.reserve(256);
-        for (auto& layerBatches : batches_) {
-            layerBatches.reserve(16);
-        }
         stats_.reset();
         worldPrepared_ = false;
     }
 
-    void RenderQueue::submitSprite(RenderLayer layer, float z, Texture2D texture,
+    LayerId RenderQueue::toLayerId(RenderLayer layer) const {
+        switch (layer) {
+            case RenderLayer::Background: return layers_->background();
+            case RenderLayer::World: return layers_->world();
+            case RenderLayer::Foreground: return layers_->foreground();
+            case RenderLayer::UI: return layers_->ui();
+            default: return layers_->world();
+        }
+    }
+
+    void RenderQueue::submitSprite(LayerId layer, float z, Texture2D texture,
                                    Rectangle src, Rectangle dest, Vector2 origin,
                                    float rotation, Color tint) {
         auto& batch = getBatch(layer, texture);
@@ -22,10 +30,14 @@ namespace rlge {
         worldPrepared_ = false;
     }
 
-    SpriteBatch& RenderQueue::getBatch(RenderLayer layer, Texture2D texture) {
-        const int layerIdx = static_cast<int>(layer);
-        auto& layerBatches = batches_[layerIdx];
+    void RenderQueue::submitSprite(RenderLayer layer, float z, Texture2D texture,
+                                   Rectangle src, Rectangle dest, Vector2 origin,
+                                   float rotation, Color tint) {
+        submitSprite(toLayerId(layer), z, texture, src, dest, origin, rotation, tint);
+    }
 
+    SpriteBatch& RenderQueue::getBatch(LayerId layer, Texture2D texture) {
+        auto& layerBatches = batches_[layer];
         const TextureId texId = texture.id;
         auto it = layerBatches.find(texId);
 
@@ -40,14 +52,38 @@ namespace rlge {
         return it->second;
     }
 
-    void RenderQueue::submit(RenderLayer layer, float z, std::function<void()> fn) {
-        commands_.push_back(DrawCommand{layer, z, std::move(fn)});
+    void RenderQueue::submitCustom(LayerId layer, float z, Shader shader,
+                                   std::function<void()> fn) {
+        DrawCommand cmd;
+        cmd.layer = layer;
+        cmd.z = z;
+        cmd.draw = std::move(fn);
+        cmd.shader = shader;
+        commands_.push_back(std::move(cmd));
         stats_.customCommands++;
         worldPrepared_ = false;
     }
 
-    void RenderQueue::submit(RenderLayer layer, std::function<void()> fn) {
+    void RenderQueue::submit(LayerId layer, float z, std::function<void()> fn) {
+        DrawCommand cmd;
+        cmd.layer = layer;
+        cmd.z = z;
+        cmd.draw = std::move(fn);
+        commands_.push_back(std::move(cmd));
+        stats_.customCommands++;
+        worldPrepared_ = false;
+    }
+
+    void RenderQueue::submit(LayerId layer, std::function<void()> fn) {
         submit(layer, 0.0f, std::move(fn));
+    }
+
+    void RenderQueue::submit(RenderLayer layer, float z, std::function<void()> fn) {
+        submit(toLayerId(layer), z, std::move(fn));
+    }
+
+    void RenderQueue::submit(RenderLayer layer, std::function<void()> fn) {
+        submit(toLayerId(layer), 0.0f, std::move(fn));
     }
 
     void RenderQueue::beginFrame() {
@@ -56,7 +92,7 @@ namespace rlge {
     }
 
     void RenderQueue::clear() {
-        for (auto& layerBatches : batches_) {
+        for (auto& [layerId, layerBatches] : batches_) {
             for (auto& [texId, batch] : layerBatches) {
                 batch.clear();
             }
@@ -66,31 +102,31 @@ namespace rlge {
     }
 
     void RenderQueue::submitBackground(std::function<void()> fn) {
-        submit(RenderLayer::Background, std::move(fn));
+        submit(layers_->background(), std::move(fn));
     }
 
     void RenderQueue::submitBackground(float z, std::function<void()> fn) {
-        submit(RenderLayer::Background, z, std::move(fn));
+        submit(layers_->background(), z, std::move(fn));
     }
 
     void RenderQueue::submitWorld(std::function<void()> fn) {
-        submit(RenderLayer::World, std::move(fn));
+        submit(layers_->world(), std::move(fn));
     }
 
     void RenderQueue::submitWorld(float z, std::function<void()> fn) {
-        submit(RenderLayer::World, z, std::move(fn));
+        submit(layers_->world(), z, std::move(fn));
     }
 
     void RenderQueue::submitForeground(std::function<void()> fn) {
-        submit(RenderLayer::Foreground, std::move(fn));
+        submit(layers_->foreground(), std::move(fn));
     }
 
     void RenderQueue::submitForeground(float z, std::function<void()> fn) {
-        submit(RenderLayer::Foreground, z, std::move(fn));
+        submit(layers_->foreground(), z, std::move(fn));
     }
 
     void RenderQueue::submitUI(std::function<void()> fn) {
-        submit(RenderLayer::UI, std::move(fn));
+        submit(layers_->ui(), std::move(fn));
     }
 
     void RenderQueue::prepareWorld() {
@@ -99,11 +135,19 @@ namespace rlge {
 
         const auto startTime = std::chrono::high_resolution_clock::now();
 
+        // Get sorted layers
+        auto sortedLayers = layers_->getSorted();
+
+        // Sort commands by layer sort order, then by z
         if (!commands_.empty()) {
             std::sort(commands_.begin(), commands_.end(),
-                      [](const DrawCommand& a, const DrawCommand& b) {
-                          if (a.layer != b.layer)
-                              return static_cast<int>(a.layer) < static_cast<int>(b.layer);
+                      [this](const DrawCommand& a, const DrawCommand& b) {
+                          const LayerData* layerA = layers_->get(a.layer);
+                          const LayerData* layerB = layers_->get(b.layer);
+                          const int orderA = layerA ? layerA->config.sortOrder : 0;
+                          const int orderB = layerB ? layerB->config.sortOrder : 0;
+                          if (orderA != orderB)
+                              return orderA < orderB;
                           return a.z < b.z;
                       });
         }
@@ -111,9 +155,16 @@ namespace rlge {
         stats_.batchCount = 0;
         stats_.drawCalls = 0;
 
-        for (int i = 0; i <= static_cast<int>(RenderLayer::Foreground); ++i) {
-            auto& layerBatches = batches_[i];
-            for (auto& [texId, batch] : layerBatches) {
+        // Sort quads within batches for world-space layers
+        for (auto* layer : sortedLayers) {
+            if (!layer->config.worldSpace)
+                continue;
+
+            auto it = batches_.find(layer->id);
+            if (it == batches_.end())
+                continue;
+
+            for (auto& [texId, batch] : it->second) {
                 if (batch.quads.empty())
                     continue;
 
@@ -125,10 +176,12 @@ namespace rlge {
             }
         }
 
+        // Count world-space commands
+        const LayerId uiLayerId = layers_->ui();
         const size_t worldCommands = std::count_if(
             commands_.begin(),
             commands_.end(),
-            [](const DrawCommand& cmd) { return cmd.layer != RenderLayer::UI; });
+            [uiLayerId](const DrawCommand& cmd) { return cmd.layer != uiLayerId; });
         stats_.drawCalls = stats_.batchCount + worldCommands;
 
         const auto endTime = std::chrono::high_resolution_clock::now();
@@ -157,36 +210,70 @@ namespace rlge {
 
         size_t drawCallsThisView = 0;
 
-        for (int i = 0; i <= static_cast<int>(RenderLayer::Foreground); ++i) {
-            auto& layerBatches = batches_[i];
-            for (auto& [texId, batch] : layerBatches) {
-                if (batch.quads.empty())
-                    continue;
+        // Get sorted world-space layers
+        auto sortedLayers = layers_->getSorted();
 
-                bool batchRendered = false;
-                for (const auto& quad : batch.quads) {
-                    const Rectangle quadBounds{
-                        quad.dest.x - quad.origin.x,
-                        quad.dest.y - quad.origin.y,
-                        std::abs(quad.dest.width),
-                        std::abs(quad.dest.height)
-                    };
+        for (auto* layer : sortedLayers) {
+            // Skip screen-space layers (UI)
+            if (!layer->config.worldSpace)
+                continue;
 
-                    if (!CheckCollisionRecs(quadBounds, viewBounds))
-                        continue;
-
-                    DrawTexturePro(batch.texture, quad.src, quad.dest,
-                                   quad.origin, quad.rotation, quad.tint);
-                    batchRendered = true;
+            // Apply layer shader if present
+            const bool hasLayerShader = layer->shader.id != 0;
+            if (hasLayerShader) {
+                BeginShaderMode(layer->shader);
+                // Apply typed params if present
+                if (layer->shaderParams) {
+                    layer->shaderParams->apply();
                 }
-
-                if (batchRendered)
-                    drawCallsThisView++;
             }
 
+            // Render batched sprites for this layer
+            auto batchIt = batches_.find(layer->id);
+            if (batchIt != batches_.end()) {
+                for (auto& [texId, batch] : batchIt->second) {
+                    if (batch.quads.empty())
+                        continue;
+
+                    bool batchRendered = false;
+                    for (const auto& quad : batch.quads) {
+                        const Rectangle quadBounds{
+                            quad.dest.x - quad.origin.x,
+                            quad.dest.y - quad.origin.y,
+                            std::abs(quad.dest.width),
+                            std::abs(quad.dest.height)
+                        };
+
+                        if (!CheckCollisionRecs(quadBounds, viewBounds))
+                            continue;
+
+                        DrawTexturePro(batch.texture, quad.src, quad.dest,
+                                       quad.origin, quad.rotation, quad.tint);
+                        batchRendered = true;
+                    }
+
+                    if (batchRendered)
+                        drawCallsThisView++;
+                }
+            }
+
+            // End layer shader before processing custom commands
+            if (hasLayerShader) {
+                EndShaderMode();
+            }
+
+            // Render custom draw commands for this layer
             for (const auto& cmd : commands_) {
-                if (static_cast<int>(cmd.layer) == i && cmd.draw) {
+                if (cmd.layer == layer->id && cmd.draw) {
+                    // Apply command-specific shader if present
+                    const bool hasCmdShader = cmd.shader.id != 0;
+                    if (hasCmdShader) {
+                        BeginShaderMode(cmd.shader);
+                    }
                     cmd.draw();
+                    if (hasCmdShader) {
+                        EndShaderMode();
+                    }
                     drawCallsThisView++;
                 }
             }
@@ -204,30 +291,58 @@ namespace rlge {
     void RenderQueue::flushUI() {
         auto startTime = std::chrono::high_resolution_clock::now();
 
-        auto& uiBatches = batches_[static_cast<int>(RenderLayer::UI)];
+        const LayerId uiLayerId = layers_->ui();
+        const LayerData* uiLayer = layers_->get(uiLayerId);
+
         size_t uiDrawCalls = 0;
-        for (auto& [texId, batch] : uiBatches) {
-            if (batch.quads.empty())
-                continue;
 
-            std::ranges::sort(batch.quads,
-                      [](const SpriteQuad& a, const SpriteQuad& b) {
-                          return a.z < b.z;
-                      });
-
-            for (const auto& quad : batch.quads) {
-                DrawTexturePro(batch.texture, quad.src, quad.dest,
-                               quad.origin, quad.rotation, quad.tint);
+        // Apply UI layer shader if present
+        const bool hasLayerShader = uiLayer && uiLayer->shader.id != 0;
+        if (hasLayerShader) {
+            BeginShaderMode(uiLayer->shader);
+            if (uiLayer->shaderParams) {
+                uiLayer->shaderParams->apply();
             }
-
-            stats_.drawCalls++;
-            stats_.batchCount++;
-            uiDrawCalls++;
         }
 
+        // Render UI batches
+        auto batchIt = batches_.find(uiLayerId);
+        if (batchIt != batches_.end()) {
+            for (auto& [texId, batch] : batchIt->second) {
+                if (batch.quads.empty())
+                    continue;
+
+                std::ranges::sort(batch.quads,
+                          [](const SpriteQuad& a, const SpriteQuad& b) {
+                              return a.z < b.z;
+                          });
+
+                for (const auto& quad : batch.quads) {
+                    DrawTexturePro(batch.texture, quad.src, quad.dest,
+                                   quad.origin, quad.rotation, quad.tint);
+                }
+
+                stats_.drawCalls++;
+                stats_.batchCount++;
+                uiDrawCalls++;
+            }
+        }
+
+        if (hasLayerShader) {
+            EndShaderMode();
+        }
+
+        // Render UI commands
         for (const auto& cmd : commands_) {
-            if (cmd.layer == RenderLayer::UI && cmd.draw) {
+            if (cmd.layer == uiLayerId && cmd.draw) {
+                const bool hasCmdShader = cmd.shader.id != 0;
+                if (hasCmdShader) {
+                    BeginShaderMode(cmd.shader);
+                }
                 cmd.draw();
+                if (hasCmdShader) {
+                    EndShaderMode();
+                }
                 stats_.drawCalls++;
                 uiDrawCalls++;
             }

@@ -44,8 +44,7 @@ target_include_directories(imgui INTERFACE ${imgui_SOURCE_DIR})
 FetchContent_Declare(
         rlimgui
         GIT_REPOSITORY "https://github.com/raylib-extras/rlImGui.git"
-        GIT_TAG "4d8a61842903978bc42adf3347cd34f4e6524efc"
-        GIT_SHALLOW TRUE
+        GIT_TAG "main"
         GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(rlimgui)

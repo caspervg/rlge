@@ -1,6 +1,7 @@
 #pragma once
 #include "component.hpp"
 #include "raylib.h"
+#include "render_layer.hpp"
 #include "transformer.hpp"
 
 namespace rlge {
@@ -30,9 +31,13 @@ namespace rlge {
     // Component that draws a single tile from a SpriteSheet.
     class SheetSprite : public Component {
     public:
-        SheetSprite(Entity& e, SpriteSheet& sheet, int col, int row);
+        SheetSprite(Entity& e, SpriteSheet& sheet, int col, int row, LayerId layer = InvalidLayerId);
 
         void setTile(int col, int row);
+
+        // Set the render layer
+        void setLayer(LayerId layer) { layer_ = layer; }
+        LayerId layer() const { return layer_; }
 
         void draw() override;
 
@@ -40,6 +45,7 @@ namespace rlge {
         SpriteSheet& sheet_;
         int col_;
         int row_;
+        LayerId layer_;
     };
 }
 
