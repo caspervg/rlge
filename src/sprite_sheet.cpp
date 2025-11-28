@@ -4,6 +4,7 @@
 
 #include "entity.hpp"
 #include "scene.hpp"
+#include "shader_effect.hpp"
 
 namespace rlge {
     SpriteSheet::SpriteSheet(Texture2D& tex, const int tileW, const int tileH)
@@ -40,11 +41,12 @@ namespace rlge {
         };
     }
 
-    SheetSprite::SheetSprite(Entity& e, SpriteSheet& sheet, const int col, const int row)
+    SheetSprite::SheetSprite(Entity& e, SpriteSheet& sheet, const int col, const int row, LayerId layer)
         : Component(e)
         , sheet_(sheet)
         , col_(col)
-        , row_(row) {}
+        , row_(row)
+        , layer_(layer) {}
 
     void SheetSprite::setTile(const int col, const int row) {
         col_ = col;
@@ -68,9 +70,28 @@ namespace rlge {
         dest.y = std::roundf(dest.y);
         const float rotation = t->rotation;
 
-        // Use batched sprite submission
-        auto& rq = entity().scene().rq();
-        rq.submitSprite(RenderLayer::World, pos.y, sheet_.texture(),
-                       src, dest, origin, rotation, WHITE);
+        auto& scene = entity().scene();
+        auto& rq = scene.rq();
+
+        // Resolve layer: use provided layer or default to world
+        LayerId effectiveLayer = layer_;
+        if (effectiveLayer == InvalidLayerId) {
+            effectiveLayer = scene.layers().world();
+        }
+
+        // Check for per-entity shader effect
+        auto* shaderEffect = entity().get<IShaderEffect>();
+        if (shaderEffect) {
+            // Use custom draw command with shader (bypasses batching)
+            Shader shader = shaderEffect->shader();
+            rq.submitCustom(effectiveLayer, pos.y, shader, [this, src, dest, origin, rotation, shaderEffect]() {
+                shaderEffect->apply();
+                DrawTexturePro(sheet_.texture(), src, dest, origin, rotation, WHITE);
+            });
+        } else {
+            // Use batched sprite submission
+            rq.submitSprite(effectiveLayer, pos.y, sheet_.texture(),
+                           src, dest, origin, rotation, WHITE);
+        }
     }
 }

@@ -22,7 +22,8 @@ namespace rlge {
                      std::vector<TileCell> tiles,
                      int margin,
                      int spacing,
-                     int columns)
+                     int columns,
+                     LayerId layer)
         : Entity(scene)
         , texture_(tex)
         , tw_(tileW)
@@ -32,7 +33,8 @@ namespace rlge {
         , data_(std::move(tiles))
         , margin_(margin)
         , spacing_(spacing)
-        , columns_(columns) {
+        , columns_(columns)
+        , layer_(layer) {
         add<Transform>();
     }
 
@@ -59,7 +61,8 @@ namespace rlge {
     Tilemap& Tilemap::loadTMX(Scene& scene,
                               Texture2D& tex,
                               const std::filesystem::path& path,
-                              const std::string& layerName) {
+                              const std::string& layerName,
+                              LayerId layer) {
         tson::Tileson parser;
         auto map = parser.parse(path);
         if (!map || map->getStatus() != tson::ParseStatus::OK) {
@@ -138,7 +141,8 @@ namespace rlge {
                                     std::move(tiles),
                                     margin,
                                     spacing,
-                                    columns);
+                                    columns,
+                                    layer);
     }
 
     void Tilemap::draw() {
@@ -150,6 +154,12 @@ namespace rlge {
         constexpr std::uint32_t FLIP_D = 0x20000000u;
 
         auto& rq = scene().rq();
+
+        // Resolve layer: use provided layer or default to background
+        LayerId effectiveLayer = layer_;
+        if (effectiveLayer == InvalidLayerId) {
+            effectiveLayer = scene().layers().background();
+        }
 
         // Iterate over all tiles; per-view culling happens in the renderer.
         for (auto y = 0; y < height_; ++y) {
@@ -202,8 +212,8 @@ namespace rlge {
                 };
                 const Vector2 origin{halfSize.x, halfSize.y};
 
-                // Use batched sprite submission instead of lambda
-                rq.submitSprite(RenderLayer::Background, 0.0f, texture_,
+                // Use batched sprite submission with dynamic layer
+                rq.submitSprite(effectiveLayer, 0.0f, texture_,
                                src, dest, origin, rotation, WHITE);
             }
         }

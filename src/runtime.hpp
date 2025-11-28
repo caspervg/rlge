@@ -11,6 +11,7 @@
 #include "events.hpp"
 #include "input.hpp"
 #include "prefab.hpp"
+#include "render_layer.hpp"
 #include "render_queue.hpp"
 #include "scene.hpp"
 #include "window.hpp"
@@ -68,6 +69,9 @@ namespace rlge {
         RenderQueue& renderer();
         const RenderQueue& renderer() const;
 
+        LayerRegistry& layers();
+        const LayerRegistry& layers() const;
+
         GameServices& services();
         const GameServices& services() const;
 
@@ -94,6 +98,7 @@ namespace rlge {
         AssetStore assets_;
         Input<> input_;
         GameServices services_;
+        LayerRegistry layers_;
         RenderQueue renderer_;
         SceneStack scenes_;
         std::vector<View> views_;

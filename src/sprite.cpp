@@ -2,13 +2,15 @@
 
 #include "entity.hpp"
 #include "scene.hpp"
+#include "shader_effect.hpp"
 
 namespace rlge {
-    Sprite::Sprite(Entity& e, Texture2D& tex, const int frameW, const int frameH)
+    Sprite::Sprite(Entity& e, Texture2D& tex, const int frameW, const int frameH, LayerId layer)
         : Component(e)
         , texture_(tex)
         , fw_(frameW)
-        , fh_(frameH) {}
+        , fh_(frameH)
+        , layer_(layer) {}
 
     void Sprite::draw() {
         const auto* t = entity().get<Transform>();
@@ -29,14 +31,33 @@ namespace rlge {
         const Rectangle dest{pos.x, pos.y, size.x, size.y};
         const float rotation = t->rotation;
 
-        // Use batched sprite submission
-        auto& rq = entity().scene().rq();
-        rq.submitSprite(RenderLayer::World, pos.y, texture_,
-                       src, dest, origin, rotation, WHITE);
+        auto& scene = entity().scene();
+        auto& rq = scene.rq();
+
+        // Resolve layer: use provided layer or default to world
+        LayerId effectiveLayer = layer_;
+        if (effectiveLayer == InvalidLayerId) {
+            effectiveLayer = scene.layers().world();
+        }
+
+        // Check for per-entity shader effect
+        auto* shaderEffect = entity().get<IShaderEffect>();
+        if (shaderEffect) {
+            // Use custom draw command with shader (bypasses batching)
+            Shader shader = shaderEffect->shader();
+            rq.submitCustom(effectiveLayer, pos.y, shader, [this, &rq, src, dest, origin, rotation, shaderEffect]() {
+                shaderEffect->apply();
+                DrawTexturePro(texture_, src, dest, origin, rotation, WHITE);
+            });
+        } else {
+            // Use batched sprite submission
+            rq.submitSprite(effectiveLayer, pos.y, texture_,
+                           src, dest, origin, rotation, WHITE);
+        }
     }
 
-    SpriteAnim::SpriteAnim(Entity& e, Texture2D& tex, const int frameW, const int frameH)
-        : Sprite(e, tex, frameW, frameH) {}
+    SpriteAnim::SpriteAnim(Entity& e, Texture2D& tex, const int frameW, const int frameH, LayerId layer)
+        : Sprite(e, tex, frameW, frameH, layer) {}
 
     void SpriteAnim::addFrame(const Rectangle& src, const float time) {
         frames_.push_back({src, time});
@@ -80,9 +101,28 @@ namespace rlge {
         const Rectangle dest{pos.x, pos.y, size.x, size.y};
         const float rotation = t->rotation;
 
-        // Use batched sprite submission
-        auto& rq = entity().scene().rq();
-        rq.submitSprite(RenderLayer::World, pos.y, texture_,
-                       f.rect, dest, origin, rotation, WHITE);
+        auto& scene = entity().scene();
+        auto& rq = scene.rq();
+
+        // Resolve layer: use provided layer or default to world
+        LayerId effectiveLayer = layer_;
+        if (effectiveLayer == InvalidLayerId) {
+            effectiveLayer = scene.layers().world();
+        }
+
+        // Check for per-entity shader effect
+        auto* shaderEffect = entity().get<IShaderEffect>();
+        if (shaderEffect) {
+            // Use custom draw command with shader (bypasses batching)
+            Shader shader = shaderEffect->shader();
+            rq.submitCustom(effectiveLayer, pos.y, shader, [this, &f, dest, origin, rotation, shaderEffect]() {
+                shaderEffect->apply();
+                DrawTexturePro(texture_, f.rect, dest, origin, rotation, WHITE);
+            });
+        } else {
+            // Use batched sprite submission
+            rq.submitSprite(effectiveLayer, pos.y, texture_,
+                           f.rect, dest, origin, rotation, WHITE);
+        }
     }
 }

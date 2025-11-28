@@ -3,6 +3,7 @@
 
 #include "component.hpp"
 #include "raylib.h"
+#include "render_layer.hpp"
 #include "transformer.hpp"
 
 namespace rlge {
@@ -10,17 +11,24 @@ namespace rlge {
 
     class Sprite : public Component {
     public:
-        Sprite(Entity& e, Texture2D& tex, int frameW, int frameH);
+        // Constructor with optional layer (defaults to world layer)
+        Sprite(Entity& e, Texture2D& tex, int frameW, int frameH, LayerId layer = InvalidLayerId);
         void draw() override;
+
+        // Set the render layer
+        void setLayer(LayerId layer) { layer_ = layer; }
+        LayerId layer() const { return layer_; }
+
     protected:
         Texture2D& texture_;
         int fw_;
         int fh_;
+        LayerId layer_;
     };
 
     class SpriteAnim : public Sprite {
     public:
-        SpriteAnim(Entity& e, Texture2D& tex, int frameW, int frameH);
+        SpriteAnim(Entity& e, Texture2D& tex, int frameW, int frameH, LayerId layer = InvalidLayerId);
 
         void addFrame(const Rectangle& src, float time);
 
