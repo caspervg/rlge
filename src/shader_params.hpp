@@ -158,8 +158,7 @@ namespace rlge {
         void rebind() {
             // Clear existing bindings and recreate from setups
             bindings_.clear();
-            std::vector<std::function<void()>> setups = bindingSetups_;
-            bindingSetups_.clear();
+            auto setups = std::move(bindingSetups_);
             for (auto& setup : setups) {
                 setup();
             }
