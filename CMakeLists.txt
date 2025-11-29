@@ -74,6 +74,14 @@ file(GLOB RLGE_SOURCES "${PROJECT_INCLUDE}*.cpp" "${PROJECT_INCLUDE}collision/*.
 add_library(rlge STATIC ${RLGE_SOURCES})
 target_include_directories(rlge PUBLIC ${PROJECT_INCLUDE} "${PROJECT_INClUDE}/collision/" "${PROJECT_INCLUDE}/collision/shape/")
 target_link_libraries(rlge PUBLIC raylib rlimgui tileson)
+target_sources(rlge PRIVATE
+        src/ui/widget.cpp
+        src/ui/stack.cpp
+        src/ui/panel.cpp
+        src/ui/label.cpp
+        src/ui/button.cpp
+        src/ui/spacer.cpp
+        src/ui/system.cpp)
 
 # Example game executables
 add_executable(rlge_basic_game examples/basic_game/main.cpp)

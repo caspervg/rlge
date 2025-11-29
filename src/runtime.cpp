@@ -1,5 +1,4 @@
 #include "runtime.hpp"
-#include "collision/collision_system.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -31,6 +30,8 @@ namespace rlge {
             renderer_.beginFrame();
             const float dt = GetFrameTime();
 
+            services_.ui().beginFrame(window_.size());
+
             if (IsKeyPressed(debugKey_)) {
                 debugEnabled_ = !debugEnabled_;
             }
@@ -47,6 +48,9 @@ namespace rlge {
             ClearBackground(BLACK);
 
             scenes_.draw();
+            services_.ui().layout();
+            services_.ui().processInput(input_);
+            services_.ui().render(renderer_);
 
             renderer_.prepareWorld();
 

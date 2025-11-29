@@ -15,7 +15,6 @@ namespace rlge {
 namespace snake {
 
     class Background;
-    class Scoreboard;
     class SnakeHead;
     class SnakeBody;
     class BorderTiles;
@@ -36,7 +35,6 @@ namespace snake {
         Game game_;
 
         Background* bg_{nullptr};
-        Scoreboard* scoreboard_{nullptr};
         SnakeHead* snake_{nullptr};
         SnakeBody* snakeBody_{nullptr};
         BorderTiles* borders_{nullptr};
