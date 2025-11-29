@@ -35,7 +35,11 @@ namespace rlge {
                 debugEnabled_ = !debugEnabled_;
             }
 
-            scenes_.update(dt);
+            if (transitionState_ != TransitionState::None) {
+                updateTransition_(dt);
+            } else {
+                scenes_.update(dt);
+            }
             services_.audio().update();
             services_.gameEvents().dispatchQueued();
 
@@ -68,6 +72,10 @@ namespace rlge {
                 ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
                 scenes_.drawDebug();
                 rlImGuiEnd();
+            }
+
+            if (transitionState_ != TransitionState::None) {
+                drawTransition_();
             }
 
             EndDrawing();
@@ -144,5 +152,29 @@ namespace rlge {
         }
         return nullptr;
     }
+
     const std::vector<View>& Runtime::views() const { return views_; }
+
+    void Runtime::updateTransition_(const float dt) {
+        if (pendingTransition_->update(dt)) {
+            if (transitionState_ == TransitionState::Out) {
+                // Switch scenes at the midpoint
+                scenes_.pop();
+                scenes_.push(pendingSceneFactory_());
+                pendingTransition_->setPhase(TransitionPhase::In);
+                transitionState_ = TransitionState::In;
+            } else {
+                // Transition complete
+                pendingTransition_.reset();
+                transitionState_ = TransitionState::None;
+            }
+        }
+    }
+
+    void Runtime::drawTransition_() {
+        const auto [x, y] = window_.size();
+        pendingTransition_->draw(renderer_, x, y);
+    }
+
+
 } // namespace rlge

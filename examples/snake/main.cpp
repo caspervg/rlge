@@ -25,9 +25,7 @@ int main() {
 
     auto& bus = runtime.services().gameEvents();
     bus.subscribe<snake::RestartGame>([&runtime](const snake::RestartGame& _) {
-        runtime.popScene(); // pop GameOverScene
-        runtime.popScene(); // pop old GameScene
-        runtime.pushScene<snake::GameScene>();
+        runtime.transitionTo<snake::GameScene>(std::make_unique<FadeTransition>(0.35f));
     });
 
     runtime.pushScene<snake::GameScene>();

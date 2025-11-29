@@ -14,6 +14,7 @@
 #include "render_layer.hpp"
 #include "render_queue.hpp"
 #include "scene.hpp"
+#include "transition.hpp"
 #include "window.hpp"
 
 
@@ -48,11 +49,23 @@ namespace rlge {
         Runtime(const Runtime&) = delete;
         Runtime& operator=(const Runtime&) = delete;
 
+        // Immediately go to a new scene
         template <typename T, typename... Args>
         void pushScene(Args&&... args) {
             static_assert(std::is_base_of_v<Scene, T>, "T must be Scene");
             auto ptr = std::make_unique<T>(*this, std::forward<Args>(args)...);
             scenes_.push(std::move(ptr));
+        }
+
+        // Transition to a new scene
+        template <typename T, typename... Args>
+        void transitionTo(std::unique_ptr<Transition> transition, Args&&... args) {
+            pendingTransition_ = std::move(transition);
+            pendingSceneFactory_ = [this, ... args = std::forward<Args>(args)]() {
+                return std::make_unique<T>(*this, args...);
+            };
+            transitionState_ = TransitionState::Out;
+            pendingTransition_->setPhase(TransitionPhase::Out);
         }
 
         void popScene();
@@ -91,6 +104,11 @@ namespace rlge {
         [[nodiscard]] const std::vector<View>& views() const;
 
     private:
+        void updateTransition_(float dt);
+        void drawTransition_();
+
+    private:
+        enum class TransitionState { None, Out, In };
         bool running_ = false;
         bool debugEnabled_ = false;
         KeyboardKey debugKey_ = KEY_F1;
@@ -98,10 +116,13 @@ namespace rlge {
         AssetStore assets_;
         Input<> input_;
         GameServices services_;
-        LayerRegistry layers_;  // Must be declared before renderer_ (dependency)
+        LayerRegistry layers_;
         RenderQueue renderer_;
         SceneStack scenes_;
         std::vector<View> views_;
         ViewId nextViewId_{0};
+        std::unique_ptr<Transition> pendingTransition_;
+        std::function<std::unique_ptr<Scene>()> pendingSceneFactory_;
+        TransitionState transitionState_ = TransitionState::None;
     };
 }

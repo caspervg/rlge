@@ -103,8 +103,10 @@ namespace snake {
             deathTimer_ -= dt;
             if (deathTimer_ <= 0.0f) {
                 deathPending_ = false;
-                runtime().pushScene<GameOverScene>(score_);
-                return;
+                runtime().transitionTo<GameOverScene>(
+                    std::make_unique<FadeTransition>(0.3f),
+                    score_
+                );
             }
         }
 
