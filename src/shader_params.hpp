@@ -60,9 +60,7 @@ namespace rlge {
         ShaderParams(const ShaderParams& other)
             : shader_(other.shader_)
             , params_(other.params_)
-            , bindings_(other.bindings_)
             , bindingSetups_(other.bindingSetups_) {
-            // Re-bind to ensure pointers reference our params_
             rebind();
         }
 
@@ -70,9 +68,7 @@ namespace rlge {
         ShaderParams(ShaderParams&& other) noexcept
             : shader_(other.shader_)
             , params_(std::move(other.params_))
-            , bindings_(std::move(other.bindings_))
             , bindingSetups_(std::move(other.bindingSetups_)) {
-            // Re-bind to ensure pointers reference our params_
             rebind();
         }
 
@@ -81,7 +77,6 @@ namespace rlge {
             if (this != &other) {
                 shader_ = other.shader_;
                 params_ = other.params_;
-                bindings_ = other.bindings_;
                 bindingSetups_ = other.bindingSetups_;
                 rebind();
             }
@@ -93,7 +88,6 @@ namespace rlge {
             if (this != &other) {
                 shader_ = other.shader_;
                 params_ = std::move(other.params_);
-                bindings_ = std::move(other.bindings_);
                 bindingSetups_ = std::move(other.bindingSetups_);
                 rebind();
             }
@@ -103,34 +97,22 @@ namespace rlge {
         // Fluent bind API using pointer-to-member
         template<typename M>
         ShaderParams& bind(const char* uniformName, M T::* member) {
-            // Cache the uniform location
-            const int location = GetShaderLocation(shader_, uniformName);
-
             // Store the binding setup for rebinding after copy/move
-            bindingSetups_.push_back([this, uniformName, member]() {
-                const int loc = GetShaderLocation(shader_, uniformName);
+            bindingSetups_.push_back([uniformName, member](ShaderParams& self) {
+                const int loc = GetShaderLocation(self.shader_, uniformName);
                 UniformBinding binding;
                 binding.location = loc;
-                binding.apply = [this, member, loc](Shader s, int) {
+                binding.apply = [&self, member, loc](Shader s, int) {
                     if (loc < 0) return;
-                    const M& value = params_.*member;
+                    const M& value = self.params_.*member;
                     SetShaderValue(s, loc, &value,
                                    ShaderUniformType<M>::value);
                 };
-                bindings_.push_back(std::move(binding));
+                self.bindings_.push_back(std::move(binding));
             });
 
-            // Create the binding immediately
-            UniformBinding binding;
-            binding.location = location;
-            binding.apply = [this, member, location](Shader s, int) {
-                if (location < 0) return;
-                const M& value = params_.*member;
-                SetShaderValue(s, location, &value,
-                               ShaderUniformType<M>::value);
-            };
-            bindings_.push_back(std::move(binding));
-
+            // Create the binding immediately for this instance
+            bindingSetups_.back()(*this);
             return *this;
         }
 
@@ -156,18 +138,16 @@ namespace rlge {
 
     private:
         void rebind() {
-            // Clear existing bindings and recreate from setups
             bindings_.clear();
-            auto setups = std::move(bindingSetups_);
-            for (auto& setup : setups) {
-                setup();
+            for (auto& setup : bindingSetups_) {
+                setup(*this);
             }
         }
 
         Shader shader_;
         T params_;
         std::vector<UniformBinding> bindings_;
-        std::vector<std::function<void()>> bindingSetups_;
+        std::vector<std::function<void(ShaderParams&)>> bindingSetups_;
     };
 
     // Interface for type-erased shader params access
