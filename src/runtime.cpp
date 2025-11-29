@@ -2,6 +2,7 @@
 #include "collision/collision_system.hpp"
 
 #include <algorithm>
+#include <filesystem>
 
 #include "imgui.h"
 #include "raylib.h"
@@ -10,9 +11,9 @@
 namespace rlge {
     Runtime::Runtime(const WindowConfig& cfg)
         : window_(cfg)
-        , layers_()
-        , renderer_(layers_) {
+          , renderer_(layers_) {
         layers_.createDefaults();
+        assets_.setRoot(std::filesystem::current_path());
         rlImGuiSetup(true);
     }
 
@@ -87,13 +88,13 @@ namespace rlge {
 
     const RenderQueue& Runtime::renderer() const { return renderer_; }
 
-    GameServices& Runtime::services() { return services_; }
-
-    const GameServices& Runtime::services() const { return services_; }
-
     LayerRegistry& Runtime::layers() { return layers_; }
 
     const LayerRegistry& Runtime::layers() const { return layers_; }
+
+    GameServices& Runtime::services() { return services_; }
+
+    const GameServices& Runtime::services() const { return services_; }
 
     Window& Runtime::window() { return window_; }
 
