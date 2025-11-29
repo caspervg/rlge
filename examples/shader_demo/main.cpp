@@ -158,7 +158,7 @@ public:
         assets().setRoot(findDemoRoot());
 
         // Load shaders via the asset store
-        waveShader_ = assets().loadFragmentShader("wave_frag","wave.fs");
+        waveShader_ = assets().loadFragmentShader("wave_frag","wave.frag");
         flashShader_ = assets().loadShaderFromMemory("flash_frag", nullptr, flashFragmentShader);
 
         // Create a custom "water" layer with the wave shader
