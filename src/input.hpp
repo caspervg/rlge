@@ -1,7 +1,6 @@
 #pragma once
-#include <unordered_map>
 #include <optional>
-#include <cmath>
+#include <unordered_map>
 #include "raylib.h"
 
 namespace rlge {
@@ -165,17 +164,19 @@ namespace rlge {
     };
 
     // Template Input class - allows users to define their own Action enum
-    template<typename ActionEnum = Action>
+    template <typename ActionEnum = Action>
     class Input {
     public:
         // Keyboard binding
-        void bind(ActionEnum action, KeyCode key) {
-            keyBindings_[action] = KeyBinding{key};
+        template <typename... KeyCodes>
+        void bind(ActionEnum action, KeyCodes... keys) {
+            (keyBindings_.insert({action, KeyBinding{keys}}), ...);
         }
 
         // Mouse binding
-        void bindMouse(ActionEnum action, MouseButton button) {
-            mouseBindings_[action] = MouseBinding{button};
+        template <typename... MouseButtons>
+        void bindMouse(ActionEnum action, MouseButtons... buttons) {
+            (mouseBindings_.insert({action, MouseBinding{buttons}}), ...);
         }
 
         // Gamepad binding
@@ -204,18 +205,22 @@ namespace rlge {
 
         // Query if action button is currently held down (checks keyboard, mouse, and gamepad)
         bool down(ActionEnum action) const {
-            // Check keyboard
-            const auto keyIt = keyBindings_.find(action);
-            if (keyIt != keyBindings_.end() && IsKeyDown(static_cast<int>(keyIt->second.key))) {
-                return true;
+            // Check all keyboard bindings for this action
+            auto [begin, end] = keyBindings_.equal_range(action);
+            for (auto it = begin; it != end; ++it) {
+                if (IsKeyDown(static_cast<int>(it->second.key))) {
+                    return true;
+                }
             }
-            
-            // Check mouse
-            const auto mouseIt = mouseBindings_.find(action);
-            if (mouseIt != mouseBindings_.end() && IsMouseButtonDown(static_cast<int>(mouseIt->second.button))) {
-                return true;
+
+            // Check mouse...
+            auto [mBegin, mEnd] = mouseBindings_.equal_range(action);
+            for (auto it = mBegin; it != mEnd; ++it) {
+                if (IsMouseButtonDown(static_cast<int>(it->second.button))) {
+                    return true;
+                }
             }
-            
+
             // Check gamepad
             const auto gamepadIt = gamepadBindings_.find(action);
             if (gamepadIt != gamepadBindings_.end()) {
@@ -224,7 +229,7 @@ namespace rlge {
                     return true;
                 }
             }
-            
+
             return false;
         }
 
@@ -235,22 +240,23 @@ namespace rlge {
             if (keyIt != keyBindings_.end() && IsKeyPressed(static_cast<int>(keyIt->second.key))) {
                 return true;
             }
-            
+
             // Check mouse
             const auto mouseIt = mouseBindings_.find(action);
             if (mouseIt != mouseBindings_.end() && IsMouseButtonPressed(static_cast<int>(mouseIt->second.button))) {
                 return true;
             }
-            
+
             // Check gamepad
             const auto gamepadIt = gamepadBindings_.find(action);
             if (gamepadIt != gamepadBindings_.end()) {
                 if (IsGamepadAvailable(gamepadIt->second.gamepadId) &&
-                    IsGamepadButtonPressed(gamepadIt->second.gamepadId, toRaylibGamepadButton(gamepadIt->second.button))) {
+                    IsGamepadButtonPressed(gamepadIt->second.gamepadId,
+                                           toRaylibGamepadButton(gamepadIt->second.button))) {
                     return true;
                 }
             }
-            
+
             return false;
         }
 
@@ -261,22 +267,23 @@ namespace rlge {
             if (keyIt != keyBindings_.end() && IsKeyReleased(static_cast<int>(keyIt->second.key))) {
                 return true;
             }
-            
+
             // Check mouse
             const auto mouseIt = mouseBindings_.find(action);
             if (mouseIt != mouseBindings_.end() && IsMouseButtonReleased(static_cast<int>(mouseIt->second.button))) {
                 return true;
             }
-            
+
             // Check gamepad
             const auto gamepadIt = gamepadBindings_.find(action);
             if (gamepadIt != gamepadBindings_.end()) {
                 if (IsGamepadAvailable(gamepadIt->second.gamepadId) &&
-                    IsGamepadButtonReleased(gamepadIt->second.gamepadId, toRaylibGamepadButton(gamepadIt->second.button))) {
+                    IsGamepadButtonReleased(gamepadIt->second.gamepadId,
+                                            toRaylibGamepadButton(gamepadIt->second.button))) {
                     return true;
                 }
             }
-            
+
             return false;
         }
 
@@ -306,10 +313,10 @@ namespace rlge {
             const auto it = gamepadBindings_.find(action);
             if (it == gamepadBindings_.end())
                 return false;
-            
+
             if (!IsGamepadAvailable(it->second.gamepadId))
                 return false;
-            
+
             return IsGamepadButtonDown(it->second.gamepadId, toRaylibGamepadButton(it->second.button));
         }
 
@@ -318,10 +325,10 @@ namespace rlge {
             const auto it = gamepadBindings_.find(action);
             if (it == gamepadBindings_.end())
                 return false;
-            
+
             if (!IsGamepadAvailable(it->second.gamepadId))
                 return false;
-            
+
             return IsGamepadButtonPressed(it->second.gamepadId, toRaylibGamepadButton(it->second.button));
         }
 
@@ -353,8 +360,8 @@ namespace rlge {
                     float axisVal = GetGamepadAxisMovement(
                         gamepadBinding.gamepadId,
                         toRaylibGamepadAxis(gamepadBinding.axis)
-                    );
-                    
+                        );
+
                     // Replace keyboard value only if gamepad axis is active (exceeds dead zone)
                     if (std::abs(axisVal) > binding.deadZone) {
                         value = axisVal;
@@ -395,42 +402,64 @@ namespace rlge {
             float deadZone = 0.1f;
         };
 
-        std::unordered_map<ActionEnum, KeyBinding> keyBindings_;
-        std::unordered_map<ActionEnum, MouseBinding> mouseBindings_;
-        std::unordered_map<ActionEnum, GamepadBinding> gamepadBindings_;
+        std::unordered_multimap<ActionEnum, KeyBinding> keyBindings_;
+        std::unordered_multimap<ActionEnum, MouseBinding> mouseBindings_;
+        std::unordered_multimap<ActionEnum, GamepadBinding> gamepadBindings_;
         std::unordered_map<ActionEnum, AxisBinding> axisBindings_;
 
         // Helper to convert GamepadButton to Raylib constant
         [[nodiscard]] static int toRaylibGamepadButton(const GamepadButton button) {
             switch (button) {
-                case GamepadButton::A: return GAMEPAD_BUTTON_RIGHT_FACE_DOWN;
-                case GamepadButton::B: return GAMEPAD_BUTTON_RIGHT_FACE_RIGHT;
-                case GamepadButton::X: return GAMEPAD_BUTTON_RIGHT_FACE_LEFT;
-                case GamepadButton::Y: return GAMEPAD_BUTTON_RIGHT_FACE_UP;
-                case GamepadButton::LeftBumper: return GAMEPAD_BUTTON_LEFT_TRIGGER_1;
-                case GamepadButton::RightBumper: return GAMEPAD_BUTTON_RIGHT_TRIGGER_1;
-                case GamepadButton::Back: return GAMEPAD_BUTTON_MIDDLE_LEFT;
-                case GamepadButton::Start: return GAMEPAD_BUTTON_MIDDLE_RIGHT;
-                case GamepadButton::LeftThumb: return GAMEPAD_BUTTON_LEFT_THUMB;
-                case GamepadButton::RightThumb: return GAMEPAD_BUTTON_RIGHT_THUMB;
-                case GamepadButton::DPadUp: return GAMEPAD_BUTTON_LEFT_FACE_UP;
-                case GamepadButton::DPadRight: return GAMEPAD_BUTTON_LEFT_FACE_RIGHT;
-                case GamepadButton::DPadDown: return GAMEPAD_BUTTON_LEFT_FACE_DOWN;
-                case GamepadButton::DPadLeft: return GAMEPAD_BUTTON_LEFT_FACE_LEFT;
-                default: return GAMEPAD_BUTTON_UNKNOWN;
+            case GamepadButton::A:
+                return GAMEPAD_BUTTON_RIGHT_FACE_DOWN;
+            case GamepadButton::B:
+                return GAMEPAD_BUTTON_RIGHT_FACE_RIGHT;
+            case GamepadButton::X:
+                return GAMEPAD_BUTTON_RIGHT_FACE_LEFT;
+            case GamepadButton::Y:
+                return GAMEPAD_BUTTON_RIGHT_FACE_UP;
+            case GamepadButton::LeftBumper:
+                return GAMEPAD_BUTTON_LEFT_TRIGGER_1;
+            case GamepadButton::RightBumper:
+                return GAMEPAD_BUTTON_RIGHT_TRIGGER_1;
+            case GamepadButton::Back:
+                return GAMEPAD_BUTTON_MIDDLE_LEFT;
+            case GamepadButton::Start:
+                return GAMEPAD_BUTTON_MIDDLE_RIGHT;
+            case GamepadButton::LeftThumb:
+                return GAMEPAD_BUTTON_LEFT_THUMB;
+            case GamepadButton::RightThumb:
+                return GAMEPAD_BUTTON_RIGHT_THUMB;
+            case GamepadButton::DPadUp:
+                return GAMEPAD_BUTTON_LEFT_FACE_UP;
+            case GamepadButton::DPadRight:
+                return GAMEPAD_BUTTON_LEFT_FACE_RIGHT;
+            case GamepadButton::DPadDown:
+                return GAMEPAD_BUTTON_LEFT_FACE_DOWN;
+            case GamepadButton::DPadLeft:
+                return GAMEPAD_BUTTON_LEFT_FACE_LEFT;
+            default:
+                return GAMEPAD_BUTTON_UNKNOWN;
             }
         }
 
         // Helper to convert GamepadAxis to Raylib constant
-       [[nodiscard]] static int toRaylibGamepadAxis(const GamepadAxis axis)  {
+        [[nodiscard]] static int toRaylibGamepadAxis(const GamepadAxis axis) {
             switch (axis) {
-                case GamepadAxis::LeftX: return GAMEPAD_AXIS_LEFT_X;
-                case GamepadAxis::LeftY: return GAMEPAD_AXIS_LEFT_Y;
-                case GamepadAxis::RightX: return GAMEPAD_AXIS_RIGHT_X;
-                case GamepadAxis::RightY: return GAMEPAD_AXIS_RIGHT_Y;
-                case GamepadAxis::LeftTrigger: return GAMEPAD_AXIS_LEFT_TRIGGER;
-                case GamepadAxis::RightTrigger: return GAMEPAD_AXIS_RIGHT_TRIGGER;
-                default: return GAMEPAD_AXIS_LEFT_X;
+            case GamepadAxis::LeftX:
+                return GAMEPAD_AXIS_LEFT_X;
+            case GamepadAxis::LeftY:
+                return GAMEPAD_AXIS_LEFT_Y;
+            case GamepadAxis::RightX:
+                return GAMEPAD_AXIS_RIGHT_X;
+            case GamepadAxis::RightY:
+                return GAMEPAD_AXIS_RIGHT_Y;
+            case GamepadAxis::LeftTrigger:
+                return GAMEPAD_AXIS_LEFT_TRIGGER;
+            case GamepadAxis::RightTrigger:
+                return GAMEPAD_AXIS_RIGHT_TRIGGER;
+            default:
+                return GAMEPAD_AXIS_LEFT_X;
             }
         }
     };
