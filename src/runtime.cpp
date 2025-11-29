@@ -29,8 +29,9 @@ namespace rlge {
         while (running_ && !WindowShouldClose()) {
             renderer_.beginFrame();
             const float dt = GetFrameTime();
-
-            services_.ui().beginFrame(window_.size());
+            if (auto* s = scenes_.top()) {
+                s->ui().beginFrame(window_.size());
+            }
 
             if (IsKeyPressed(debugKey_)) {
                 debugEnabled_ = !debugEnabled_;
@@ -48,9 +49,14 @@ namespace rlge {
             ClearBackground(BLACK);
 
             scenes_.draw();
-            services_.ui().layout();
-            services_.ui().processInput(input_);
-            services_.ui().render(renderer_);
+            if (auto* s = scenes_.top()) {
+                s->ui().layout();
+                s->ui().processInput(input_);
+                s->ui().render(renderer_);
+            }
+            if (transitionState_ != TransitionState::None) {
+                drawTransition_();
+            }
 
             renderer_.prepareWorld();
 
@@ -76,10 +82,6 @@ namespace rlge {
                 ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
                 scenes_.drawDebug();
                 rlImGuiEnd();
-            }
-
-            if (transitionState_ != TransitionState::None) {
-                drawTransition_();
             }
 
             EndDrawing();

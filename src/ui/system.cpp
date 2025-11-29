@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <unordered_map>
 
 #include "layout.hpp"
 #include "raylib.h"
@@ -25,10 +26,9 @@ namespace rlge::ui {
 
     void UiSystem::beginFrame(const Vector2 windowSize) {
         hover_ = nullptr;
+        active_ = nullptr;
         clicked_.reset();
         clickedId_.reset();
-        // Keep activeId_ so held clicks persist across frames; active_ will be reassigned each frame.
-
         if (root_) {
             root_->setLayout(LayoutConfig{.size = windowSize});
         }

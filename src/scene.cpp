@@ -10,7 +10,7 @@ namespace rlge {
 
     Scene::Scene(Runtime& r)
         : runtime_(r)
-          , ctx_{r.assetStore(), r.input(), r.renderer(), r.layers(), r.services().gameEvents(), r.services().audio()}
+          , ctx_{r.assetStore(), r.input(), r.renderer(), r.layers(), r.services().gameEvents(), r.services().audio(), ui::UiSystem{}}
           , collisions_(CollisionSystem())
           , collisionResponses_(CollisionResponseSystem())
           , tweens_(TweenSystem())
@@ -73,6 +73,10 @@ namespace rlge {
     AudioManager& Scene::audio() { return ctx_.audio; }
 
     const AudioManager& Scene::audio() const { return ctx_.audio; }
+
+    ui::UiSystem& Scene::ui() { return ctx_.ui; }
+
+    const ui::UiSystem& Scene::ui() const { return ctx_.ui; }
 
     CollisionSystem& Scene::collisions() { return collisions_; }
 
@@ -144,5 +148,17 @@ namespace rlge {
             }
             s->collisions().debugOverlay();
         }
+    }
+
+    Scene* SceneStack::top() {
+        if (stack_.empty())
+            return nullptr;
+        return stack_.back().get();
+    }
+
+    const Scene* SceneStack::top() const {
+        if (stack_.empty())
+            return nullptr;
+        return stack_.back().get();
     }
 } // namespace rlge

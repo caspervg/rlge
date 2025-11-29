@@ -116,8 +116,8 @@ namespace snake {
         }
 
         // Build HUD using the UI system.
-        auto& ui = runtime().services().ui();
-        auto& root = ui.root();
+        auto& uiSystem = ui();
+        auto& root = uiSystem.root();
         root.clearChildren();
 
         const auto windowSize = runtime().window().size();

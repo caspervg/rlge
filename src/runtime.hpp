@@ -15,7 +15,6 @@
 #include "render_queue.hpp"
 #include "scene.hpp"
 #include "transition.hpp"
-#include "ui/system.hpp"
 #include "window.hpp"
 
 
@@ -33,13 +32,11 @@ namespace rlge {
         EventBus& gameEvents() { return events_; }
         AudioManager& audio() { return audio_; }
         PrefabFactory& prefabs() { return prefabs_; }
-        ui::UiSystem& ui() { return ui_; }
 
     private:
         EventBus events_;
         AudioManager audio_;
         PrefabFactory prefabs_;
-        ui::UiSystem ui_;
 
         friend class Runtime;
     };
