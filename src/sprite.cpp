@@ -5,6 +5,13 @@
 #include "shader_effect.hpp"
 
 namespace rlge {
+    Sprite::Sprite(Entity& e, Texture2D& tex, const int frameW, const int frameH)
+        : Component(e)
+        , texture_(tex)
+        , fw_(frameW)
+        , fh_(frameH)
+        , layer_(InvalidLayerId) {}
+
     Sprite::Sprite(Entity& e, Texture2D& tex, const int frameW, const int frameH, LayerId layer)
         : Component(e)
         , texture_(tex)
@@ -41,7 +48,7 @@ namespace rlge {
         }
 
         // Check for per-entity shader effect
-        auto* shaderEffect = entity().get<IShaderEffect>();
+        auto* shaderEffect = entity().get<HasShaderEffect>();
         if (shaderEffect) {
             // Use custom draw command with shader (bypasses batching)
             Shader shader = shaderEffect->shader();
@@ -55,6 +62,9 @@ namespace rlge {
                            src, dest, origin, rotation, WHITE);
         }
     }
+
+    SpriteAnim::SpriteAnim(Entity& e, Texture2D& tex, const int frameW, const int frameH)
+        : Sprite(e, tex, frameW, frameH) {}
 
     SpriteAnim::SpriteAnim(Entity& e, Texture2D& tex, const int frameW, const int frameH, LayerId layer)
         : Sprite(e, tex, frameW, frameH, layer) {}
@@ -111,7 +121,7 @@ namespace rlge {
         }
 
         // Check for per-entity shader effect
-        auto* shaderEffect = entity().get<IShaderEffect>();
+        auto* shaderEffect = entity().get<HasShaderEffect>();
         if (shaderEffect) {
             // Use custom draw command with shader (bypasses batching)
             Shader shader = shaderEffect->shader();

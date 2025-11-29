@@ -31,7 +31,11 @@ namespace rlge {
     // Component that draws a single tile from a SpriteSheet.
     class SheetSprite : public Component {
     public:
-        SheetSprite(Entity& e, SpriteSheet& sheet, int col, int row, LayerId layer = InvalidLayerId);
+        // Constructor without LayerId (defaults to world layer)
+        SheetSprite(Entity& e, SpriteSheet& sheet, int col, int row);
+
+        // Constructor with LayerId
+        SheetSprite(Entity& e, SpriteSheet& sheet, int col, int row, LayerId layer);
 
         void setTile(int col, int row);
 

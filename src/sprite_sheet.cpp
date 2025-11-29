@@ -41,6 +41,13 @@ namespace rlge {
         };
     }
 
+    SheetSprite::SheetSprite(Entity& e, SpriteSheet& sheet, const int col, const int row)
+        : Component(e)
+        , sheet_(sheet)
+        , col_(col)
+        , row_(row)
+        , layer_(InvalidLayerId) {}
+
     SheetSprite::SheetSprite(Entity& e, SpriteSheet& sheet, const int col, const int row, LayerId layer)
         : Component(e)
         , sheet_(sheet)
@@ -80,7 +87,7 @@ namespace rlge {
         }
 
         // Check for per-entity shader effect
-        auto* shaderEffect = entity().get<IShaderEffect>();
+        auto* shaderEffect = entity().get<HasShaderEffect>();
         if (shaderEffect) {
             // Use custom draw command with shader (bypasses batching)
             Shader shader = shaderEffect->shader();

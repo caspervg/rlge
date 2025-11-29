@@ -1,7 +1,9 @@
 #pragma once
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -42,19 +44,19 @@ namespace rlge {
 
         // Create a new layer with the given configuration
         // Returns the unique layer ID
-        LayerId create(const std::string& name, int sortOrder, bool worldSpace = true);
+        LayerId create(std::string_view name, int sortOrder, bool worldSpace = true);
 
         // Remove a layer by ID
         // Returns true if the layer was found and removed
         bool remove(LayerId id);
 
-        // Get layer data by ID (returns nullptr if not found)
-        LayerData* get(LayerId id);
-        const LayerData* get(LayerId id) const;
+        // Get layer data by ID
+        std::optional<std::reference_wrapper<LayerData>> get(LayerId id);
+        std::optional<std::reference_wrapper<const LayerData>> get(LayerId id) const;
 
-        // Get layer by name (returns nullptr if not found)
-        LayerData* getByName(const std::string& name);
-        const LayerData* getByName(const std::string& name) const;
+        // Get layer by name
+        std::optional<std::reference_wrapper<LayerData>> getByName(std::string_view name);
+        std::optional<std::reference_wrapper<const LayerData>> getByName(std::string_view name) const;
 
         // Set a simple shader for a layer (no typed params)
         void setShader(LayerId id, Shader shader);
@@ -62,10 +64,9 @@ namespace rlge {
         // Set typed shader params for a layer
         template<typename T>
         void setShaderParams(LayerId id, ShaderParams<T> params) {
-            auto* layer = get(id);
-            if (layer) {
-                layer->shader = params.shader();
-                layer->shaderParams = std::make_unique<ShaderParamsWrapper<T>>(
+            if (auto layer = get(id)) {
+                layer->get().shader = params.shader();
+                layer->get().shaderParams = std::make_unique<ShaderParamsWrapper<T>>(
                     std::move(params));
             }
         }
@@ -95,6 +96,10 @@ namespace rlge {
         LayerId worldId_ = InvalidLayerId;
         LayerId foregroundId_ = InvalidLayerId;
         LayerId uiId_ = InvalidLayerId;
+
+        // Helper template to avoid code duplication in getSorted
+        template<typename Self>
+        static auto getSortedImpl(Self& self);
     };
 
 } // namespace rlge

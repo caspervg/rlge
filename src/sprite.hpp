@@ -11,8 +11,12 @@ namespace rlge {
 
     class Sprite : public Component {
     public:
-        // Constructor with optional layer (defaults to world layer)
-        Sprite(Entity& e, Texture2D& tex, int frameW, int frameH, LayerId layer = InvalidLayerId);
+        // Constructor without LayerId (defaults to world layer)
+        Sprite(Entity& e, Texture2D& tex, int frameW, int frameH);
+
+        // Constructor with LayerId
+        Sprite(Entity& e, Texture2D& tex, int frameW, int frameH, LayerId layer);
+
         void draw() override;
 
         // Set the render layer
@@ -28,7 +32,11 @@ namespace rlge {
 
     class SpriteAnim : public Sprite {
     public:
-        SpriteAnim(Entity& e, Texture2D& tex, int frameW, int frameH, LayerId layer = InvalidLayerId);
+        // Constructor without LayerId (defaults to world layer)
+        SpriteAnim(Entity& e, Texture2D& tex, int frameW, int frameH);
+
+        // Constructor with LayerId
+        SpriteAnim(Entity& e, Texture2D& tex, int frameW, int frameH, LayerId layer);
 
         void addFrame(const Rectangle& src, float time);
 

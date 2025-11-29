@@ -108,3 +108,6 @@ add_executable(rlge_breakout
         examples/breakout/game_over_scene.cpp
 )
 target_link_libraries(rlge_breakout PRIVATE rlge raylib rlimgui imgui)
+
+add_executable(rlge_shader_demo examples/shader_demo/main.cpp)
+target_link_libraries(rlge_shader_demo PRIVATE rlge raylib rlimgui imgui)
