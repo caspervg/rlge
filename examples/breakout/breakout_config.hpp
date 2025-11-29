@@ -22,6 +22,8 @@ namespace breakout {
         float wallThickness = 20.0f;
         float brickHitShakeIntensity = 0.25f;
         float brickHitShakeDuration = 0.1f;
+        float ballSpeedMultiplier = 1.025f;
+        float ballSpeedMax = 900.0f;
     };
 
     inline Config g_cfg;

@@ -63,6 +63,18 @@ namespace breakout {
     void BreakoutScene::handleBrickDestroyed_(const BrickDestroyed& e) {
         score_ += e.points;
         camera_.shake(g_cfg.brickHitShakeDuration, g_cfg.brickHitShakeIntensity);
+
+        if (auto* body = ball_ ? ball_->get<PhysicsBody>() : nullptr) {
+            // Increase ball speed
+            const Vector2 vel = body->velocity();
+            if (const auto speed = Vector2Length(vel); speed > 0.0f) {
+                float newSpeed = speed * g_cfg.ballSpeedMultiplier;
+                if (g_cfg.ballSpeedMax > 0.0f && newSpeed > g_cfg.ballSpeedMax) {
+                    newSpeed = g_cfg.ballSpeedMax;
+                }
+                body->setVelocity(Vector2Scale(Vector2Normalize(vel), newSpeed));
+            }
+        }
     }
 
     void BreakoutScene::handleBallLost_(const BallLost& e) {
