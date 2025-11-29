@@ -36,7 +36,55 @@ namespace rlge {
         return textures_.at(id);
     }
 
+    Shader& AssetStore::loadShader(const std::string& id, const std::string& vertPath, const std::string& fragPath) {
+        const auto it = shaders_.find(id);
+        if (it != shaders_.end())
+            return it->second;
+        const auto v = this->path(vertPath);
+        const auto f = this->path(fragPath);
+        Shader shader = LoadShader(v.string().c_str(), f.string().c_str());
+        auto [iter, _] = shaders_.emplace(id, shader);
+        return iter->second;
+    }
+
+    Shader& AssetStore::loadShaderFromMemory(const std::string& id, const char* vertSrc, const char* fragSrc) {
+        const auto it = shaders_.find(id);
+        if (it != shaders_.end())
+            return it->second;
+        Shader shader = LoadShaderFromMemory(vertSrc, fragSrc);
+        auto [iter, _] = shaders_.emplace(id, shader);
+        return iter->second;
+    }
+
+    Shader& AssetStore::loadVertexShader(const std::string& id, const std::string& vertPath) {
+        const auto it = shaders_.find(id);
+        if (it != shaders_.end())
+            return it->second;
+        const auto v = this->path(vertPath);
+        Shader shader = LoadShader(v.string().c_str(), nullptr);
+        auto [iter, _] = shaders_.emplace(id, shader);
+        return iter->second;
+    }
+
+    Shader& AssetStore::loadFragmentShader(const std::string& id, const std::string& fragPath) {
+        const auto it = shaders_.find(id);
+        if (it != shaders_.end())
+            return it->second;
+        const auto f = this->path(fragPath);
+        Shader shader = LoadShader(nullptr, f.string().c_str());
+        auto [iter, _] = shaders_.emplace(id, shader);
+        return iter->second;
+    }
+
+    Shader& AssetStore::shader(const std::string& id) {
+        return shaders_.at(id);
+    }
+
     void AssetStore::unloadAll() {
+        for (const auto& kv : shaders_) {
+            UnloadShader(kv.second);
+        }
+        shaders_.clear();
         for (const auto& kv : textures_) {
             UnloadTexture(kv.second);
         }

@@ -1,4 +1,5 @@
 #include <cmath>
+#include <filesystem>
 #include <print>
 
 #include "debug.hpp"
@@ -26,29 +27,8 @@ struct FlashParams {
     Vector3 flashColor = {1.0f, 1.0f, 1.0f};
 };
 
-// Fragment shader source for wave distortion effect
-static const char* waveFragmentShader = R"(
-#version 330
-in vec2 fragTexCoord;
-in vec4 fragColor;
-uniform sampler2D texture0;
-uniform float u_time;
-uniform float u_amplitude;
-uniform float u_frequency;
-uniform float u_speed;
-
-out vec4 finalColor;
-
-void main() {
-    vec2 uv = fragTexCoord;
-    uv.x += sin(uv.y * u_frequency + u_time * u_speed) * u_amplitude;
-    uv.y += cos(uv.x * u_frequency + u_time * u_speed) * u_amplitude * 0.5;
-    finalColor = texture(texture0, uv) * fragColor;
-}
-)";
-
 // Fragment shader source for hit flash effect
-static const char* flashFragmentShader = R"(
+static auto flashFragmentShader = R"(
 #version 330
 in vec2 fragTexCoord;
 in vec4 fragColor;
@@ -174,9 +154,12 @@ public:
         playerTexture_ = LoadTextureFromImage(playerImg);
         UnloadImage(playerImg);
 
-        // Load shaders
-        waveShader_ = LoadShaderFromMemory(nullptr, waveFragmentShader);
-        flashShader_ = LoadShaderFromMemory(nullptr, flashFragmentShader);
+        // Configure asset root to locate demo shaders whether running from build/ or repo root
+        assets().setRoot(findDemoRoot());
+
+        // Load shaders via the asset store
+        waveShader_ = assets().loadFragmentShader("wave_frag","wave.fs");
+        flashShader_ = assets().loadShaderFromMemory("flash_frag", nullptr, flashFragmentShader);
 
         // Create a custom "water" layer with the wave shader
         waterLayer_ = layers().create("water", 25);
@@ -192,7 +175,7 @@ public:
 
         // Set up camera
         camera_ = rlge::Camera();
-        const Vector2 windowSize = runtime().window().size();
+        const auto windowSize = runtime().window().size();
         camera_.setOffset({windowSize.x * 0.5f, windowSize.y * 0.5f});
         camera_.setTarget({400, 300});
         setSingleView(camera_);
@@ -201,7 +184,7 @@ public:
         fps_ = &spawn<FpsCounter>();
 
         // Spawn some sprites on the wave layer
-        for (int i = 0; i < 5; ++i) {
+        for (auto i = 0; i < 5; ++i) {
             waveSprites_.push_back(&spawn<WaveSprite>(boxTexture_, waterLayer_,
                                                       100.0f + i * 150.0f, 150.0f));
         }
@@ -232,8 +215,6 @@ public:
     }
 
     void exit() override {
-        UnloadShader(waveShader_);
-        UnloadShader(flashShader_);
         UnloadTexture(boxTexture_);
         UnloadTexture(playerTexture_);
     }
@@ -283,13 +264,24 @@ public:
     }
 
 private:
+    static std::filesystem::path findDemoRoot() {
+        const auto cwd = std::filesystem::current_path();
+
+        const auto parentCandidate = cwd.parent_path() / "examples" / "shader_demo";
+        if (std::filesystem::exists(parentCandidate))
+            return parentCandidate;
+
+        // Fallback to cwd, this will likely fail
+        return cwd;
+    }
+
     rlge::Camera camera_;
     Texture2D boxTexture_{};
     Texture2D playerTexture_{};
     Shader waveShader_{};
     Shader flashShader_{};
     LayerId waterLayer_ = InvalidLayerId;
-    ShaderParams<WaveParams> waveParams_{Shader{0}};
+    ShaderParams<WaveParams> waveParams_{Shader{}};
 
     FpsCounter* fps_ = nullptr;
     std::vector<WaveSprite*> waveSprites_;

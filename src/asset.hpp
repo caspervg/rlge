@@ -22,10 +22,19 @@ namespace rlge {
 
         Texture2D& loadTexture(const std::string& id, const std::string& path);
         Texture2D& texture(const std::string& id);
+
+        // Shader loading helpers
+        Shader& loadShader(const std::string& id, const std::string& vertPath, const std::string& fragPath);
+        Shader& loadVertexShader(const std::string& id, const std::string& vertPath);
+        Shader& loadFragmentShader(const std::string& id, const std::string& fragPath);
+        Shader& loadShaderFromMemory(const std::string& id, const char* vertSrc, const char* fragSrc);
+        Shader& shader(const std::string& id);
+
         void unloadAll();
 
     private:
         std::unordered_map<std::string, Texture2D> textures_;
+        std::unordered_map<std::string, Shader> shaders_;
         std::filesystem::path assetRoot_{std::filesystem::current_path()};
     };
 }
