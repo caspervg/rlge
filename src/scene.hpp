@@ -56,6 +56,7 @@ namespace rlge {
 
         virtual void update(float dt);
         virtual void draw();
+        virtual void clearUi() { ctx_.ui.root().clearChildren(); }
 
         template <typename T, typename... Args>
         T& spawn(Args&&... args) {

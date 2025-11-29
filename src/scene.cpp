@@ -20,6 +20,7 @@ namespace rlge {
         for (auto& cleanup : forwardedGameSubscriptions_) {
             cleanup();
         }
+        ctx_.ui.root().clearChildren();
         entities_.clear();
         viewHandles_.clear();
         sceneEvents_.clear();
