@@ -22,6 +22,11 @@ namespace rlge {
         Component(entity)
         , renderFn_(std::move(renderFn)) {}
 
+    ParticleEmitter::ParticleEmitter(Entity& entity, RenderFn renderFn, const LayerId layer) :
+        Component(entity)
+        , renderFn_(std::move(renderFn))
+        , layer_(layer) {}
+
     void ParticleEmitter::applyConfig(const ContinuousEmitterConfig& cfg) {
         localOffset_ = cfg.localOffset;
         maxParticles_ = cfg.maxParticles;
@@ -77,15 +82,23 @@ namespace rlge {
             p.color = {r, g, b, a};
         }
 
-        std::erase_if(particles_,[](const Particle& p) { return p.life <= 0.0f; });
+        std::erase_if(particles_, [](const Particle& p) { return p.life <= 0.0f; });
     }
 
     void ParticleEmitter::drawParticles() {
         if (!renderFn_)
             return;
 
-        auto& rq = entity().scene().rq();
-        rq.submitWorld([this] {
+        auto& scene = entity().scene();
+        auto& rq = scene.rq();
+
+        // Resolve layer
+        LayerId effectiveLayer = layer_;
+        if (effectiveLayer == InvalidLayerId) {
+            effectiveLayer = scene.layers().world();
+        }
+
+        rq.submit(effectiveLayer, [this] {
             if (!renderFn_)
                 return;
 
@@ -146,13 +159,23 @@ namespace rlge {
     }
 
     // Continuous emitter
-    ContinuousParticleEmitter::ContinuousParticleEmitter(Entity& entity, const ContinuousEmitterConfig& cfg, RenderFn renderFn) :
+    ContinuousParticleEmitter::ContinuousParticleEmitter(Entity& entity, const ContinuousEmitterConfig& cfg,
+                                                         RenderFn renderFn) :
         ParticleEmitter(entity, std::move(renderFn)) {
+        applyConfig(cfg);
+    }
+
+    ContinuousParticleEmitter::ContinuousParticleEmitter(Entity& entity, const ContinuousEmitterConfig& cfg,
+                                                         RenderFn renderFn, const LayerId layer) :
+        ParticleEmitter(entity, std::move(renderFn), layer) {
         applyConfig(cfg);
     }
 
     ContinuousParticleEmitter::ContinuousParticleEmitter(Entity& entity, RenderFn renderFn) :
         ContinuousParticleEmitter(entity, ContinuousEmitterConfig{}, std::move(renderFn)) {}
+
+    ContinuousParticleEmitter::ContinuousParticleEmitter(Entity& entity, RenderFn renderFn, const LayerId layer) :
+        ContinuousParticleEmitter(entity, ContinuousEmitterConfig{}, std::move(renderFn), layer) {}
 
     ContinuousParticleEmitter::ContinuousParticleEmitter(Entity& entity) :
         ContinuousParticleEmitter(
@@ -187,8 +210,17 @@ namespace rlge {
         setConfig(cfg);
     }
 
+    BurstParticleEmitter::BurstParticleEmitter(Entity& entity, const BurstEmitterConfig& cfg,
+                                               RenderFn renderFn, const LayerId layer) :
+        ParticleEmitter(entity, std::move(renderFn), layer) {
+        setConfig(cfg);
+    }
+
     BurstParticleEmitter::BurstParticleEmitter(Entity& entity, RenderFn renderFn) :
         BurstParticleEmitter(entity, BurstEmitterConfig{}, std::move(renderFn)) {}
+
+    BurstParticleEmitter::BurstParticleEmitter(Entity& entity, RenderFn renderFn, const LayerId layer) :
+        BurstParticleEmitter(entity, BurstEmitterConfig{}, std::move(renderFn), layer) {}
 
     BurstParticleEmitter::BurstParticleEmitter(Entity& entity) :
         BurstParticleEmitter(

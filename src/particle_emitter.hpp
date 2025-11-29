@@ -58,7 +58,11 @@ namespace rlge {
         using SpawnFn = std::function<Vector2(Vector2 origin)>;
 
         ParticleEmitter(Entity& entity, RenderFn renderFn);
+        ParticleEmitter(Entity& entity, RenderFn renderFn, LayerId layer);
         ~ParticleEmitter() override = default;
+
+        void setLayer(LayerId layer) { layer_ = layer; }
+        [[nodiscard]] LayerId layer() const { return layer_; }
 
         void setLocalOffset(Vector2 localOffset) { localOffset_ = localOffset; }
         [[nodiscard]] Vector2 origin() const { return localOffset_; }
@@ -78,10 +82,10 @@ namespace rlge {
         [[nodiscard]] float minSize() const { return minSize_; }
         [[nodiscard]] float maxSize() const { return maxSize_; }
 
-        void setSpread(float radians) { spread_ = radians; }
+        void setSpread(const float radians) { spread_ = radians; }
         [[nodiscard]] float spread() const { return spread_; }
 
-        void setDirection(float radians) { direction_ = radians; }
+        void setDirection(const float radians) { direction_ = radians; }
         [[nodiscard]] float direction() const { return direction_; }
 
         void setGravity(Vector2 g) { gravity_ = g; }
@@ -96,10 +100,14 @@ namespace rlge {
 
     protected:
         std::vector<Particle> particles_;
+        std::vector<bool> alive_;
+        std::size_t liveCount_{0};
+
         RenderFn renderFn_;
         SpawnFn spawnFn_;
 
         Vector2 localOffset_{0.0f, 0.0f};
+        LayerId layer_ = InvalidLayerId;
 
         std::size_t maxParticles_{500};    // soft cap
 
@@ -118,9 +126,11 @@ namespace rlge {
 
         void applyConfig(const ContinuousEmitterConfig& cfg);
         void applyConfig(const BurstEmitterConfig& cfg);
+
+        void spawnParticle();
+        void createParticleAt(size_t idx);
         void integrateParticles(float dt);
         void drawParticles();
-        void spawnParticle();
         void enforceMaxParticles();
         [[nodiscard]] Vector2 getWorldOrigin() const;
     };
@@ -132,7 +142,9 @@ namespace rlge {
         using SpawnFn = std::function<Vector2(Vector2 origin)>;
 
         ContinuousParticleEmitter(Entity& entity, const ContinuousEmitterConfig& cfg, RenderFn renderFn);
+        ContinuousParticleEmitter(Entity& entity, const ContinuousEmitterConfig& cfg, RenderFn renderFn, LayerId layer);
         ContinuousParticleEmitter(Entity& entity, RenderFn renderFn);
+        ContinuousParticleEmitter(Entity& entity, RenderFn renderFn, LayerId layer);
         explicit ContinuousParticleEmitter(Entity& entity);
 
         void update(float dt) override;
@@ -162,7 +174,9 @@ namespace rlge {
         using SpawnFn = std::function<Vector2(Vector2 origin)>;
 
         BurstParticleEmitter(Entity& entity, const BurstEmitterConfig& cfg, RenderFn renderFn);
+        BurstParticleEmitter(Entity& entity, const BurstEmitterConfig& cfg, RenderFn renderFn, LayerId layer);
         BurstParticleEmitter(Entity& entity, RenderFn renderFn);
+        BurstParticleEmitter(Entity& entity, RenderFn renderFn, LayerId layer);
         explicit BurstParticleEmitter(Entity& entity);
 
         void update(float dt) override;
