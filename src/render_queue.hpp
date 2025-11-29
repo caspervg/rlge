@@ -60,8 +60,8 @@ namespace rlge {
 
     class RenderQueue {
     public:
-        // Default constructor - creates LayerRegistry with default layers
-        RenderQueue();
+        // Constructor with injected LayerRegistry (required for dependency injection)
+        explicit RenderQueue(LayerRegistry& layers);
 
         // Get the layer registry
         LayerRegistry& layers() { return layers_; }
@@ -102,7 +102,7 @@ namespace rlge {
         const RenderStats& stats() const { return stats_; }
 
     private:
-        LayerRegistry layers_;
+        LayerRegistry& layers_;
 
         // Batch management per layer
         using TextureId = unsigned int;  // texture.id from raylib
