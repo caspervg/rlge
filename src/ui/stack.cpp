@@ -25,8 +25,7 @@ namespace rlge::ui {
                 ? crossAxis(childLayout.size)
                 : crossAxis(measured);
 
-            childMain += mainAxis(childLayout.padding) * 2.0f;
-            childCross += crossAxis(childLayout.padding) * 2.0f;
+            // Removed double-counting of padding: childMain and childCross already include padding from measureContent().
 
             totalMain += childMain;
             maxCross = std::max(maxCross, childCross);
