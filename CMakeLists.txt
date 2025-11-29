@@ -72,7 +72,7 @@ set(PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src/")
 file(GLOB RLGE_SOURCES "${PROJECT_INCLUDE}*.cpp" "${PROJECT_INCLUDE}collision/*.cpp" "${PROJECT_INCLUDE}collision/shape/*.cpp")
 
 add_library(rlge STATIC ${RLGE_SOURCES})
-target_include_directories(rlge PUBLIC ${PROJECT_INCLUDE} "${PROJECT_INClUDE}/collision/" "${PROJECT_INCLUDE}/collision/shape/")
+target_include_directories(rlge PUBLIC ${PROJECT_INCLUDE} "${PROJECT_INCLUDE}/collision/" "${PROJECT_INCLUDE}/collision/shape/")
 target_link_libraries(rlge PUBLIC raylib rlimgui tileson)
 target_sources(rlge PRIVATE
         src/ui/widget.cpp
