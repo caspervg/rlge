@@ -4,8 +4,8 @@
 #include <chrono>
 
 namespace rlge {
-    RenderQueue::RenderQueue() {
-        layers_.createDefaults();
+    RenderQueue::RenderQueue(LayerRegistry& layers)
+        : layers_(layers) {
         commands_.reserve(256);
         stats_.reset();
         worldPrepared_ = false;

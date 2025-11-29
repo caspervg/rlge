@@ -10,7 +10,9 @@
 namespace rlge {
     Runtime::Runtime(const WindowConfig& cfg)
         : window_(cfg)
-        , renderer_() {
+        , layers_()
+        , renderer_(layers_) {
+        layers_.createDefaults();
         rlImGuiSetup(true);
     }
 
@@ -89,9 +91,9 @@ namespace rlge {
 
     const GameServices& Runtime::services() const { return services_; }
 
-    LayerRegistry& Runtime::layers() { return renderer_.layers(); }
+    LayerRegistry& Runtime::layers() { return layers_; }
 
-    const LayerRegistry& Runtime::layers() const { return renderer_.layers(); }
+    const LayerRegistry& Runtime::layers() const { return layers_; }
 
     Window& Runtime::window() { return window_; }
 

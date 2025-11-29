@@ -98,6 +98,7 @@ namespace rlge {
         AssetStore assets_;
         Input<> input_;
         GameServices services_;
+        LayerRegistry layers_;  // Must be declared before renderer_ (dependency)
         RenderQueue renderer_;
         SceneStack scenes_;
         std::vector<View> views_;
