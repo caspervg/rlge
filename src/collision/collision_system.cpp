@@ -9,6 +9,7 @@
 #include "raylib.h"
 #include "raymath.h"
 #include "scene.hpp"
+#include "spatial_grid.hpp"
 
 namespace rlge {
 
@@ -27,57 +28,55 @@ namespace rlge {
 
     void CollisionSystem::update(float) {
         flushPendingRemovals_();
+
         std::vector<CollisionEvent> newCollisions;
         collisionEvents_.clear();
         collisionPairsThisFrame_ = {};
         updating_ = true;
 
-        const size_t n = colliders_.size();
-        for (size_t i = 0; i < n; ++i) {
-            Collider* a = colliders_[i];
-            if (!a)
+        // Build spatial grid
+        SpatialGrid grid(spatialGridSize_);
+        for (auto* c : colliders_) {
+            if (c) {
+                grid.insert(c);
+            }
+        }
+
+        auto const potentialPairs = grid.getPotentialPairs();
+
+        for (auto& [a, b] : potentialPairs) {
+            if (!a || !b) continue;
+
+            if ((a->layer() & b->mask()) == 0 || (b->layer() & a->mask()) == 0)
+                // Layer masks do not align, no collision check needed
                 continue;
 
-            for (size_t j = i + 1; j < n; ++j) {
-                Collider* b = colliders_[j];
-                if (!b)
-                    continue;
+            auto m = a->testAgainst(*b);
+            if (!m.colliding)
+                // Narrow phase collision check does not succeed
+                continue;
 
-                if ((a->layer() & b->mask()) == 0 || (b->layer() & a->mask()) == 0)
-                    // Layer masks do not align, no collision check needed
-                    continue;
-
-                if (!CheckCollisionRecs(a->axisAlignedWorldBounds(), b->axisAlignedWorldBounds()))
-                    // Broad phase collision check does not succeed, no need for narrow phase.
-                    continue;
-
-                auto m = a->testAgainst(*b);
-                if (!m.colliding)
-                    // Narrow phase collision check does not succeed
-                    continue;
-
-                // Ensure manifold normal points from collider A toward collider B
-                const auto centerOf = [](const Rectangle& r) {
-                    return Vector2{r.x + r.width * 0.5f, r.y + r.height * 0.5f};
-                };
-                const Vector2 dirAB = Vector2Subtract(centerOf(b->axisAlignedWorldBounds()),
-                                                      centerOf(a->axisAlignedWorldBounds()));
-                if (Vector2DotProduct(m.normal, dirAB) < 0.0f) {
-                    m.normal = Vector2Negate(m.normal);
-                }
-
-                // Collision detected
-                CollisionPair cp = {a, b};
-                if (collisionPairsThisFrame_.contains(cp)) {
-                    continue;   // Already processed
-                }
-                collisionPairsThisFrame_.insert(cp);
-
-                const auto wasColliding = collisionPairsLastFrame_.contains(cp);
-                const auto state = wasColliding ? CollisionState::Stay : CollisionState::Enter;
-
-                newCollisions.push_back({a, b, m, state});
+            // Ensure manifold normal points from collider A toward collider B
+            const auto centerOf = [](const Rectangle& r) {
+                return Vector2{r.x + r.width * 0.5f, r.y + r.height * 0.5f};
+            };
+            const Vector2 dirAB = Vector2Subtract(centerOf(b->axisAlignedWorldBounds()),
+                                                  centerOf(a->axisAlignedWorldBounds()));
+            if (Vector2DotProduct(m.normal, dirAB) < 0.0f) {
+                m.normal = Vector2Negate(m.normal);
             }
+
+            // Collision detected
+            CollisionPair cp = {a, b};
+            if (collisionPairsThisFrame_.contains(cp)) {
+                continue;   // Already processed
+            }
+            collisionPairsThisFrame_.insert(cp);
+
+            const auto wasColliding = collisionPairsLastFrame_.contains(cp);
+            const auto state = wasColliding ? CollisionState::Stay : CollisionState::Enter;
+
+            newCollisions.push_back({a, b, m, state});
         }
 
         for (const auto& lastPair : collisionPairsLastFrame_) {
@@ -111,6 +110,10 @@ namespace rlge {
             ImGui::Checkbox("Draw colliders", &debug_);
         }
         ImGui::End();
+    }
+
+    void CollisionSystem::setSpatialGridSize(const float size) {
+        spatialGridSize_ = size;
     }
 
     void CollisionSystem::compact_() {

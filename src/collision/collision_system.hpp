@@ -44,6 +44,7 @@ namespace rlge {
         void setDebug(bool debug);
         [[nodiscard]] bool debug() const;
         void debugOverlay() override;
+        void setSpatialGridSize(float size);
 
     private:
         void compact_();
@@ -51,6 +52,7 @@ namespace rlge {
         void resolve_(Collider* a, Collider* b, const CollisionManifold& manifold);
 
     private:
+        float spatialGridSize_ = 100.0f;
         bool updating_ = false;
         std::vector<Collider*> colliders_;
         std::vector<CollisionEvent> collisionEvents_;
