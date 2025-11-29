@@ -7,15 +7,6 @@
 #include "render_layer.hpp"
 
 namespace rlge {
-    // Legacy enum for backwards compatibility
-    // New code should use LayerId instead
-    enum class RenderLayer {
-        Background = 0,
-        World = 1,
-        Foreground = 2,
-        UI = 3
-    };
-
     // Batched sprite quad data
     struct SpriteQuad {
         Rectangle src;
@@ -69,22 +60,15 @@ namespace rlge {
 
     class RenderQueue {
     public:
-        explicit RenderQueue(LayerRegistry& layers);
-
-        // Set the layer registry reference
-        void setLayerRegistry(LayerRegistry& layers) { layers_ = &layers; }
+        // Default constructor - creates LayerRegistry with default layers
+        RenderQueue();
 
         // Get the layer registry
-        LayerRegistry& layers() { return *layers_; }
-        const LayerRegistry& layers() const { return *layers_; }
+        LayerRegistry& layers() { return layers_; }
+        const LayerRegistry& layers() const { return layers_; }
 
-        // New LayerId-based sprite submission (preferred)
+        // LayerId-based sprite submission
         void submitSprite(LayerId layer, float z, Texture2D texture,
-                         Rectangle src, Rectangle dest, Vector2 origin,
-                         float rotation, Color tint = WHITE);
-
-        // Legacy RenderLayer-based sprite submission (backwards compatibility)
-        void submitSprite(RenderLayer layer, float z, Texture2D texture,
                          Rectangle src, Rectangle dest, Vector2 origin,
                          float rotation, Color tint = WHITE);
 
@@ -92,13 +76,9 @@ namespace rlge {
         void submitCustom(LayerId layer, float z, Shader shader,
                          std::function<void()> fn);
 
-        // New LayerId-based lambda submission
+        // LayerId-based lambda submission
         void submit(LayerId layer, float z, std::function<void()> fn);
         void submit(LayerId layer, std::function<void()> fn);
-
-        // Legacy RenderLayer-based lambda submission (backwards compatibility)
-        void submit(RenderLayer layer, float z, std::function<void()> fn);
-        void submit(RenderLayer layer, std::function<void()> fn);
 
         // Convenience methods (use default layer IDs from registry)
         void submitBackground(std::function<void()> fn);
@@ -122,7 +102,7 @@ namespace rlge {
         const RenderStats& stats() const { return stats_; }
 
     private:
-        LayerRegistry* layers_;
+        LayerRegistry layers_;
 
         // Batch management per layer
         using TextureId = unsigned int;  // texture.id from raylib
@@ -137,6 +117,13 @@ namespace rlge {
 
         // Helper methods
         SpriteBatch& getBatch(LayerId layer, Texture2D texture);
-        LayerId toLayerId(RenderLayer layer) const;
+
+        // Comparator for sorting draw commands by layer order then z
+        static bool compareDrawCommands(const LayerRegistry& layers,
+                                        const DrawCommand& a,
+                                        const DrawCommand& b);
+
+        // Comparator for sorting sprite quads by z
+        static bool compareQuadsByZ(const SpriteQuad& a, const SpriteQuad& b);
     };
 }

@@ -1,6 +1,6 @@
 #include "breakout_scene.hpp"
 
-#include <iostream>
+#include <print>
 
 #include "breakout_game.hpp"
 #include "circle_collider.hpp"
@@ -71,7 +71,7 @@ namespace breakout {
             gameEvents().enqueue(GameLost{score_});
         }
         else {
-            std::cout << "Remaining lives: " << lives_ << std::endl;
+            std::println("Remaining lives: {}", lives_);
             resetBall_();
         }
     }

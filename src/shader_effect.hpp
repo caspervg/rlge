@@ -5,9 +5,8 @@
 namespace rlge {
 
     // Interface for type-erased shader effect access
-    class IShaderEffect {
-    public:
-        virtual ~IShaderEffect() = default;
+    struct HasShaderEffect {
+        virtual ~HasShaderEffect() = default;
         virtual void apply() = 0;
         virtual Shader shader() const = 0;
     };
@@ -15,7 +14,7 @@ namespace rlge {
     // ShaderEffect component for per-entity shader effects
     // This bypasses batching for custom shader effects
     template<typename T>
-    class ShaderEffect : public Component, public IShaderEffect {
+    class ShaderEffect : public Component, public HasShaderEffect {
     public:
         ShaderEffect(Entity& e, Shader shader)
             : Component(e)
@@ -36,7 +35,7 @@ namespace rlge {
         T* operator->() { return params_.operator->(); }
         const T* operator->() const { return params_.operator->(); }
 
-        // IShaderEffect interface
+        // HasShaderEffect interface
         void apply() override { params_.apply(); }
         Shader shader() const override { return params_.shader(); }
 

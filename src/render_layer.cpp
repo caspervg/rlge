@@ -6,12 +6,12 @@ namespace rlge {
 
     LayerRegistry::LayerRegistry() = default;
 
-    LayerId LayerRegistry::create(const std::string& name, int sortOrder, bool worldSpace) {
+    LayerId LayerRegistry::create(std::string_view name, int sortOrder, bool worldSpace) {
         LayerId id = nextId_++;
 
         LayerData data;
         data.id = id;
-        data.config.name = name;
+        data.config.name = std::string(name);
         data.config.sortOrder = sortOrder;
         data.config.worldSpace = worldSpace;
 
@@ -23,74 +23,75 @@ namespace rlge {
         return layers_.erase(id) > 0;
     }
 
-    LayerData* LayerRegistry::get(LayerId id) {
+    std::optional<std::reference_wrapper<LayerData>> LayerRegistry::get(LayerId id) {
         auto it = layers_.find(id);
-        return it != layers_.end() ? &it->second : nullptr;
+        if (it != layers_.end()) {
+            return std::ref(it->second);
+        }
+        return std::nullopt;
     }
 
-    const LayerData* LayerRegistry::get(LayerId id) const {
+    std::optional<std::reference_wrapper<const LayerData>> LayerRegistry::get(LayerId id) const {
         auto it = layers_.find(id);
-        return it != layers_.end() ? &it->second : nullptr;
+        if (it != layers_.end()) {
+            return std::cref(it->second);
+        }
+        return std::nullopt;
     }
 
-    LayerData* LayerRegistry::getByName(const std::string& name) {
+    std::optional<std::reference_wrapper<LayerData>> LayerRegistry::getByName(std::string_view name) {
         for (auto& [id, layer] : layers_) {
             if (layer.config.name == name) {
-                return &layer;
+                return std::ref(layer);
             }
         }
-        return nullptr;
+        return std::nullopt;
     }
 
-    const LayerData* LayerRegistry::getByName(const std::string& name) const {
+    std::optional<std::reference_wrapper<const LayerData>> LayerRegistry::getByName(std::string_view name) const {
         for (const auto& [id, layer] : layers_) {
             if (layer.config.name == name) {
-                return &layer;
+                return std::cref(layer);
             }
         }
-        return nullptr;
+        return std::nullopt;
     }
 
     void LayerRegistry::setShader(LayerId id, Shader shader) {
-        auto* layer = get(id);
-        if (layer) {
-            layer->shader = shader;
-            layer->shaderParams.reset();
+        if (auto layer = get(id)) {
+            layer->get().shader = shader;
+            layer->get().shaderParams.reset();
         }
     }
 
     void LayerRegistry::clearShader(LayerId id) {
-        auto* layer = get(id);
-        if (layer) {
-            layer->shader = {0};
-            layer->shaderParams.reset();
+        if (auto layer = get(id)) {
+            layer->get().shader = {0};
+            layer->get().shaderParams.reset();
         }
+    }
+
+    template<typename Self>
+    auto LayerRegistry::getSortedImpl(Self& self) {
+        using LayerPtr = std::conditional_t<std::is_const_v<Self>, const LayerData*, LayerData*>;
+        std::vector<LayerPtr> result;
+        result.reserve(self.layers_.size());
+        for (auto& [id, layer] : self.layers_) {
+            result.push_back(&layer);
+        }
+        std::sort(result.begin(), result.end(),
+                  [](const auto* a, const auto* b) {
+                      return a->config.sortOrder < b->config.sortOrder;
+                  });
+        return result;
     }
 
     std::vector<LayerData*> LayerRegistry::getSorted() {
-        std::vector<LayerData*> result;
-        result.reserve(layers_.size());
-        for (auto& [id, layer] : layers_) {
-            result.push_back(&layer);
-        }
-        std::sort(result.begin(), result.end(),
-                  [](const LayerData* a, const LayerData* b) {
-                      return a->config.sortOrder < b->config.sortOrder;
-                  });
-        return result;
+        return getSortedImpl(*this);
     }
 
     std::vector<const LayerData*> LayerRegistry::getSorted() const {
-        std::vector<const LayerData*> result;
-        result.reserve(layers_.size());
-        for (const auto& [id, layer] : layers_) {
-            result.push_back(&layer);
-        }
-        std::sort(result.begin(), result.end(),
-                  [](const LayerData* a, const LayerData* b) {
-                      return a->config.sortOrder < b->config.sortOrder;
-                  });
-        return result;
+        return getSortedImpl(*this);
     }
 
     void LayerRegistry::createDefaults() {

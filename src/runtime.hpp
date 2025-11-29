@@ -98,7 +98,6 @@ namespace rlge {
         AssetStore assets_;
         Input<> input_;
         GameServices services_;
-        LayerRegistry layers_;
         RenderQueue renderer_;
         SceneStack scenes_;
         std::vector<View> views_;

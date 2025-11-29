@@ -4,21 +4,27 @@
 #include <chrono>
 
 namespace rlge {
-    RenderQueue::RenderQueue(LayerRegistry& layers)
-        : layers_(&layers) {
+    RenderQueue::RenderQueue() {
+        layers_.createDefaults();
         commands_.reserve(256);
         stats_.reset();
         worldPrepared_ = false;
     }
 
-    LayerId RenderQueue::toLayerId(RenderLayer layer) const {
-        switch (layer) {
-            case RenderLayer::Background: return layers_->background();
-            case RenderLayer::World: return layers_->world();
-            case RenderLayer::Foreground: return layers_->foreground();
-            case RenderLayer::UI: return layers_->ui();
-            default: return layers_->world();
-        }
+    bool RenderQueue::compareDrawCommands(const LayerRegistry& layers,
+                                          const DrawCommand& a,
+                                          const DrawCommand& b) {
+        auto layerA = layers.get(a.layer);
+        auto layerB = layers.get(b.layer);
+        const int orderA = layerA ? layerA->get().config.sortOrder : 0;
+        const int orderB = layerB ? layerB->get().config.sortOrder : 0;
+        if (orderA != orderB)
+            return orderA < orderB;
+        return a.z < b.z;
+    }
+
+    bool RenderQueue::compareQuadsByZ(const SpriteQuad& a, const SpriteQuad& b) {
+        return a.z < b.z;
     }
 
     void RenderQueue::submitSprite(LayerId layer, float z, Texture2D texture,
@@ -28,12 +34,6 @@ namespace rlge {
         batch.quads.push_back(SpriteQuad{src, dest, origin, rotation, tint, z});
         stats_.spritesSubmitted++;
         worldPrepared_ = false;
-    }
-
-    void RenderQueue::submitSprite(RenderLayer layer, float z, Texture2D texture,
-                                   Rectangle src, Rectangle dest, Vector2 origin,
-                                   float rotation, Color tint) {
-        submitSprite(toLayerId(layer), z, texture, src, dest, origin, rotation, tint);
     }
 
     SpriteBatch& RenderQueue::getBatch(LayerId layer, Texture2D texture) {
@@ -78,14 +78,6 @@ namespace rlge {
         submit(layer, 0.0f, std::move(fn));
     }
 
-    void RenderQueue::submit(RenderLayer layer, float z, std::function<void()> fn) {
-        submit(toLayerId(layer), z, std::move(fn));
-    }
-
-    void RenderQueue::submit(RenderLayer layer, std::function<void()> fn) {
-        submit(toLayerId(layer), 0.0f, std::move(fn));
-    }
-
     void RenderQueue::beginFrame() {
         stats_.reset();
         worldPrepared_ = false;
@@ -102,31 +94,31 @@ namespace rlge {
     }
 
     void RenderQueue::submitBackground(std::function<void()> fn) {
-        submit(layers_->background(), std::move(fn));
+        submit(layers_.background(), std::move(fn));
     }
 
     void RenderQueue::submitBackground(float z, std::function<void()> fn) {
-        submit(layers_->background(), z, std::move(fn));
+        submit(layers_.background(), z, std::move(fn));
     }
 
     void RenderQueue::submitWorld(std::function<void()> fn) {
-        submit(layers_->world(), std::move(fn));
+        submit(layers_.world(), std::move(fn));
     }
 
     void RenderQueue::submitWorld(float z, std::function<void()> fn) {
-        submit(layers_->world(), z, std::move(fn));
+        submit(layers_.world(), z, std::move(fn));
     }
 
     void RenderQueue::submitForeground(std::function<void()> fn) {
-        submit(layers_->foreground(), std::move(fn));
+        submit(layers_.foreground(), std::move(fn));
     }
 
     void RenderQueue::submitForeground(float z, std::function<void()> fn) {
-        submit(layers_->foreground(), z, std::move(fn));
+        submit(layers_.foreground(), z, std::move(fn));
     }
 
     void RenderQueue::submitUI(std::function<void()> fn) {
-        submit(layers_->ui(), std::move(fn));
+        submit(layers_.ui(), std::move(fn));
     }
 
     void RenderQueue::prepareWorld() {
@@ -136,19 +128,13 @@ namespace rlge {
         const auto startTime = std::chrono::high_resolution_clock::now();
 
         // Get sorted layers
-        auto sortedLayers = layers_->getSorted();
+        auto sortedLayers = layers_.getSorted();
 
         // Sort commands by layer sort order, then by z
         if (!commands_.empty()) {
             std::sort(commands_.begin(), commands_.end(),
                       [this](const DrawCommand& a, const DrawCommand& b) {
-                          const LayerData* layerA = layers_->get(a.layer);
-                          const LayerData* layerB = layers_->get(b.layer);
-                          const int orderA = layerA ? layerA->config.sortOrder : 0;
-                          const int orderB = layerB ? layerB->config.sortOrder : 0;
-                          if (orderA != orderB)
-                              return orderA < orderB;
-                          return a.z < b.z;
+                          return compareDrawCommands(layers_, a, b);
                       });
         }
 
@@ -168,16 +154,13 @@ namespace rlge {
                 if (batch.quads.empty())
                     continue;
 
-                std::sort(batch.quads.begin(), batch.quads.end(),
-                          [](const SpriteQuad& a, const SpriteQuad& b) {
-                              return a.z < b.z;
-                          });
+                std::sort(batch.quads.begin(), batch.quads.end(), compareQuadsByZ);
                 stats_.batchCount++;
             }
         }
 
         // Count world-space commands
-        const LayerId uiLayerId = layers_->ui();
+        const LayerId uiLayerId = layers_.ui();
         const size_t worldCommands = std::count_if(
             commands_.begin(),
             commands_.end(),
@@ -211,7 +194,7 @@ namespace rlge {
         size_t drawCallsThisView = 0;
 
         // Get sorted world-space layers
-        auto sortedLayers = layers_->getSorted();
+        auto sortedLayers = layers_.getSorted();
 
         for (auto* layer : sortedLayers) {
             // Skip screen-space layers (UI)
@@ -291,17 +274,17 @@ namespace rlge {
     void RenderQueue::flushUI() {
         auto startTime = std::chrono::high_resolution_clock::now();
 
-        const LayerId uiLayerId = layers_->ui();
-        const LayerData* uiLayer = layers_->get(uiLayerId);
+        const LayerId uiLayerId = layers_.ui();
+        auto uiLayerOpt = layers_.get(uiLayerId);
 
         size_t uiDrawCalls = 0;
 
         // Apply UI layer shader if present
-        const bool hasLayerShader = uiLayer && uiLayer->shader.id != 0;
+        const bool hasLayerShader = uiLayerOpt && uiLayerOpt->get().shader.id != 0;
         if (hasLayerShader) {
-            BeginShaderMode(uiLayer->shader);
-            if (uiLayer->shaderParams) {
-                uiLayer->shaderParams->apply();
+            BeginShaderMode(uiLayerOpt->get().shader);
+            if (uiLayerOpt->get().shaderParams) {
+                uiLayerOpt->get().shaderParams->apply();
             }
         }
 
@@ -312,10 +295,7 @@ namespace rlge {
                 if (batch.quads.empty())
                     continue;
 
-                std::ranges::sort(batch.quads,
-                          [](const SpriteQuad& a, const SpriteQuad& b) {
-                              return a.z < b.z;
-                          });
+                std::ranges::sort(batch.quads, compareQuadsByZ);
 
                 for (const auto& quad : batch.quads) {
                     DrawTexturePro(batch.texture, quad.src, quad.dest,
