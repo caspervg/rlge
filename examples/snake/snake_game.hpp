@@ -12,10 +12,10 @@ namespace rlge {
 
 namespace snake {
 
-    inline constexpr int kTilesX = 20;
-    inline constexpr int kTilesY = 15;
-    inline constexpr int kPixelsPerTile = 8;
-    inline constexpr int kMagnification = 4;
+    inline constexpr auto kTilesX = 20;
+    inline constexpr auto kTilesY = 15;
+    inline constexpr auto kPixelsPerTile = 8;
+    inline constexpr auto kMagnification = 4;
     inline constexpr int kTilePixels = kPixelsPerTile * kMagnification;
     inline constexpr int kScreenPixelsX = kTilesX * kTilePixels;
     inline constexpr int kScreenPixelsY = kTilesY * kTilePixels;
@@ -25,7 +25,7 @@ namespace snake {
         int tilesY = kTilesY;
         int pixelsPerTile = kPixelsPerTile;
         int magnification = kMagnification;
-        float movesPerSecond = 7.f; // tiles per second
+        float movesPerSecond = 8.f; // tiles per second
     };
 
     enum class Direction { Left, Right, Up, Down };

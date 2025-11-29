@@ -21,7 +21,7 @@ namespace snake {
     class AppleSprite;
     class FpsCounter;
 
-    class GameScene final : public rlge::Scene, public rlge::HasDebugOverlay {
+    class GameScene final : public rlge::Scene {
     public:
         explicit GameScene(rlge::Runtime& r);
         ~GameScene() override;
@@ -29,7 +29,7 @@ namespace snake {
         void enter() override;
         void update(float dt) override;
         void exit() override;
-        void debugOverlay() override;
+        void buildHUD_();
 
     private:
         Game game_;
@@ -50,6 +50,7 @@ namespace snake {
         int score_ = 0;
         bool deathPending_{false};
         float deathTimer_{0.0f};
+        Font* uiFont_{nullptr};
     };
 
 } // namespace snake

@@ -39,6 +39,7 @@ namespace rlge::ui {
         // Identifier for state lookup (optional but recommended)
         void setId(std::string id) { id_ = std::move(id); }
         [[nodiscard]] const std::string& id() const { return id_; }
+        Widget& id(std::string v) { setId(std::move(v)); return *this; }
 
         void invalidateLayout() { layoutDirty_ = true; }
 

@@ -22,18 +22,20 @@ namespace rlge::ui {
         Color text{255, 255, 255, 255};
         float fontSize = 18.0f;
         float spacing = 0.0f;
-        float borderRadius = 0.0f; // reserved for future
+        float borderRadius = 0.0f;
+        Color border{0, 0, 0, 0};
+        float borderThickness = 0.0f;
     };
 
     class Button : public Widget {
     public:
-        Button(std::string text, LayoutConfig layout = {}, ButtonStyle style = {}, const Font* font = nullptr)
+        Button(std::string text, const LayoutConfig& layout = {}, const ButtonStyle& style = {}, const Font* font = nullptr)
             : Widget(layout)
             , text_(std::move(text))
             , style_(style)
             , font_(font) {}
 
-        Vector2 measureContent() const override;
+        [[nodiscard]] Vector2 measureContent() const override;
         void draw(RenderQueue& rq) const override;
 
         void setText(std::string text) { text_ = std::move(text); invalidateLayout(); }
@@ -55,10 +57,17 @@ namespace rlge::ui {
         [[nodiscard]] const std::function<void()>& onClick() const { return onClick_; }
         [[nodiscard]] bool hasOnClick() const { return static_cast<bool>(onClick_); }
 
+        // Builder helpers
+        Button& text(std::string t) { setText(std::move(t)); return *this; }
+        Button& provider(TextProvider p) { setTextProvider(std::move(p)); return *this; }
+        Button& style(const ButtonStyle& s) { setStyle(s); return *this; }
+        Button& font(const Font* f) { setFont(f); return *this; }
+        Button& onClick(std::function<void()> cb) { setOnClick(std::move(cb)); return *this; }
+
     private:
-        const Font& resolvedFont() const;
-        Color currentBackground() const;
-        std::string currentText() const;
+        [[nodiscard]] const Font& resolvedFont() const;
+        [[nodiscard]] Color currentBackground() const;
+        [[nodiscard]] std::string currentText() const;
 
         std::string text_{};
         ButtonStyle style_{};
