@@ -41,6 +41,7 @@ namespace rlge {
         gravity_ = cfg.gravity;
         startColor_ = cfg.startColor;
         endColor_ = cfg.endColor;
+        ensureCapacity();
         enforceMaxParticles();
     }
 
@@ -58,61 +59,24 @@ namespace rlge {
         gravity_ = cfg.gravity;
         startColor_ = cfg.startColor;
         endColor_ = cfg.endColor;
+        ensureCapacity();
         enforceMaxParticles();
     }
 
-    void ParticleEmitter::integrateParticles(const float dt) {
-        for (auto& p : particles_) {
-            p.vel.x += gravity_.x * dt;
-            p.vel.y += gravity_.y * dt;
-            p.pos.x += p.vel.x * dt;
-            p.pos.y += p.vel.y * dt;
-            p.life -= dt;
-
-            const float t = 1.0f - (p.life / p.totalLife); // 0..1 as it ages
-
-            // Size over lifetime (shrink slightly towards end).
-            p.size = lerp(minSize_, maxSize_, 1.0f - t);
-
-            // Color over a lifetime.
-            const auto r = static_cast<unsigned char>(lerp(startColor_.r, endColor_.r, t));
-            const auto g = static_cast<unsigned char>(lerp(startColor_.g, endColor_.g, t));
-            const auto b = static_cast<unsigned char>(lerp(startColor_.b, endColor_.b, t));
-            const auto a = static_cast<unsigned char>(lerp(startColor_.a, endColor_.a, t));
-            p.color = {r, g, b, a};
-        }
-
-        std::erase_if(particles_, [](const Particle& p) { return p.life <= 0.0f; });
-    }
-
-    void ParticleEmitter::drawParticles() {
-        if (!renderFn_)
-            return;
-
-        auto& scene = entity().scene();
-        auto& rq = scene.rq();
-
-        // Resolve layer
-        LayerId effectiveLayer = layer_;
-        if (effectiveLayer == InvalidLayerId) {
-            effectiveLayer = scene.layers().world();
-        }
-
-        rq.submit(effectiveLayer, [this] {
-            if (!renderFn_)
-                return;
-
-            for (const auto& p : particles_) {
-                renderFn_(p);
-            }
-        });
-    }
-
     void ParticleEmitter::spawnParticle() {
-        if (particles_.size() >= maxParticles_)
+        if (liveCount_ >= maxParticles_)
             return;
 
-        Particle p;
+        // Write into packed live range; grow if needed.
+        if (liveCount_ >= particles_.size()) {
+            particles_.push_back(Particle{});
+        }
+        createParticleAt(liveCount_);
+        liveCount_++;
+    }
+
+    void ParticleEmitter::createParticleAt(const size_t idx) {
+        Particle& p = particles_[idx];
 
         const Transform* transform = entity().get<Transform>();
         const Vector2 worldOrigin = getWorldOrigin();
@@ -138,15 +102,79 @@ namespace rlge {
         p.size = lerp(minSize_, maxSize_, randUnit()) * sizeScale;
         p.rotation = angle;
         p.color = startColor_;
+    }
 
-        particles_.push_back(p);
+    void ParticleEmitter::integrateParticles(const float dt) {
+        size_t i = 0;
+        while (i < liveCount_) {
+            Particle& p = particles_[i];
+
+            p.vel.x += gravity_.x * dt;
+            p.vel.y += gravity_.y * dt;
+            p.pos.x += p.vel.x * dt;
+            p.pos.y += p.vel.y * dt;
+            p.life -= dt;
+
+            if (p.life <= 0.0f) {
+                const size_t lastLive = liveCount_ - 1;
+                particles_[i] = particles_[lastLive]; // swap-remove
+                liveCount_--;
+                continue; // process the swapped-in particle at the same index
+            }
+
+            const float t = 1.0f - (p.life / p.totalLife);
+
+            // Size interpolation
+            p.size = lerp(minSize_, maxSize_, 1.0f - t);
+
+            // Color interpolation
+            const auto r = static_cast<unsigned char>(lerp(startColor_.r, endColor_.r, t));
+            const auto g = static_cast<unsigned char>(lerp(startColor_.g, endColor_.g, t));
+            const auto b = static_cast<unsigned char>(lerp(startColor_.b, endColor_.b, t));
+            const auto a = static_cast<unsigned char>(lerp(startColor_.a, endColor_.a, t));
+            p.color = {r, g, b, a};
+            ++i;
+        }
+    }
+
+    void ParticleEmitter::drawParticles() {
+        if (!renderFn_)
+            return;
+
+        auto& scene = entity().scene();
+        auto& rq = scene.rq();
+
+        // Resolve layer
+        LayerId effectiveLayer = layer_;
+        if (effectiveLayer == InvalidLayerId) {
+            effectiveLayer = scene.layers().world();
+        }
+
+        rq.submit(effectiveLayer, [this] {
+            if (!renderFn_)
+                return;
+
+            for (size_t i = 0; i < liveCount_; ++i) {
+                renderFn_(particles_[i]);
+            }
+        });
     }
 
     void ParticleEmitter::enforceMaxParticles() {
         if (particles_.size() <= maxParticles_)
             return;
+
         const auto toRemove = particles_.size() - maxParticles_;
-        particles_.erase(particles_.begin(), particles_.begin() + static_cast<std::ptrdiff_t>(toRemove));
+
+        // Erase from end (safer)
+        particles_.erase(particles_.end() - toRemove, particles_.end());
+        liveCount_ = std::min(liveCount_, particles_.size());
+    }
+
+    void ParticleEmitter::ensureCapacity() {
+        if (particles_.capacity() < maxParticles_) {
+            particles_.reserve(maxParticles_);
+        }
     }
 
     Vector2 ParticleEmitter::getWorldOrigin() const {
@@ -185,9 +213,10 @@ namespace rlge {
 
     void ContinuousParticleEmitter::update(const float dt) {
         Component::update(dt);
+
         if (emitting_) {
             emitAccumulator_ += emitRate_ * dt;
-            while (emitAccumulator_ >= 1.0f && particles_.size() < maxParticles_) {
+            while (emitAccumulator_ >= 1.0f && liveCount_ < maxParticles_) {
                 emitAccumulator_ -= 1.0f;
                 spawnParticle();
             }
@@ -202,6 +231,7 @@ namespace rlge {
 
     void ContinuousParticleEmitter::clear() {
         particles_.clear();
+        liveCount_ = 0;
     }
 
     // Burst emitter
@@ -230,8 +260,10 @@ namespace rlge {
 
     void BurstParticleEmitter::update(const float dt) {
         Component::update(dt);
+
         integrateParticles(dt);
-        if (particles_.empty()) {
+
+        if (liveCount_ == 0) {
             bursting_ = false;
         }
     }
@@ -246,11 +278,9 @@ namespace rlge {
 
     void BurstParticleEmitter::burst(const std::size_t count) {
         bursting_ = true;
-        const auto desired = static_cast<std::size_t>(count > 0 ? count : burstCount_);
+        const auto desired = count > 0 ? count : burstCount_;
         for (std::size_t i = 0; i < desired; ++i) {
-            if (particles_.size() < maxParticles_) {
-                spawnParticle();
-            }
+            spawnParticle();
         }
     }
 
@@ -258,6 +288,7 @@ namespace rlge {
 
     void BurstParticleEmitter::clear() {
         particles_.clear();
+        liveCount_ = 0;
         bursting_ = false;
     }
 

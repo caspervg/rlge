@@ -133,6 +133,9 @@ public:
         }
 
         Scene::update(dt);
+
+        emitter_->setLifetimeRange(pendingMinLife_, pendingMaxLife_);
+        emitter_->setMaxParticles(pendingMaxParticles_);
     }
 
     void debugOverlay() override {
@@ -146,15 +149,14 @@ public:
             emitter_->setEmitRate(rate);
         }
 
-        auto maxParticles = static_cast<int>(emitter_->maxParticles());
-        if (ImGui::SliderInt("Max particles", &maxParticles, 0, 5000)) {
-            emitter_->setMaxParticles(static_cast<std::size_t>(maxParticles));
+        int mp = pendingMaxParticles_;
+        if (ImGui::SliderInt("Max particles", &mp, 0, 5000)) {
+            pendingMaxParticles_ = mp;
         }
 
-        float minLife = emitter_->minLifetime();
+        const float minLife = emitter_->minLifetime();
         float maxLife = emitter_->maxLifetime();
-        if (ImGui::DragFloatRange2("Lifetime", &minLife, &maxLife, 0.01f, 0.05f, 5.0f)) {
-            emitter_->setLifetimeRange(minLife, maxLife);
+        if (ImGui::DragFloatRange2("Lifetime", &pendingMinLife_, &pendingMaxLife_, 0.01f, 0.05f, 5.0f)) {
         }
 
         float minSpeed = emitter_->minSpeed();
@@ -335,6 +337,9 @@ private:
     int burstCount_{150};
     bool streaksEnabled_{false};
     ContinuousEmitterConfig mouseConfig_{};
+    float pendingMinLife_{1};
+    float pendingMaxLife_{1};
+    int pendingMaxParticles_{5000};
 };
 
 int main() {

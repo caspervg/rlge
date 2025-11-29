@@ -67,7 +67,7 @@ namespace rlge {
         void setLocalOffset(Vector2 localOffset) { localOffset_ = localOffset; }
         [[nodiscard]] Vector2 origin() const { return localOffset_; }
 
-        void setMaxParticles(std::size_t max) { maxParticles_ = max; enforceMaxParticles(); }
+        void setMaxParticles(std::size_t max) { maxParticles_ = max; ensureCapacity(); enforceMaxParticles(); }
         [[nodiscard]] std::size_t maxParticles() const { return maxParticles_; }
 
         void setLifetimeRange(float minL, float maxL) { minLifetime_ = minL; maxLifetime_ = maxL; }
@@ -100,7 +100,6 @@ namespace rlge {
 
     protected:
         std::vector<Particle> particles_;
-        std::vector<bool> alive_;
         std::size_t liveCount_{0};
 
         RenderFn renderFn_;
@@ -132,6 +131,7 @@ namespace rlge {
         void integrateParticles(float dt);
         void drawParticles();
         void enforceMaxParticles();
+        void ensureCapacity();
         [[nodiscard]] Vector2 getWorldOrigin() const;
     };
 
