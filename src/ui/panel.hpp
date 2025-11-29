@@ -22,6 +22,7 @@ namespace rlge::ui {
 
         void setStyle(const PanelStyle& style) { style_ = style; }
         [[nodiscard]] const PanelStyle& style() const { return style_; }
+        Panel& style(const PanelStyle& s) { setStyle(s); return *this; }
 
     private:
         PanelStyle style_{};

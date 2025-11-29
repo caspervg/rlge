@@ -239,3 +239,4 @@ Look at the examples for small, focused patterns that combine these systems.
 - Snake sprites: _[Snake Game Assets](https://cosme.itch.io/snake)_ by Cosme, from itch.io ([CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)).
 - Snake sound effects: Generated myself with a very basic Python script.
 - Snake background music: _[Snake around the Sun](https://freemusicarchive.org/music/crowander/circles/snake-around-the-sun/)_ by Crowander, from the Free Music Archive ([CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/)).
+- Snake UI font: _[Falling Sky Black](https://www.fontspace.com/falling-sky-font-f22358)_ by KineticPlasma Fonts, from FontSpace.com ([SIL Open Font License](https://openfontlicense.org/open-font-license-official-text/)).

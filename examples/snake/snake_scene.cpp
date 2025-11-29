@@ -1,6 +1,5 @@
 #include "snake_scene.hpp"
 
-#include <algorithm>
 #include <format>
 
 #include "game_over_scene.h"
@@ -16,7 +15,8 @@ namespace snake {
     class GameOverScene;
     using namespace rlge;
 
-    GameScene::GameScene(Runtime& r) : Scene(r), game_(Config{}, &r.services().gameEvents(), &sceneEvents()) {
+    GameScene::GameScene(Runtime& r) :
+        Scene(r), game_(Config{}, &r.services().gameEvents(), &sceneEvents()) {
         forwardGameEvent<SnakeDied>();
     }
 
@@ -38,11 +38,14 @@ namespace snake {
 
         auto& spriteTex = assets().loadTexture("spritesheet", "../examples/snake/assets/spritesheet.png");
         spriteSheet_ = std::make_unique<SpriteSheet>(spriteTex, kPixelsPerTile, kPixelsPerTile);
+        uiFont_ = &assets().loadFont("ui_font", "../examples/snake/assets/fallingskyblack-gyxa.otf", 32);
 
         camera_ = rlge::Camera();
         camera_.setOffset({snake::kTilesX * snake::kPixelsPerTile * snake::kMagnification / 2.0f,
                            snake::kTilesY * snake::kPixelsPerTile * snake::kMagnification / 2.0f});
         setSingleView(camera_);
+
+        buildHUD_();
 
         bg_ = &spawn<Background>();
         borders_ = &spawn<BorderTiles>(game_, *spriteSheet_);
@@ -104,7 +107,7 @@ namespace snake {
                 runtime().transitionTo<GameOverScene>(
                     std::make_unique<FadeTransition>(0.3f),
                     score_
-                );
+                    );
             }
         }
 
@@ -114,65 +117,39 @@ namespace snake {
         if (deathFx_ && deathFx_->isDone()) {
             deathFx_->clear();
         }
-
-        // Build HUD using the UI system.
-        auto& uiSystem = ui();
-        auto& root = uiSystem.root();
-        // Clear and rebuild UI tree; IDs keep interactions stable.
-        root.clearChildren();
-
-        const auto windowSize = runtime().window().size();
-
-        const ui::PanelStyle hudStyle{
-            .background = Fade(BLACK, 180),
-            .border = {0, 0, 0, 0},
-            .borderThickness = 0.0f
-        };
-
-        auto& hudPanel = root.addChild<ui::Panel>(
-            ui::LayoutConfig{.size = {windowSize.x, 48.0f}, .padding = {12.0f, 10.0f}},
-            hudStyle);
-
-        auto& bar = hudPanel.addChild<ui::HStack>(
-            ui::LayoutConfig{},
-            ui::StackConfig{.spacing = 12.0f, .alignment = ui::Alignment::Center, .distribution = ui::Distribution::SpaceBetween});
-
-        auto& left = bar.addChild<ui::HStack>(
-            ui::LayoutConfig{},
-            ui::StackConfig{.spacing = 10.0f, .alignment = ui::Alignment::Center});
-        left.addChild<ui::Label>(
-            ui::bind([this]() { return std::format("Score: {}", score_); }),
-            ui::LayoutConfig{},
-            ui::LabelStyle{.color = WHITE, .fontSize = 20.0f});
-        left.addChild<ui::Label>(
-            ui::bind([this]() { return std::format("Length: {}", game_.body().size()); }),
-            ui::LayoutConfig{},
-            ui::LabelStyle{.color = LIGHTGRAY, .fontSize = 18.0f});
-
-        auto& right = bar.addChild<ui::HStack>(
-            ui::LayoutConfig{},
-            ui::StackConfig{.spacing = 8.0f, .alignment = ui::Alignment::Center});
-        auto& quitBtn = right.addChild<ui::Button>(
-            "Quit",
-            ui::LayoutConfig{.padding = {10.0f, 6.0f}},
-            ui::ButtonStyle{
-                .background = {80, 40, 40, 220},
-                .hover = {100, 60, 60, 240},
-                .pressed = {60, 30, 30, 255},
-                .disabled = {40, 40, 40, 200},
-                .text = WHITE,
-                .fontSize = 18.0f});
-        quitBtn.setId("snake_quit");
-        quitBtn.setOnClick([this] { runtime().quit(); });
     }
 
     void GameScene::exit() { audio().stopMusic(); }
 
-    void GameScene::debugOverlay() {
-        ImGui::Begin("Game debug");
-        ImGui::Text("Number of entities: %d", static_cast<int>(entities().size()));
-        ImGui::Text("Score: %d", score_);
-        ImGui::End();
+    void GameScene::buildHUD_() {
+        auto& uiSystem = ui();
+        auto& root = uiSystem.root();
+        root.clearChildren();
+
+        const auto [x, _] = runtime().window().size();
+
+        const ui::PanelStyle hudStyle{
+            .background = Fade(BLACK, .5f)
+        };
+
+        auto& hudPanel = root.addChild<ui::Panel>(
+            ui::LayoutConfig{.size = {100.0f, 40.0f}, .padding = {16.0f, 12.0f}},
+            hudStyle);
+
+        hudPanel.addChild<ui::HStack>(
+                    ui::LayoutConfig{},
+                    ui::StackConfig{.spacing = 20.0f, .alignment = ui::Alignment::Center,
+                                    .distribution = ui::Distribution::SpaceBetween}
+                    )
+                .addChild<ui::HStack>(
+                    ui::LayoutConfig{},
+                    ui::StackConfig{.spacing = 12.0f, .alignment = ui::Alignment::Center}
+                    )
+                .addChild<ui::Label>(
+                    ui::bind([this]() { return std::format("Score: {}", score_); }),
+                    ui::LayoutConfig{},
+                    ui::LabelStyle{.color = {100, 255, 100, 255}, .fontSize = 24.0f}, uiFont_);
     }
+
 
 } // namespace snake

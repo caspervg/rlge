@@ -12,6 +12,8 @@ namespace snake {
     using namespace rlge;
 
     void FpsCounter::draw() {
+        return;
+
         rq().submitUI([] {
             DrawRectangle(5, 5, 80, 30, Fade(BLACK, 0.5f));
             DrawFPS(10, 10);

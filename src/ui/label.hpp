@@ -47,6 +47,12 @@ namespace rlge::ui {
         void setFont(const Font* font) { font_ = font; invalidateLayout(); }
         [[nodiscard]] const Font* font() const { return font_; }
 
+        // Builder helpers
+        Label& text(std::string t) { setText(std::move(t)); return *this; }
+        Label& provider(TextProvider p) { setTextProvider(std::move(p)); return *this; }
+        Label& style(const LabelStyle& s) { setStyle(s); return *this; }
+        Label& font(const Font* f) { setFont(f); return *this; }
+
     private:
         const Font& resolvedFont() const;
         std::string currentText() const;

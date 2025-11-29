@@ -36,6 +36,22 @@ namespace rlge {
         return textures_.at(id);
     }
 
+    Font& AssetStore::loadFont(const std::string& id, const std::string& path, const int size) {
+        const auto it = fonts_.find(id);
+        if (it != fonts_.end()) {
+            UnloadFont(it->second);
+            it->second = LoadFontEx(this->path(path).string().c_str(), size, nullptr, 0);
+            return it->second;
+        }
+        Font font = LoadFontEx(this->path(path).string().c_str(), size, nullptr, 0);
+        auto [iter, _] = fonts_.emplace(id, font);
+        return iter->second;
+    }
+
+    Font& AssetStore::font(const std::string& id) {
+        return fonts_.at(id);
+    }
+
     Shader& AssetStore::loadShader(const std::string& id, const std::string& vertPath, const std::string& fragPath) {
         const auto it = shaders_.find(id);
         if (it != shaders_.end())
@@ -85,6 +101,10 @@ namespace rlge {
             UnloadShader(kv.second);
         }
         shaders_.clear();
+        for (const auto& kv : fonts_) {
+            UnloadFont(kv.second);
+        }
+        fonts_.clear();
         for (const auto& kv : textures_) {
             UnloadTexture(kv.second);
         }

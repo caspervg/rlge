@@ -55,9 +55,23 @@ namespace rlge::ui {
         const auto text = currentText();
         const Vector2 textPos{rect.x + layout_.padding.x, rect.y + layout_.padding.y};
 
-        rq.submitUI([rect, bg] {
-            DrawRectangleV({rect.x, rect.y}, {rect.width, rect.height}, bg);
+        rq.submitUI([rect, bg, style = style_] {
+            if (style.borderRadius > 0.0f) {
+                DrawRectangleRounded(rect, style.borderRadius, 8, bg);
+            } else {
+                DrawRectangleV({rect.x, rect.y}, {rect.width, rect.height}, bg);
+            }
         });
+
+        if (style_.border.a > 0 && style_.borderThickness > 0.0f) {
+            rq.submitUI([rect, border = style_.border, t = style_.borderThickness, style = style_] {
+                if (style.borderRadius > 0.0f) {
+                    DrawRectangleRoundedLinesEx(rect, style.borderRadius, 8, t, border);
+                } else {
+                    DrawRectangleLinesEx(rect, t, border);
+                }
+            });
+        }
 
         rq.submitUI([textPos, font, text, style = style_, textColor] {
             DrawTextEx(font, text.c_str(), textPos, style.fontSize, style.spacing, textColor);

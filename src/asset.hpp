@@ -23,6 +23,10 @@ namespace rlge {
         Texture2D& loadTexture(const std::string& id, const std::string& path);
         Texture2D& texture(const std::string& id);
 
+        // Fonts
+        Font& loadFont(const std::string& id, const std::string& path, int size = 32);
+        Font& font(const std::string& id);
+
         // Shader loading helpers
         Shader& loadShader(const std::string& id, const std::string& vertPath, const std::string& fragPath);
         Shader& loadVertexShader(const std::string& id, const std::string& vertPath);
@@ -34,6 +38,7 @@ namespace rlge {
 
     private:
         std::unordered_map<std::string, Texture2D> textures_;
+        std::unordered_map<std::string, Font> fonts_;
         std::unordered_map<std::string, Shader> shaders_;
         std::filesystem::path assetRoot_{std::filesystem::current_path()};
     };
