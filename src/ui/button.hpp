@@ -53,6 +53,7 @@ namespace rlge::ui {
 
         void setOnClick(std::function<void()> cb) { onClick_ = std::move(cb); }
         [[nodiscard]] const std::function<void()>& onClick() const { return onClick_; }
+        [[nodiscard]] bool hasOnClick() const { return static_cast<bool>(onClick_); }
 
     private:
         const Font& resolvedFont() const;

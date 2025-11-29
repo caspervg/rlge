@@ -118,6 +118,7 @@ namespace snake {
         // Build HUD using the UI system.
         auto& uiSystem = ui();
         auto& root = uiSystem.root();
+        // Clear and rebuild UI tree; IDs keep interactions stable.
         root.clearChildren();
 
         const auto windowSize = runtime().window().size();

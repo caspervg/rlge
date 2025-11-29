@@ -49,14 +49,6 @@ namespace rlge {
             ClearBackground(BLACK);
 
             scenes_.draw();
-            if (auto* s = scenes_.top()) {
-                s->ui().layout();
-                s->ui().processInput(input_);
-                s->ui().render(renderer_);
-            }
-            if (transitionState_ != TransitionState::None) {
-                drawTransition_();
-            }
 
             renderer_.prepareWorld();
 
@@ -75,6 +67,14 @@ namespace rlge {
             }
 
             // Render UI once, in screen space
+            if (auto* s = scenes_.top()) {
+                s->ui().layout();
+                s->ui().processInput(input_);
+                s->ui().render(renderer_);
+            }
+            if (transitionState_ != TransitionState::None) {
+                drawTransition_();
+            }
             renderer_.flushUI();
 
             if (debugEnabled_) {

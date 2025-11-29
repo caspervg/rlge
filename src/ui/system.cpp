@@ -100,6 +100,10 @@ namespace rlge::ui {
         // Update button states based on hover/active.
         for (auto* w : widgets) {
             if (auto* btn = dynamic_cast<Button*>(const_cast<Widget*>(w))) {
+                if (btn->id().empty()) {
+                    // Require IDs on interactive widgets to avoid state loss across rebuilds.
+                    continue;
+                }
                 if (btn->state() == ButtonState::Disabled)
                     continue;
                 if (btn == active_) {
@@ -115,7 +119,7 @@ namespace rlge::ui {
         // Invoke callbacks for clicked buttons.
         if (clicked_) {
             if (auto* btn = dynamic_cast<Button*>(*clicked_)) {
-                if (btn->onClick()) {
+                if (!btn->id().empty() && btn->hasOnClick()) {
                     btn->onClick()();
                 }
             }
