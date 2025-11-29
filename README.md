@@ -7,9 +7,11 @@ This repository also contains example games/demos:
 - `examples/basic_game`: minimal moving-sprite scene with a stats overlay.
 - `examples/snake`: small game showing scenes, audio, and event flow.
 - `examples/particles`: configurable CPU particle emitters with live tuning.
+- `examples/breakout`: paddle/brick demo using the physics body + collision events.
 - `examples/tilemap`: orthogonal Tiled map rendering with flip flag support.
 - `examples/multiview`: split-screen + minimap rendering via multiple cameras.
 - `examples/collision_debug`: collider shapes, layer masks, and debug overlays.
+- `examples/shader_demo`: layer and per-entity shaders with live ImGui controls.
 
 ---
 
@@ -19,10 +21,12 @@ This repository also contains example games/demos:
 - Entity/component model with helpers (`Transform`, sprites/animations, sprite sheets, tilemaps, particles, etc.).
 - Two event buses: scene-local and shared game-wide, with queued dispatch and forwarding helpers.
 - Camera system (follow/pan/zoom/rotate, screen <-> world helpers, view bounds) plus multi-view rendering.
-- **Type-safe Input system** with support for keyboard, mouse, gamepad, and analog axes.
+- Dynamic render layers with optional shaders and typed uniform bindings; per-entity shader effects for custom visuals.
+- Type-safe Input system with support for keyboard, mouse, gamepad, and analog axes.
 - Batched render queue with layers (`Background`, `World`, `Foreground`, `UI`), z-sorting, per-view culling, and render stats.
 - Collision system with layers/masks, triggers vs solids vs kinematic colliders, AABB/OBB/circle/polygon shapes, and optional ImGui debug overlay.
-- Asset store for textures, prefab factory for named entity constructors, and an audio manager for sounds/music.
+- Lightweight PhysicsBody component for gravity/forces/bounce with ground detection and collision response.
+- Asset store for textures/shaders (file or in-memory), prefab factory for named entity constructors, and an audio manager for sounds/music.
 - Particle emitter component with configurable spawn/render functions and helper spawn shapes.
 - Tilemap support using Tiled/JSON (via Tileson) with proper source-rect handling and per-tile flip flags.
 - Optional debug overlays via ImGui (toggle with `F1` in the examples).
@@ -52,6 +56,8 @@ This will produce the following executables:
 - `rlge_tilemap`
 - `rlge_multiview`
 - `rlge_collision_debug`
+- `rlge_breakout`
+- `rlge_shader_demo`
 
 On Windows, they will be under `build/` or a generator-specific subdirectory (for example `build/Debug`).
 
@@ -62,9 +68,11 @@ Each executable runs a focused scenario; use `F1` to toggle the ImGui overlay in
 - `rlge_basic_game`: moving sprite with camera follow and render stats.
 - `rlge_snake`: two-scene flow, audio, and global game events.
 - `rlge_particles`: two emitters with live tuning for spawn/rates/colors.
+- `rlge_breakout`: physics-backed paddle/brick collisions, game over flow, and global events.
 - `rlge_tilemap`: loads a Tiled map and renders it via the batched renderer.
 - `rlge_multiview`: two independent world views plus a static minimap.
 - `rlge_collision_debug`: move a collider through several shapes; enable collider drawing in the "Collisions" window.
+- `rlge_shader_demo`: layer-level wave shader + per-entity flash shader with ImGui sliders.
 
 ## Using RLGE in your own game
 
@@ -144,6 +152,47 @@ private:
 - Use layers to control draw order and z to sort within a layer; world layers are flushed per view, UI once per frame.
 - `RenderEntity` is a convenience base that exposes `rq()`, `assets()`, `input()`, `audio()`, and `events()`.
 - Render stats (`rq().stats()`) are handy for debug overlays.
+
+### Shaders (layers and entities)
+
+- Load shaders through the asset store from disk or memory: `assets().loadShader("wave", "wave.vert", "wave.frag")` or `loadShaderFromMemory`.
+- Apply a shader to a render layer and bind typed uniforms:
+  ```cpp
+  struct WaveParams { float time{0.0f}; float amplitude{0.02f}; };
+
+  auto& shader = assets().loadFragmentShader("wave", "wave.frag");
+  ShaderParams<WaveParams> params(shader);
+  params.bind("u_time", &WaveParams::time)
+        .bind("u_amplitude", &WaveParams::amplitude);
+
+  auto waterLayer = layers().create("Water", 5 /*sort*/, true);
+  layers().setShaderParams(waterLayer, std::move(params));
+
+  // Later in update
+  if (auto layer = layers().get(waterLayer)) {
+      if (auto* wrapper = dynamic_cast<ShaderParamsWrapper<WaveParams>*>(layer->get().shaderParams.get())) {
+          wrapper->get().params().time += dt;
+      }
+  }
+  ```
+- Add per-entity effects with `ShaderEffect<T>`; batching is bypassed so custom visuals are isolated:
+  ```cpp
+  static const char* kFlashFrag = "...";
+  auto& flash = assets().loadFragmentShader("flash", kFlashFrag);
+  auto& e = spawn<MyEntity>();
+  e.add<ShaderEffect<FlashParams>>(flash)
+      .bind("u_intensity", &FlashParams::intensity)
+      .bind("u_flashColor", &FlashParams::flashColor);
+  e.get<ShaderEffect<FlashParams>>()->params().intensity = 0.8f;
+  ```
+- Layer shaders and per-entity shaders can be used together; per-entity shaders wrap only that draw call while layer shaders affect everything on the layer.
+
+### Scene transitions
+
+- For instant swaps, call `runtime.pushScene<NewScene>()` and `runtime.popScene()`.
+- For smooth transitions, use `runtime.transitionTo<NextScene>(std::make_unique<FadeTransition>(0.35f));`. The runtime handles the out/in phases.
+- Built-ins: `FadeTransition(duration, color)` and `SlideTransition(duration, direction)`. Draws are submitted to the UI layer so they cover the frame.
+- Create custom transitions by deriving from `Transition`, overriding `draw(RenderQueue&, screenW, screenH)`, and pushing your own shapes or effects. Set the phase with `setPhase(TransitionPhase::Out/In)` if you need different visuals per half.
 
 ### Events, assets, audio, and prefabs
 
