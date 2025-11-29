@@ -17,7 +17,7 @@ namespace rlge::ui {
             : layout_(layout) {}
         virtual ~Widget() = default;
 
-        // Measure desired content size (excluding padding) for this widget.
+        // Measure desired content size (including padding) for this widget.
         virtual Vector2 measureContent() const = 0;
 
         // Compute final bounds given parent space; derived classes can override.
