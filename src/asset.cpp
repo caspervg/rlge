@@ -38,11 +38,8 @@ namespace rlge {
 
     Font& AssetStore::loadFont(const std::string& id, const std::string& path, const int size) {
         const auto it = fonts_.find(id);
-        if (it != fonts_.end()) {
-            UnloadFont(it->second);
-            it->second = LoadFontEx(this->path(path).string().c_str(), size, nullptr, 0);
+        if (it != fonts_.end())
             return it->second;
-        }
         Font font = LoadFontEx(this->path(path).string().c_str(), size, nullptr, 0);
         auto [iter, _] = fonts_.emplace(id, font);
         return iter->second;
