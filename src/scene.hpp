@@ -14,6 +14,7 @@
 #include "render_queue.hpp"
 #include "tween.hpp"
 #include "collision/collision_system.hpp"
+#include "ui/system.hpp"
 
 namespace rlge {
     struct View;
@@ -29,6 +30,7 @@ namespace rlge {
         LayerRegistry& layers;
         EventBus& gameEvents;
         AudioManager& audio;
+        ui::UiSystem ui;
     };
 
     class ViewHandle {
@@ -87,6 +89,9 @@ namespace rlge {
         AudioManager& audio();
         const AudioManager& audio() const;
 
+        ui::UiSystem& ui();
+        const ui::UiSystem& ui() const;
+
         CollisionSystem& collisions();
         const CollisionSystem& collisions() const;
 
@@ -138,6 +143,8 @@ namespace rlge {
         void update(float dt);
         void draw();
         void drawDebug();
+        Scene* top();
+        const Scene* top() const;
 
     private:
         std::vector<std::unique_ptr<Scene>> stack_;
