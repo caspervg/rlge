@@ -15,10 +15,10 @@ namespace rlge::ui {
 
             auto childWidth = childLayout.size.x > 0.0f
                 ? childLayout.size.x
-                : measured.x + childLayout.padding.x * 2.0f;
+                : measured.x;
             auto childHeight = childLayout.size.y > 0.0f
                 ? childLayout.size.y
-                : measured.y + childLayout.padding.y * 2.0f;
+                : measured.y;
 
             maxSize.x = std::max(maxSize.x, childWidth);
             maxSize.y = std::max(maxSize.y, childHeight);
