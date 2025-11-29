@@ -1,21 +1,14 @@
-// Shader Demo - Demonstrates the RLGE shader system
-// Features:
-// - Per-layer shaders (water wave effect on a custom layer)
-// - Per-entity shaders (hit flash effect on individual sprites)
-// - Dynamic layer creation and management
-// - ShaderParams<T> typed uniform binding
-
-#include <print>
 #include <cmath>
+#include <print>
 
 #include "debug.hpp"
-#include "runtime.hpp"
-#include "window.hpp"
 #include "imgui.h"
+#include "render_entity.hpp"
+#include "runtime.hpp"
+#include "shader_effect.hpp"
 #include "sprite.hpp"
 #include "transformer.hpp"
-#include "render_entity.hpp"
-#include "shader_effect.hpp"
+#include "window.hpp"
 
 using namespace rlge;
 
@@ -74,7 +67,8 @@ void main() {
 
 class FpsCounter final : public RenderEntity {
 public:
-    explicit FpsCounter(Scene& scene) : RenderEntity(scene) {}
+    explicit FpsCounter(Scene& scene) :
+        RenderEntity(scene) {}
 
     void draw() override {
         rq().submitUI([] {
@@ -86,8 +80,8 @@ public:
 // Entity on the wave layer (affected by wave shader)
 class WaveSprite final : public RenderEntity {
 public:
-    WaveSprite(Scene& scene, Texture2D& texture, LayerId layer, float x, float y)
-        : RenderEntity(scene)
+    WaveSprite(Scene& scene, Texture2D& texture, LayerId layer, float x, float y) :
+        RenderEntity(scene)
         , texture_(texture)
         , layer_(layer) {
         auto& tr = add<rlge::Transform>();
@@ -103,13 +97,13 @@ private:
 // Entity with per-entity flash shader effect
 class FlashingSprite final : public RenderEntity {
 public:
-    FlashingSprite(Scene& scene, Texture2D& texture, Shader flashShader, float x, float y)
-        : RenderEntity(scene)
+    FlashingSprite(Scene& scene, Texture2D& texture, Shader flashShader, float x, float y) :
+        RenderEntity(scene)
         , flashShader_(flashShader) {
         auto& tr = add<rlge::Transform>();
         tr.position = {x, y};
 
-        // Add per-entity shader effect
+        // Add a per-entity shader effect
         add<ShaderEffect<FlashParams>>(flashShader)
             .bind("u_intensity", &FlashParams::intensity)
             .bind("u_flashColor", &FlashParams::flashColor);
@@ -155,8 +149,8 @@ private:
 // Normal sprite without shader (for comparison)
 class NormalSprite final : public RenderEntity {
 public:
-    NormalSprite(Scene& scene, Texture2D& texture, float x, float y)
-        : RenderEntity(scene) {
+    NormalSprite(Scene& scene, Texture2D& texture, float x, float y) :
+        RenderEntity(scene) {
         auto& tr = add<rlge::Transform>();
         tr.position = {x, y};
         add<Sprite>(texture, texture.width, texture.height);
@@ -165,8 +159,8 @@ public:
 
 class ShaderDemoScene final : public Scene, public HasDebugOverlay {
 public:
-    explicit ShaderDemoScene(Runtime& r)
-        : Scene(r) {}
+    explicit ShaderDemoScene(Runtime& r) :
+        Scene(r) {}
 
     void enter() override {
         // Create textures programmatically
@@ -198,6 +192,8 @@ public:
 
         // Set up camera
         camera_ = rlge::Camera();
+        const Vector2 windowSize = runtime().window().size();
+        camera_.setOffset({windowSize.x * 0.5f, windowSize.y * 0.5f});
         camera_.setTarget({400, 300});
         setSingleView(camera_);
 
@@ -207,7 +203,7 @@ public:
         // Spawn some sprites on the wave layer
         for (int i = 0; i < 5; ++i) {
             waveSprites_.push_back(&spawn<WaveSprite>(boxTexture_, waterLayer_,
-                                                       100.0f + i * 150.0f, 150.0f));
+                                                      100.0f + i * 150.0f, 150.0f));
         }
 
         // Spawn flashing sprite (per-entity shader)
@@ -244,21 +240,11 @@ public:
 
     void debugOverlay() override {
         ImGui::Begin("Shader Demo");
-
-        ImGui::Text("This demo shows the RLGE shader system:");
-        ImGui::BulletText("Top row: Wave layer shader");
-        ImGui::BulletText("Middle: Per-entity flash shader");
-        ImGui::BulletText("Bottom row: Normal (no shader)");
-        ImGui::Separator();
-
-        ImGui::Text("Controls:");
-        ImGui::BulletText("Arrow keys / WASD: Move flashing sprite");
-        ImGui::BulletText("F1: Toggle this debug panel");
         ImGui::Separator();
 
         // Wave shader controls
         if (ImGui::CollapsingHeader("Wave Layer Shader", ImGuiTreeNodeFlags_DefaultOpen)) {
-            if (auto layer = layers().get(waterLayer_)) {
+            if (const auto layer = layers().get(waterLayer_)) {
                 auto* wrapper = dynamic_cast<ShaderParamsWrapper<WaveParams>*>(
                     layer->get().shaderParams.get());
                 if (wrapper) {
@@ -279,7 +265,7 @@ public:
                 auto* effect = flashingSprite_->get<ShaderEffect<FlashParams>>();
                 if (effect) {
                     ImGui::ColorEdit3("Flash Color",
-                        reinterpret_cast<float*>(&effect->params().flashColor));
+                                      reinterpret_cast<float*>(&effect->params().flashColor));
                 }
             }
         }
@@ -312,24 +298,18 @@ private:
 };
 
 int main() {
-    WindowConfig cfg{
+    Runtime runtime(WindowConfig{
         .width = 800,
         .height = 600,
         .fps = 60,
         .title = "RLGE Shader Demo"
-    };
-
-    Runtime runtime(cfg);
+    });
 
     // Input bindings
-    runtime.input().bind(Action::MoveLeft, KeyCode::Left);
-    runtime.input().bind(Action::MoveLeft, KeyCode::A);
-    runtime.input().bind(Action::MoveRight, KeyCode::Right);
-    runtime.input().bind(Action::MoveRight, KeyCode::D);
-    runtime.input().bind(Action::MoveUp, KeyCode::Up);
-    runtime.input().bind(Action::MoveUp, KeyCode::W);
-    runtime.input().bind(Action::MoveDown, KeyCode::Down);
-    runtime.input().bind(Action::MoveDown, KeyCode::S);
+    runtime.input().bind(Action::MoveLeft, KeyCode::Left, KeyCode::A);
+    runtime.input().bind(Action::MoveRight, KeyCode::Right, KeyCode::D);
+    runtime.input().bind(Action::MoveUp, KeyCode::Up, KeyCode::W);
+    runtime.input().bind(Action::MoveDown, KeyCode::Down, KeyCode::S);
 
     runtime.pushScene<ShaderDemoScene>();
     runtime.run();
