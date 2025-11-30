@@ -10,13 +10,13 @@ namespace breakout {
 
     void ScoreBoard::draw() {
         rq().submitUI([this] {
-            const auto line1 = std::format("Level ({}/{}) {}", state_.level + 1, state_.numLevels, state_.levelName);
-            const auto line2 = std::format("Score {}", state_.score);
-            const auto line3 = std::format("Lives {}", state_.lives);
-            const auto line4 = std::format("Bricks: {}/{}", state_.numBricksLeft, state_.numBricksTotal);
+            const auto line1 = std::format("L: {}/{}", state_.level + 1, state_.numLevels);
+            const auto line2 = std::format("S: {}", state_.score);
+            const auto line3 = std::format("H: {}", state_.lives);
+            const auto line4 = std::format("B: {}/{}", state_.numBricksLeft, state_.numBricksTotal);
             DrawText(line1.c_str(), 10, 10, 20, WHITE);
-            DrawText(line2.c_str(), 10, 30, 20, WHITE);
-            DrawText(line3.c_str(), 10, 50, 20, WHITE);
+            DrawText(line2.c_str(), 10, 30, 20, GREEN);
+            DrawText(line3.c_str(), 10, 50, 20, RED);
             DrawText(line4.c_str(), 10, 70, 20, WHITE);
         });
     }
@@ -103,8 +103,8 @@ namespace breakout {
             const auto* tr = get<rlge::Transform>();
             if (!tr)
                 return;
-            DrawRectangle(static_cast<int>(tr->position.x - g_cfg.paddleWidth / 2.0f),
-                          static_cast<int>(tr->position.y - g_cfg.paddleHeight / 2.0f), g_cfg.paddleWidth,
+            DrawRectangle(static_cast<int>(tr->position.x - level_.paddleWidth / 2.0f),
+                          static_cast<int>(tr->position.y - g_cfg.paddleHeight / 2.0f), level_.paddleWidth,
                           g_cfg.paddleHeight, g_cfg.paddleColor);
         });
     }
