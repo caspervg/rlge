@@ -180,8 +180,9 @@ namespace rlge {
         }
 
         // Gamepad binding
-        void bindGamepad(ActionEnum action, int gamepadId, GamepadButton button) {
-            gamepadBindings_[action] = GamepadBinding{gamepadId, button};
+        template <typename... GamepadButtons>
+        void bindGamepad(ActionEnum action, int gamepadId, GamepadButtons... buttons) {
+            (gamepadBindings_.insert({action, GamepadBinding{gamepadId, buttons}}), ...);
         }
 
         // Axis binding for key pairs (e.g., A/D for horizontal movement)
