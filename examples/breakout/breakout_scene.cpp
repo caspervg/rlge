@@ -57,6 +57,7 @@ namespace breakout {
 
     void BreakoutScene::exit() {
         gameEvents().unsubscribe<BrickDestroyed>(brickDestroyedHandlerId_);
+        gameEvents().unsubscribe<BrickHit>(brickHitHandlerId_);
         gameEvents().unsubscribe<BallLost>(ballLostHandlerId_);
     }
 
