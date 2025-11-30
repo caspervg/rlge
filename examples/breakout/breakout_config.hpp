@@ -1,30 +1,40 @@
 #pragma once
+#include <string>
+#include <vector>
+
 #include "raylib.h"
 
 namespace breakout {
+    struct Level;
+
     struct Config {
-        int width = 800;
-        int height = 600;
+        int viewPortWidth = 800;
+        int viewPortHeight = 600;
         int brickWidth = 30;
         int brickHeight = 15;
         int brickMargin = 5;
         float ballRadius = 5.0f;
-        int brickColumns = 20;
-        int brickRows = 5;
         int paddleWidth = 80;
         int paddleHeight = 15;
-        float paddleSpeed = 400.0f;
         float maxBallPaddleDeflectionAngle = 60.0f; // degrees
         Color paddleColor = BLUE;
         Color brickColor = LIME;
         Color ballColor = YELLOW;
-        int initialLives = 3;
         float wallThickness = 20.0f;
         float brickHitShakeIntensity = 0.25f;
         float brickHitShakeDuration = 0.1f;
-        float ballSpeedMultiplier = 1.025f;
-        float ballSpeedMax = 900.0f;
+    };
+
+    struct GameState {
+        std::string levelName = "Unnamed Level";
+        int level = 1;
+        int numLevels = 1;
+        int score = 0;
+        int lives = 3;
+        size_t numBricksLeft = 0;
+        size_t numBricksTotal = 0;
     };
 
     inline Config g_cfg;
+
 }

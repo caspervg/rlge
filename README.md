@@ -232,6 +232,7 @@ Look at the examples for small, focused patterns that combine these systems.
 - [raylib](https://www.raylib.com/) - windowing, input, rendering (zlib License)
 - [Dear ImGui](https://github.com/ocornut/imgui) - immediate-mode GUI (MIT License)
 - [rlImGui](https://github.com/raylib-extras/rlImGui) - ImGui integration for raylib (zlib License)
+- [cpptoml](https://github.com/skystrife/cpptoml) - parsing TOML config files for the Breakout example (MIT License)
 
 ### Assets
 

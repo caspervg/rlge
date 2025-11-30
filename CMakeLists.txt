@@ -114,6 +114,7 @@ add_executable(rlge_breakout
         examples/breakout/breakout_scene.cpp
         examples/breakout/breakout_entities.cpp
         examples/breakout/game_over_scene.cpp
+        examples/breakout/breakout_level.cpp
 )
 target_link_libraries(rlge_breakout PRIVATE rlge raylib rlimgui imgui)
 

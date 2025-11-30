@@ -1,12 +1,28 @@
 #include "breakout_entities.hpp"
 #include "breakout_config.hpp"
-#include "breakout_game.hpp"
+#include "breakout_events.hpp"
 
 namespace breakout {
     using namespace rlge;
     using CLM = ColliderLayerMask;
 
-    Wall::Wall(Scene& s, const float x, const float y, const float w, const float h) : Entity(s) {
+    ScoreBoard::ScoreBoard(Scene& s, const GameState& state) : RenderEntity(s), state_(state) {}
+
+    void ScoreBoard::draw() {
+        rq().submitUI([this] {
+            const auto line1 = std::format("Level ({}/{}) {}", state_.level + 1, state_.numLevels, state_.levelName);
+            const auto line2 = std::format("Score {}", state_.score);
+            const auto line3 = std::format("Lives {}", state_.lives);
+            const auto line4 = std::format("Bricks: {}/{}", state_.numBricksLeft, state_.numBricksTotal);
+            DrawText(line1.c_str(), 10, 10, 20, WHITE);
+            DrawText(line2.c_str(), 10, 30, 20, WHITE);
+            DrawText(line3.c_str(), 10, 50, 20, WHITE);
+            DrawText(line4.c_str(), 10, 70, 20, WHITE);
+        });
+    }
+
+    Wall::Wall(Scene& s, const float x, const float y, const float w, const float h) :
+        Entity(s) {
         auto& tr = add<rlge::Transform>();
         tr.position = {x + w / 2.0f, y + h / 2.0f};
 
@@ -14,17 +30,18 @@ namespace breakout {
                          ColliderLayerMask::LAYER_BULLET, Rectangle{-w / 2.0f, -h / 2.0f, w, h}, false);
     }
 
-    Paddle::Paddle(Scene& s) : RenderEntity(s) {
+    Paddle::Paddle(Scene& s, const Level& level) :
+        RenderEntity(s), level_(level) {
         auto& tr = add<rlge::Transform>();
-        tr.position = {g_cfg.width / 2.0f, g_cfg.height - 20.0f - g_cfg.paddleHeight / 2.0f};
+        tr.position = {g_cfg.viewPortWidth / 2.0f, g_cfg.viewPortHeight - 20.0f - g_cfg.paddleHeight / 2.0f};
 
         PhysicsBodyConfig conf = {.mass = 1.0f, .velocity = {0.f, 0.f}, .type = BodyType::Kinematic};
         physics_ = &add<PhysicsBody>(conf);
 
         coll_ = &add<BoxCollider>(scene().collisions(), ColliderType::Kinematic, ColliderLayerMask::LAYER_PLAYER,
                                   ColliderLayerMask::LAYER_BULLET,
-                                  Rectangle{-g_cfg.paddleWidth / 2.0f, -g_cfg.paddleHeight / 2.0f,
-                                            g_cfg.paddleWidth * 1.0f, g_cfg.paddleHeight * 1.0f},
+                                  Rectangle{-level_.paddleWidth / 2.0f, -g_cfg.paddleHeight / 2.0f,
+                                            level_.paddleWidth * 1.0f, g_cfg.paddleHeight * 1.0f},
                                   false);
     }
 
@@ -36,22 +53,22 @@ namespace breakout {
             return;
 
         if (input().down(Action::MoveLeft)) {
-            tr->position.x -= g_cfg.paddleSpeed * dt;
+            tr->position.x -= level_.paddleSpeed * dt;
         }
         if (input().down(Action::MoveRight)) {
-            tr->position.x += g_cfg.paddleSpeed * dt;
+            tr->position.x += level_.paddleSpeed * dt;
         }
 
-        tr->position.x += input().axisValue(Action::MoveLeft) * g_cfg.paddleSpeed * dt;
-        tr->position.x -= input().axisValue(Action::MoveRight) * g_cfg.paddleSpeed * dt;
+        tr->position.x += input().axisValue(Action::MoveLeft) * level_.paddleSpeed * dt;
+        tr->position.x -= input().axisValue(Action::MoveRight) * level_.paddleSpeed * dt;
 
 
-        const float halfWidth = g_cfg.paddleWidth / 2.0f;
+        const float halfWidth = level_.paddleWidth / 2.0f;
         if (tr->position.x < halfWidth) {
             tr->position.x = halfWidth;
         }
-        if (tr->position.x > g_cfg.width - halfWidth) {
-            tr->position.x = g_cfg.width - halfWidth;
+        if (tr->position.x > g_cfg.viewPortWidth - halfWidth) {
+            tr->position.x = g_cfg.viewPortWidth - halfWidth;
         }
     }
 
@@ -66,7 +83,7 @@ namespace breakout {
             // Calculate hit position (-1.0 to 1.0)
             const auto hitOffset = (ballTr->position.x - tr->position.x) / (g_cfg.paddleWidth / 2.0f);
 
-            // Modify ball angle based on hit position
+            // Modify the ball angle based on hit position
             const auto angle = hitOffset * g_cfg.maxBallPaddleDeflectionAngle * DEG2RAD;
             const auto speed = Vector2Length(ballPhysics->velocity());
 
@@ -77,6 +94,7 @@ namespace breakout {
             ballPhysics->setVelocity(newVel);
         }
     }
+
 
     void Paddle::draw() {
         RenderEntity::draw();
@@ -91,11 +109,12 @@ namespace breakout {
         });
     }
 
-    Brick::Brick(Scene& s, const float x, const float y) : RenderEntity(s) {
+    Brick::Brick(Scene& s, const BrickConfig& config, const float screenX, const float screenY) :
+        RenderEntity(s), config_(config) {
         auto& tr = add<rlge::Transform>();
-        tr.position = {x, y};
+        tr.position = {screenX, screenY};
 
-        coll_ = &add<BoxCollider>(scene().collisions(), ColliderType::Solid, ColliderLayerMask::LAYER_WORLD,
+        coll_ = &add<BoxCollider>(scene().collisions(), ColliderType::Kinematic, ColliderLayerMask::LAYER_WORLD,
                                   ColliderLayerMask::LAYER_BULLET,
                                   Rectangle{-g_cfg.brickWidth / 2.0f, -g_cfg.brickHeight / 2.0f,
                                             g_cfg.brickWidth * 1.0f, g_cfg.brickHeight * 1.0f},
@@ -103,10 +122,15 @@ namespace breakout {
     }
 
     void Brick::onCollision(const CollisionEvent& event) {
-        coll_->unregisterCollider(); // Remove collider to prevent further collisions
-        if (event.state == CollisionState::Enter && alive_) {
+        if (event.state != CollisionState::Enter || !alive_)
+            return;
+
+        if (--hitPoints_ <= 0) {
             alive_ = false;
-            scene().gameEvents().enqueue(BrickDestroyed{10});
+            coll_->unregisterCollider();
+            scene().gameEvents().enqueue(BrickDestroyed{config_.hitPoints * 10, config_});
+        } else {
+            scene().gameEvents().enqueue(BrickHit{config_});
         }
     }
 
@@ -119,23 +143,28 @@ namespace breakout {
             const auto* tr = get<rlge::Transform>();
             if (!tr)
                 return;
+            Color brickColor = config_.color;
+            brickColor.a = static_cast<unsigned char>(
+                (static_cast<float>(hitPoints_) / static_cast<float>(maxHitPoints_)) * brickColor.a);
+
             DrawRectangle(static_cast<int>(tr->position.x - g_cfg.brickWidth / 2.0f),
                           static_cast<int>(tr->position.y - g_cfg.brickHeight / 2.0f), g_cfg.brickWidth,
-                          g_cfg.brickHeight, g_cfg.brickColor);
+                          g_cfg.brickHeight, brickColor);
         });
     }
 
-    Ball::Ball(Scene& s) : RenderEntity(s) {
+    Ball::Ball(Scene& s, const Level& level) :
+        RenderEntity(s), level_(level) {
         auto& tr = add<rlge::Transform>();
-        tr.position = {g_cfg.width / 2.0f, g_cfg.height / 2.0f};
+        tr.position = {g_cfg.viewPortWidth / 2.0f, g_cfg.viewPortHeight / 2.0f};
 
         PhysicsBodyConfig conf = {
-            .mass = 1.0f, .velocity = {250.0f, -250.0f}, .gravity = {0.0f, 0.0f}, .type = BodyType::Dynamic};
+            .mass = 1.0f, .velocity = level_.ballVelocityStart, .gravity = {0.0f, 0.0f}, .type = BodyType::Dynamic};
         physics_ = &add<PhysicsBody>(conf);
 
         col_ = &add<CircleCollider>(scene().collisions(), ColliderType::Solid, CLM::LAYER_BULLET,
                                     toLayerMask(CLM::LAYER_PLAYER | CLM::LAYER_WORLD), Vector2{0.0f, 0.0f},
-                                    g_cfg.ballRadius, false);
+                                    level_.ballRadius, false);
     }
 
     void Ball::update(float dt) {
@@ -145,7 +174,7 @@ namespace breakout {
             return;
 
         // The ball fell off
-        if (tr->position.y > g_cfg.height && !outOfFrame_) {
+        if (tr->position.y > g_cfg.viewPortHeight && !outOfFrame_) {
             outOfFrame_ = true;
             scene().gameEvents().publish(BallLost{});
         }
@@ -157,7 +186,7 @@ namespace breakout {
             const auto* tr = get<rlge::Transform>();
             if (!tr)
                 return;
-            DrawCircleV(tr->position, g_cfg.ballRadius, g_cfg.ballColor);
+            DrawCircleV(tr->position, level_.ballRadius, g_cfg.ballColor);
         });
     }
 
