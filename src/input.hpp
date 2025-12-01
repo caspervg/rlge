@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdlib>
 #include <optional>
 #include <unordered_map>
 #include "raylib.h"

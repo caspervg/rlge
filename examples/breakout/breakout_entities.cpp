@@ -1,4 +1,7 @@
 #include "breakout_entities.hpp"
+
+#include <format>
+
 #include "breakout_config.hpp"
 #include "breakout_events.hpp"
 

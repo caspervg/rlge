@@ -1,5 +1,7 @@
 #include "breakout_level.hpp"
 
+#include <format>
+
 #include "breakout_entities.hpp"
 #include "include/cpptoml.h"
 
