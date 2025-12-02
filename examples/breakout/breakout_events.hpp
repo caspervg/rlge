@@ -4,15 +4,15 @@
 namespace breakout {
 
     struct GameLost {
-        int finalScore = 0;
+        int finalScore{0};
     };
 
     struct GameWon {
-        int finalScore = 0;
+        int finalScore{0};
     };
 
     struct LevelCompleted {
-        int levelScore = 0;
+        int levelScore{0};
     };
 
     struct RestartGame {};
@@ -22,8 +22,8 @@ namespace breakout {
     };
 
     struct BrickDestroyed {
-        int points = 0;
-        BrickConfig brick;
+        int points{0};
+        BrickConfig brick{};
     };
 
     struct BallLost {};

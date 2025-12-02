@@ -69,6 +69,8 @@ namespace rlge {
         }
 
         void popScene();
+        void clearScenes();
+
         void run();
 
         void quit();

@@ -77,6 +77,9 @@ namespace rlge {
         [[nodiscard]] Entity* get(EntityId id) const;
         const std::vector<std::unique_ptr<Entity>>& entities();
 
+        void destroy(EntityId id);
+        void destroyDeferred(EntityId id);
+
         Runtime& runtime();
         [[nodiscard]] const Runtime& runtime() const;
 
@@ -140,17 +143,19 @@ namespace rlge {
         std::vector<std::unique_ptr<Entity>> entities_;
         std::vector<std::unique_ptr<ViewHandle>> viewHandles_;
         std::vector<std::function<void()>> forwardedGameSubscriptions_;
+        std::vector<EntityId> pendingEntityDestructions_{};
     };
 
     class SceneStack {
     public:
         void push(std::unique_ptr<Scene> s);
         void pop();
-        void update(float dt);
-        void draw();
-        void drawDebug();
+        void clear();
+        void update(float dt) const;
+        void draw() const;
+        void drawDebug() const;
         Scene* top();
-        const Scene* top() const;
+        [[nodiscard]] const Scene* top() const;
 
     private:
         std::vector<std::unique_ptr<Scene>> stack_;

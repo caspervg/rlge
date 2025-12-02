@@ -1,5 +1,6 @@
 #pragma once
 #include "box_collider.hpp"
+#include "breakout_game.hpp"
 #include "breakout_level.hpp"
 #include "circle_collider.hpp"
 #include "entity.hpp"
@@ -12,11 +13,11 @@ namespace breakout {
 
     class ScoreBoard final : public RenderEntity {
     public:
-        explicit ScoreBoard(Scene& s, const GameState& state);
+        explicit ScoreBoard(Scene& s, const BreakoutGame& game);
         void draw() override;
 
     private:
-        const GameState& state_;
+        const BreakoutGame& game_;
     };
 
     class Wall final : public Entity {

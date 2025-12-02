@@ -1,6 +1,7 @@
 #include "entity.hpp"
 
 #include "component.hpp"
+#include "scene.hpp"
 
 namespace rlge {
     Entity::~Entity() = default;
@@ -17,6 +18,14 @@ namespace rlge {
     void Entity::draw() {
         for (auto& c : components_)
             c->draw();
+    }
+
+    void Entity::destroy() const {
+        scene_.destroy(id_);
+    }
+
+    void Entity::destroyDeferred() const {
+        scene_.destroyDeferred(id_);
     }
 
     Scene& Entity::scene() {

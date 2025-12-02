@@ -25,16 +25,6 @@ namespace breakout {
         float brickHitShakeDuration = 0.1f;
     };
 
-    struct GameState {
-        std::string levelName = "Unnamed Level";
-        int level = 1;
-        int numLevels = 1;
-        int score = 0;
-        int lives = 3;
-        size_t numBricksLeft = 0;
-        size_t numBricksTotal = 0;
-    };
-
     inline Config g_cfg;
 
 }

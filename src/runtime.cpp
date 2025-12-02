@@ -24,6 +24,10 @@ namespace rlge {
 
     void Runtime::popScene() { scenes_.pop(); }
 
+    void Runtime::clearScenes() {
+        scenes_.clear();
+    }
+
     void Runtime::run() {
         running_ = true;
         while (running_ && !WindowShouldClose()) {

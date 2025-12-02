@@ -4,23 +4,22 @@
 
 #include "breakout_config.hpp"
 #include "breakout_events.hpp"
+#include "breakout_game.hpp"
 
 namespace breakout {
     using namespace rlge;
     using CLM = ColliderLayerMask;
 
-    ScoreBoard::ScoreBoard(Scene& s, const GameState& state) : RenderEntity(s), state_(state) {}
+    ScoreBoard::ScoreBoard(Scene& s, const BreakoutGame& game) : RenderEntity(s), game_(game) {}
 
     void ScoreBoard::draw() {
         rq().submitUI([this] {
-            const auto line1 = std::format("L: {}/{}", state_.level + 1, state_.numLevels);
-            const auto line2 = std::format("S: {}", state_.score);
-            const auto line3 = std::format("H: {}", state_.lives);
-            const auto line4 = std::format("B: {}/{}", state_.numBricksLeft, state_.numBricksTotal);
+            const auto line1 = std::format("L: {}/{}", game_.displayLevelNumber(), game_.numLevels());
+            const auto line2 = std::format("S: {}", game_.displayTotalScore());
+            const auto line3 = std::format("H: {}", game_.displayLivesRemaining());
             DrawText(line1.c_str(), 10, 10, 20, WHITE);
             DrawText(line2.c_str(), 10, 30, 20, GREEN);
             DrawText(line3.c_str(), 10, 50, 20, RED);
-            DrawText(line4.c_str(), 10, 70, 20, WHITE);
         });
     }
 
@@ -132,6 +131,7 @@ namespace breakout {
             alive_ = false;
             coll_->unregisterCollider();
             scene().gameEvents().enqueue(BrickDestroyed{config_.hitPoints * 10, config_});
+            destroyDeferred();
         } else {
             scene().gameEvents().enqueue(BrickHit{config_});
         }
@@ -170,7 +170,7 @@ namespace breakout {
                                     level_.ballRadius, false);
     }
 
-    void Ball::update(float dt) {
+    void Ball::update(const float dt) {
         RenderEntity::update(dt);
         const auto* tr = get<rlge::Transform>();
         if (!tr)
@@ -179,7 +179,8 @@ namespace breakout {
         // The ball fell off
         if (tr->position.y > g_cfg.viewPortHeight && !outOfFrame_) {
             outOfFrame_ = true;
-            scene().gameEvents().publish(BallLost{});
+            // Defer handling so the scene isn't mutated mid-update.
+            scene().gameEvents().enqueue(BallLost{});
         }
     }
 

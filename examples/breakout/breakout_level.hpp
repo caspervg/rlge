@@ -75,11 +75,11 @@ namespace breakout {
     class LevelManager {
     public:
         LevelManager();
-        explicit LevelManager(const std::string& levelFile);
+        explicit LevelManager(std::string_view levelFile);
 
         [[nodiscard]] const Level* currentLevel() const;
         [[nodiscard]] size_t currentLevelIndex() const;
-        [[nodiscard]] const Level* getLevel(int index) const;
+        [[nodiscard]] const Level* getLevel(size_t index) const;
         [[nodiscard]] bool nextLevel();
         [[nodiscard]] size_t numLevels() const;
         void reset();

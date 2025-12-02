@@ -47,6 +47,9 @@ namespace rlge {
             return nullptr;
         }
 
+        void destroy() const;
+        void destroyDeferred() const;
+
         Scene& scene();
         const Scene& scene() const;
 

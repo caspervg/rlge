@@ -10,8 +10,8 @@ namespace breakout {
     LevelManager::LevelManager() :
         LevelManager("../examples/breakout/assets/levels.toml") {}
 
-    LevelManager::LevelManager(const std::string& levelFile) {
-        const auto levels = cpptoml::parse_file(levelFile);
+    LevelManager::LevelManager(std::string_view levelFile) {
+        const auto levels = cpptoml::parse_file(levelFile.data());
         const auto levelsArr = levels->get_table_array("levels");
 
         for (const auto& levelTab : levelsArr->get()) {
@@ -58,7 +58,7 @@ namespace breakout {
 
     size_t LevelManager::currentLevelIndex() const { return currentLevelIndex_; }
 
-    const Level* LevelManager::getLevel(const int index) const {
+    const Level* LevelManager::getLevel(const size_t index) const {
         if (levels_.size() <= index || index < 0)
             return nullptr;
         return levels_[index].get();

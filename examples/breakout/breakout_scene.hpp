@@ -2,6 +2,7 @@
 #include "breakout_config.hpp"
 #include "breakout_entities.hpp"
 #include "breakout_events.hpp"
+#include "breakout_game.hpp"
 #include "scene.hpp"
 
 namespace breakout {
@@ -9,12 +10,11 @@ namespace breakout {
 
     class BreakoutScene final : public Scene {
     public:
-        explicit BreakoutScene(Runtime& r, const Level* level);
+        explicit BreakoutScene(Runtime& r, BreakoutGame* game);
 
         void enter() override;
         void exit() override;
         void update(float dt) override;
-        [[nodiscard]] const GameState& gameState() const;
 
     private:
         void resetBall_();
@@ -25,10 +25,12 @@ namespace breakout {
         void attachBallToPaddle_();
 
     private:
-        const Level& level_;
+        BreakoutGame* game_{nullptr};
         rlge::Camera camera_;
-        GameState state_;
         bool ballLaunched_{false};
+        int levelScore_{0};
+        unsigned int numBricksLeft_{0};
+        unsigned int numBricksTotal_{0};
         Paddle* paddle_{nullptr};
         Ball* ball_{nullptr};
         Wall* leftWall_{nullptr};

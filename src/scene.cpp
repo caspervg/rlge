@@ -40,6 +40,11 @@ namespace rlge {
         collisions_.update(dt);
         collisionResponses_.update(*this);
         sceneEvents_.dispatchQueued();
+
+        for (const auto id : pendingEntityDestructions_) {
+            destroy(id);
+        }
+        pendingEntityDestructions_.clear();
     }
 
     void Scene::draw() {
@@ -50,6 +55,19 @@ namespace rlge {
     Entity* Scene::get(const EntityId id) const { return registry_.get(id); }
 
     const std::vector<std::unique_ptr<Entity>>& Scene::entities() { return entities_; }
+
+    void Scene::destroy(const EntityId id) {
+        auto* e = registry_.get(id);
+        if (!e)
+            return;
+
+        std::erase_if(entities_, [e](const std::unique_ptr<Entity>& ent) { return ent.get() == e; });
+        registry_.destroy(id);
+    }
+
+    void Scene::destroyDeferred(const EntityId id) {
+        pendingEntityDestructions_.push_back(id);
+    }
 
     Runtime& Scene::runtime() { return runtime_; }
 
@@ -131,18 +149,23 @@ namespace rlge {
             stack_.back()->resume();
     }
 
-    void SceneStack::update(float dt) {
+    void SceneStack::clear() {
+        while (!stack_.empty())
+            pop();
+    }
+
+    void SceneStack::update(const float dt) const {
         if (stack_.empty())
             return;
         stack_.back()->update(dt);
     }
 
-    void SceneStack::draw() {
+    void SceneStack::draw() const {
         for (auto& s : stack_)
             s->draw();
     }
 
-    void SceneStack::drawDebug() {
+    void SceneStack::drawDebug() const {
         for (auto& s : stack_) {
             if (auto* dbg = dynamic_cast<HasDebugOverlay*>(s.get())) {
                 dbg->debugOverlay();

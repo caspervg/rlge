@@ -22,7 +22,12 @@ namespace rlge {
             pendingRemovals_.push_back(c);
             return;
         }
+
         std::erase(colliders_, c);
+        std::erase_if(collisionPairsLastFrame_, [c](const CollisionPair& pair) {
+            return pair.a == c || pair.b == c;
+        });
+
         compact_();
     }
 
