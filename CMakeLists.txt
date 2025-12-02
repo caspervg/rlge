@@ -72,7 +72,7 @@ set(PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src/")
 file(GLOB RLGE_SOURCES "${PROJECT_INCLUDE}*.cpp" "${PROJECT_INCLUDE}collision/*.cpp" "${PROJECT_INCLUDE}collision/shape/*.cpp")
 
 add_library(rlge STATIC ${RLGE_SOURCES})
-target_include_directories(rlge PUBLIC ${PROJECT_INCLUDE} "${PROJECT_INCLUDE}/collision/" "${PROJECT_INCLUDE}/collision/shape/")
+target_include_directories(rlge PUBLIC ${PROJECT_INCLUDE} "${PROJECT_INCLUDE}/collision/" "${PROJECT_INCLUDE}/collision/shape/" "${PROJECT_INCLUDE}/lighting/")
 target_link_libraries(rlge PUBLIC raylib rlimgui tileson)
 target_sources(rlge PRIVATE
         src/ui/widget.cpp
@@ -81,7 +81,10 @@ target_sources(rlge PRIVATE
         src/ui/label.cpp
         src/ui/button.cpp
         src/ui/spacer.cpp
-        src/ui/system.cpp)
+        src/ui/system.cpp
+        src/lighting/lighting_system.cpp
+        src/lighting/lit_scene.cpp
+        src/lighting/lit_sprite.cpp)
 
 # Example game executables
 add_executable(rlge_basic_game examples/basic_game/main.cpp)
@@ -120,3 +123,6 @@ target_link_libraries(rlge_breakout PRIVATE rlge raylib rlimgui imgui)
 
 add_executable(rlge_shader_demo examples/shader_demo/main.cpp)
 target_link_libraries(rlge_shader_demo PRIVATE rlge raylib rlimgui imgui)
+
+add_executable(rlge_lighting_demo examples/lighting_demo/main.cpp)
+target_link_libraries(rlge_lighting_demo PRIVATE rlge raylib rlimgui imgui)
