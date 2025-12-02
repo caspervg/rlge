@@ -5,6 +5,8 @@
 #include "runtime.hpp"
 #include "transformer.hpp"
 
+#include <cstdio>
+
 namespace rlge {
 
 LitSprite::LitSprite(Entity& e, Texture2D& diffuse, Texture2D& normalMap,
@@ -55,22 +57,31 @@ void LitSprite::draw() {
         effectiveLayer = scene.layers().world();
     }
 
-    Shader shader = lighting_.normalMapShader();
+    const Shader& shader = lighting_.normalMapShader();
     
-    // Capture needed data for the draw call
+    // Capture values (not references) for the draw call lambda to avoid dangling references
+    const auto& lights = lighting_.lights();
+    const auto& ambient = lighting_.ambient();
+    const auto& locs = lighting_.normalMapLocations();
+    const View* primaryView = scene.primaryView();
+    Camera2D cam = primaryView && primaryView->camera ? primaryView->camera->cam2d() : Camera2D{};
+    bool hasCamera = primaryView && primaryView->camera;
+    float winWidth = static_cast<float>(lighting_.width());
+    float winHeight = static_cast<float>(lighting_.height());
+    
+    // Count enabled lights
+    int enabledLightCount = 0;
+    for (size_t i = 0; i < lights.size() && enabledLightCount < MAX_LIGHTS; i++) {
+        if (lights[i].enabled) enabledLightCount++;
+    }
+    
     rq.submitCustom(effectiveLayer, pos.y, shader, 
-        [this, &scene, src, dest, origin, rotation]() {
-            Shader normalShader = lighting_.normalMapShader();
-            
-            // Get the light data
-            const auto& lights = lighting_.lights();
-            const auto& ambient = lighting_.ambient();
+        [this, src, dest, origin, rotation, &lights, &ambient, &locs, cam, hasCamera, winWidth, winHeight, enabledLightCount]() {
+            const Shader& normalShader = lighting_.normalMapShader();
             
             // Set resolution uniform
-            auto [winWidth, winHeight] = scene.runtime().window().size();
             Vector2 resolution = {winWidth, winHeight};
-            int resLoc = GetShaderLocation(normalShader, "u_resolution");
-            SetShaderValue(normalShader, resLoc, &resolution, SHADER_UNIFORM_VEC2);
+            SetShaderValue(normalShader, locs.resolution, &resolution, SHADER_UNIFORM_VEC2);
             
             // Set ambient
             Vector3 ambientVec = {
@@ -78,58 +89,40 @@ void LitSprite::draw() {
                 ambient.color.g / 255.0f,
                 ambient.color.b / 255.0f
             };
-            int ambientLoc = GetShaderLocation(normalShader, "u_ambient");
-            SetShaderValue(normalShader, ambientLoc, &ambientVec, SHADER_UNIFORM_VEC3);
+            SetShaderValue(normalShader, locs.ambient, &ambientVec, SHADER_UNIFORM_VEC3);
             
             // Set light count
-            int lightCount = static_cast<int>(std::min(lights.size(), static_cast<size_t>(MAX_LIGHTS)));
-            int lightCountLoc = GetShaderLocation(normalShader, "u_lightCount");
-            SetShaderValue(normalShader, lightCountLoc, &lightCount, SHADER_UNIFORM_INT);
+            SetShaderValue(normalShader, locs.lightCount, &enabledLightCount, SHADER_UNIFORM_INT);
             
             // Set light arrays (convert world to screen positions)
-            const View* primaryView = scene.primaryView();
-            if (primaryView && primaryView->camera) {
-                const Camera2D& cam = primaryView->camera->cam2d();
-                
-                for (int i = 0; i < lightCount; i++) {
+            if (hasCamera) {
+                int shaderLightIndex = 0;
+                for (size_t i = 0; i < lights.size() && shaderLightIndex < MAX_LIGHTS; i++) {
                     const auto& light = lights[i];
                     if (!light.enabled) continue;
                     
                     // Convert world position to screen position
                     Vector2 screenPos = GetWorldToScreen2D(light.position, cam);
-                    
-                    char posName[32];
-                    snprintf(posName, sizeof(posName), "u_lightPos[%d]", i);
-                    int posLoc = GetShaderLocation(normalShader, posName);
-                    SetShaderValue(normalShader, posLoc, &screenPos, SHADER_UNIFORM_VEC2);
+                    SetShaderValue(normalShader, locs.lightPos[shaderLightIndex], &screenPos, SHADER_UNIFORM_VEC2);
                     
                     Vector3 colorVec = {
                         light.color.r / 255.0f,
                         light.color.g / 255.0f,
                         light.color.b / 255.0f
                     };
-                    char colorName[32];
-                    snprintf(colorName, sizeof(colorName), "u_lightColor[%d]", i);
-                    int colorLoc = GetShaderLocation(normalShader, colorName);
-                    SetShaderValue(normalShader, colorLoc, &colorVec, SHADER_UNIFORM_VEC3);
+                    SetShaderValue(normalShader, locs.lightColor[shaderLightIndex], &colorVec, SHADER_UNIFORM_VEC3);
                     
                     // Scale radius by camera zoom
                     float scaledRadius = light.radius * cam.zoom;
-                    char radiusName[32];
-                    snprintf(radiusName, sizeof(radiusName), "u_lightRadius[%d]", i);
-                    int radiusLoc = GetShaderLocation(normalShader, radiusName);
-                    SetShaderValue(normalShader, radiusLoc, &scaledRadius, SHADER_UNIFORM_FLOAT);
+                    SetShaderValue(normalShader, locs.lightRadius[shaderLightIndex], &scaledRadius, SHADER_UNIFORM_FLOAT);
+                    SetShaderValue(normalShader, locs.lightIntensity[shaderLightIndex], &light.intensity, SHADER_UNIFORM_FLOAT);
                     
-                    char intensityName[32];
-                    snprintf(intensityName, sizeof(intensityName), "u_lightIntensity[%d]", i);
-                    int intensityLoc = GetShaderLocation(normalShader, intensityName);
-                    SetShaderValue(normalShader, intensityLoc, &light.intensity, SHADER_UNIFORM_FLOAT);
+                    shaderLightIndex++;
                 }
             }
             
             // Bind normal map to texture slot 1
-            int normalMapLoc = GetShaderLocation(normalShader, "u_normalMap");
-            SetShaderValueTexture(normalShader, normalMapLoc, normalMap_);
+            SetShaderValueTexture(normalShader, locs.normalMap, normalMap_);
             
             // Draw the sprite
             DrawTexturePro(diffuse_, src, dest, origin, rotation, WHITE);

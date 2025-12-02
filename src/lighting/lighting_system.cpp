@@ -1,6 +1,7 @@
 #include "lighting_system.hpp"
 
 #include <algorithm>
+#include <cstdio>
 
 namespace rlge {
 
@@ -287,15 +288,28 @@ void LightingSystem::cacheUniformLocations() {
     lightAccumLoc_lightIntensity_ = GetShaderLocation(lightAccumShader_, "u_lightIntensity");
     lightAccumLoc_resolution_ = GetShaderLocation(lightAccumShader_, "u_resolution");
 
-    // Normal map shader
-    normalMapLoc_lightPos_ = GetShaderLocation(normalMapShader_, "u_lightPos");
-    normalMapLoc_lightColor_ = GetShaderLocation(normalMapShader_, "u_lightColor");
-    normalMapLoc_lightRadius_ = GetShaderLocation(normalMapShader_, "u_lightRadius");
-    normalMapLoc_lightIntensity_ = GetShaderLocation(normalMapShader_, "u_lightIntensity");
-    normalMapLoc_lightCount_ = GetShaderLocation(normalMapShader_, "u_lightCount");
-    normalMapLoc_ambient_ = GetShaderLocation(normalMapShader_, "u_ambient");
-    normalMapLoc_resolution_ = GetShaderLocation(normalMapShader_, "u_resolution");
-    normalMapLoc_normalMap_ = GetShaderLocation(normalMapShader_, "u_normalMap");
+    // Normal map shader - cache array locations for each light index
+    for (int i = 0; i < MAX_LIGHTS; i++) {
+        char posName[32];
+        snprintf(posName, sizeof(posName), "u_lightPos[%d]", i);
+        normalMapLocs_.lightPos[i] = GetShaderLocation(normalMapShader_, posName);
+
+        char colorName[32];
+        snprintf(colorName, sizeof(colorName), "u_lightColor[%d]", i);
+        normalMapLocs_.lightColor[i] = GetShaderLocation(normalMapShader_, colorName);
+
+        char radiusName[32];
+        snprintf(radiusName, sizeof(radiusName), "u_lightRadius[%d]", i);
+        normalMapLocs_.lightRadius[i] = GetShaderLocation(normalMapShader_, radiusName);
+
+        char intensityName[32];
+        snprintf(intensityName, sizeof(intensityName), "u_lightIntensity[%d]", i);
+        normalMapLocs_.lightIntensity[i] = GetShaderLocation(normalMapShader_, intensityName);
+    }
+    normalMapLocs_.lightCount = GetShaderLocation(normalMapShader_, "u_lightCount");
+    normalMapLocs_.ambient = GetShaderLocation(normalMapShader_, "u_ambient");
+    normalMapLocs_.resolution = GetShaderLocation(normalMapShader_, "u_resolution");
+    normalMapLocs_.normalMap = GetShaderLocation(normalMapShader_, "u_normalMap");
 
     // Combine shader
     combineLoc_lightBuffer_ = GetShaderLocation(combineShader_, "u_lightBuffer");
