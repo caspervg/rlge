@@ -61,7 +61,7 @@ namespace rlge {
         // Optional hooks to let scenes redirect world rendering (e.g., to render targets)
         // and run post-processing before UI is drawn.
         virtual RenderTexture2D* beginWorldRenderTarget() { return nullptr; }
-        virtual void afterWorldRender(RenderTexture2D* /*target*/, const std::vector<View>& /*views*/) {}
+        virtual void afterWorldRender(RenderTexture2D* target, const std::vector<View>& views) {}
 
         template <typename T, typename... Args>
         T& spawn(Args&&... args) {
@@ -74,44 +74,44 @@ namespace rlge {
             return ref;
         }
 
-        Entity* get(EntityId id) const;
+        [[nodiscard]] Entity* get(EntityId id) const;
         const std::vector<std::unique_ptr<Entity>>& entities();
 
         Runtime& runtime();
-        const Runtime& runtime() const;
+        [[nodiscard]] const Runtime& runtime() const;
 
         AssetStore& assets();
-        const AssetStore& assets() const;
+        [[nodiscard]] const AssetStore& assets() const;
 
         Input<>& input();
-        const Input<>& input() const;
+        [[nodiscard]] const Input<>& input() const;
 
         RenderQueue& rq();
-        const RenderQueue& rq() const;
+        [[nodiscard]] const RenderQueue& rq() const;
 
         LayerRegistry& layers();
-        const LayerRegistry& layers() const;
+        [[nodiscard]] const LayerRegistry& layers() const;
 
         AudioManager& audio();
-        const AudioManager& audio() const;
+        [[nodiscard]] const AudioManager& audio() const;
 
         ui::UiSystem& ui();
-        const ui::UiSystem& ui() const;
+        [[nodiscard]] const ui::UiSystem& ui() const;
 
         CollisionSystem& collisions();
-        const CollisionSystem& collisions() const;
+        [[nodiscard]] const CollisionSystem& collisions() const;
 
         CollisionResponseSystem& collisionResponses();
-        const CollisionResponseSystem& collisionResponses() const;
+        [[nodiscard]] const CollisionResponseSystem& collisionResponses() const;
 
         TweenSystem& tweens();
-        const TweenSystem& tweens() const;
+        [[nodiscard]] const TweenSystem& tweens() const;
 
         EventBus& sceneEvents();
-        const EventBus& sceneEvents() const;
+        [[nodiscard]] const EventBus& sceneEvents() const;
 
         EventBus& gameEvents();
-        const EventBus& gameEvents() const;
+        [[nodiscard]] const EventBus& gameEvents() const;
 
         void addView(Camera& camera, const Rectangle& viewport);
         [[nodiscard]] const View* primaryView() const;
