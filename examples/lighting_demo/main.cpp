@@ -35,6 +35,19 @@ public:
     }
 };
 
+// Lit background sprite
+class Background final : public RenderEntity {
+public:
+    Background(Scene& scene, Texture2D& diffuse, Texture2D& normalMap,
+               LightingSystem& lighting, Vector2 pos)
+        : RenderEntity(scene) {
+        auto& tr = add<rlge::Transform>();
+        tr.position = pos;
+        add<LitSprite>(diffuse, normalMap, diffuse.width, diffuse.height, lighting,
+                       scene.layers().background());
+    }
+};
+
 // FPS counter
 class FpsCounter final : public RenderEntity {
 public:
@@ -110,15 +123,40 @@ public:
         plainTexture_ = LoadTextureFromImage(plainImg);
         UnloadImage(plainImg);
 
+        const auto windowSize = runtime().window().size();
+
+        // Background (tiled floor) diffuse/normal
+        const int bgW = static_cast<int>(windowSize.x);
+        const int bgH = static_cast<int>(windowSize.y);
+        Image bgImg = GenImageColor(bgW, bgH, {28, 32, 40, 255});
+        const int tile = 64;
+        for (int y = 0; y < bgH; y += tile) {
+            for (int x = 0; x < bgW; x += tile) {
+                Color c = ((x / tile + y / tile) % 2 == 0)
+                              ? Color{36, 42, 52, 255}
+                              : Color{30, 36, 46, 255};
+                ImageDrawRectangle(&bgImg, x, y, tile, tile, c);
+            }
+        }
+        bgDiffuse_ = LoadTextureFromImage(bgImg);
+        UnloadImage(bgImg);
+
+        Image bgNormImg = GenImageColor(bgW, bgH, {128, 128, 255, 255}); // Flat normals
+        bgNormal_ = LoadTextureFromImage(bgNormImg);
+        UnloadImage(bgNormImg);
+
         // Set up camera
         camera_ = rlge::Camera();
-        const auto windowSize = runtime().window().size();
         camera_.setOffset({windowSize.x * 0.5f, windowSize.y * 0.5f});
-        camera_.setTarget({400, 300});
+        camera_.setTarget({windowSize.x * 0.5f, windowSize.y * 0.5f});
         setSingleView(camera_);
 
         // Set darker ambient for dramatic effect
         lighting().setAmbient({20, 20, 30, 255});
+
+        // Background covering the scene (lit)
+        const auto win = runtime().window().size();
+        spawn<Background>(bgDiffuse_, bgNormal_, lighting(), Vector2{win.x * 0.5f, win.y * 0.5f});
 
         // Add static lights
         staticLight1_ = lighting().addPointLight({150, 200}, 200.0f, RED, 0.8f);
@@ -175,6 +213,8 @@ public:
         UnloadTexture(boxDiffuse_);
         UnloadTexture(boxNormal_);
         UnloadTexture(plainTexture_);
+        UnloadTexture(bgDiffuse_);
+        UnloadTexture(bgNormal_);
     }
 
     void drawUnlit() override {
@@ -256,6 +296,8 @@ private:
     Texture2D boxDiffuse_{};
     Texture2D boxNormal_{};
     Texture2D plainTexture_{};
+    Texture2D bgDiffuse_{};
+    Texture2D bgNormal_{};
 
     size_t staticLight1_{0};
     size_t staticLight2_{0};
@@ -267,9 +309,9 @@ private:
 
 int main() {
     Runtime runtime(WindowConfig{
-        .width = 800,
-        .height = 600,
-        .fps = 60,
+        .width = 1920,
+        .height = 1080,
+        .fps = 144,
         .title = "RLGE Lighting Demo"
     });
 
