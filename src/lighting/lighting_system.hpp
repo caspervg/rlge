@@ -1,13 +1,22 @@
 #pragma once
-#include <vector>
-#include <cstddef>
 #include <array>
+#include <cstdint>
+#include <vector>
 
 #include "raylib.h"
 
 namespace rlge {
 
-    constexpr int MAX_LIGHTS = 16;
+    constexpr auto MAX_LIGHTS = 16;
+
+    struct LightId {
+        std::uint16_t index{0};
+        std::uint16_t generation{0};
+
+        [[nodiscard]] bool valid() const { return generation != 0xFFFFu; }
+
+        static LightId invalid() { return {0, 0xFFFFu}; }
+    };
 
     struct PointLight {
         Vector2 position{0.0f, 0.0f};
@@ -35,6 +44,20 @@ namespace rlge {
 
     class LightingSystem {
     public:
+        struct ActiveLight {
+            LightId id;
+            const PointLight* light{};
+        };
+
+        struct NormalPassData {
+            std::vector<ActiveLight> lights;
+            AmbientLight ambient;
+            const NormalMapUniformLocations* locs{nullptr};
+            float winWidth{0.0f};
+            float winHeight{0.0f};
+            int enabledLightCount{0};
+        };
+
         LightingSystem() = default;
         ~LightingSystem();
 
@@ -48,9 +71,9 @@ namespace rlge {
         void resize(int width, int height);
 
         // Light management
-        size_t addPointLight(Vector2 pos, float radius, Color color, float intensity);
-        PointLight* getLight(size_t index);
-        void removeLight(size_t index);
+        LightId addPointLight(Vector2 pos, float radius, Color color, float intensity);
+        PointLight* getLight(LightId id);
+        void removeLight(LightId id);
         void clearLights();
 
         // Ambient light
@@ -58,31 +81,35 @@ namespace rlge {
         [[nodiscard]] const AmbientLight& ambient() const { return ambient_; }
 
         // Rendering pipeline
-        void beginFrame();
-        void renderLights(const Camera2D& camera);
-        void applyLighting(Texture2D sceneTexture);
+        void beginFrame() const;
+        void renderLights(const Camera2D& camera, const Rectangle& viewport) const;
+        void applyLighting(const Texture2D& sceneTexture) const;
 
         // Shader access
         [[nodiscard]] const Shader& normalMapShader() const { return normalMapShader_; }
 
         // Light data access for normal map shader
-        [[nodiscard]] const std::vector<PointLight>& lights() const { return lights_; }
+        [[nodiscard]] std::vector<ActiveLight> activeLights() const;
 
         // Cached uniform locations for normal map shader
         [[nodiscard]] const NormalMapUniformLocations& normalMapLocations() const { return normalMapLocs_; }
+        [[nodiscard]] NormalPassData normalPassData() const;
 
         // Get window dimensions
         [[nodiscard]] int width() const { return width_; }
         [[nodiscard]] int height() const { return height_; }
 
     private:
-        void loadShaders();
-        void unloadShaders();
-        void createRenderTextures(int width, int height);
-        void destroyRenderTextures();
-        void cacheUniformLocations();
+        void loadShaders_();
+        void unloadShaders_() const;
+        void createRenderTextures_(int width, int height);
+        void destroyRenderTextures_();
+        void cacheUniformLocations_();
 
-        std::vector<PointLight> lights_;
+        std::array<PointLight, MAX_LIGHTS> lights_{};
+        std::array<std::uint16_t, MAX_LIGHTS> generations_{};
+        std::array<bool, MAX_LIGHTS> active_{};
+        std::vector<std::size_t> freeList_;
         AmbientLight ambient_;
 
         RenderTexture2D lightBuffer_{};

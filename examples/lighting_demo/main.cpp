@@ -1,7 +1,9 @@
 #include <cmath>
+#include <algorithm>
 
 #include "debug.hpp"
 #include "imgui.h"
+#include "input.hpp"
 #include "render_entity.hpp"
 #include "runtime.hpp"
 #include "sprite.hpp"
@@ -124,32 +126,12 @@ public:
         UnloadImage(plainImg);
 
         const auto windowSize = runtime().window().size();
+        lastWindowSize_ = windowSize;
 
-        // Background (tiled floor) diffuse/normal
-        const int bgW = static_cast<int>(windowSize.x);
-        const int bgH = static_cast<int>(windowSize.y);
-        Image bgImg = GenImageColor(bgW, bgH, {28, 32, 40, 255});
-        const int tile = 64;
-        for (int y = 0; y < bgH; y += tile) {
-            for (int x = 0; x < bgW; x += tile) {
-                Color c = ((x / tile + y / tile) % 2 == 0)
-                              ? Color{36, 42, 52, 255}
-                              : Color{30, 36, 46, 255};
-                ImageDrawRectangle(&bgImg, x, y, tile, tile, c);
-            }
-        }
-        bgDiffuse_ = LoadTextureFromImage(bgImg);
-        UnloadImage(bgImg);
+        rebuildBackground(windowSize);
 
-        Image bgNormImg = GenImageColor(bgW, bgH, {128, 128, 255, 255}); // Flat normals
-        bgNormal_ = LoadTextureFromImage(bgNormImg);
-        UnloadImage(bgNormImg);
-
-        // Set up camera
-        camera_ = rlge::Camera();
-        camera_.setOffset({windowSize.x * 0.5f, windowSize.y * 0.5f});
-        camera_.setTarget({windowSize.x * 0.5f, windowSize.y * 0.5f});
-        setSingleView(camera_);
+        // Set up cameras and views (main + picture-in-picture)
+        configureViews(windowSize);
 
         // Set darker ambient for dramatic effect
         lighting().setAmbient({20, 20, 30, 255});
@@ -184,10 +166,24 @@ public:
         // Spawn regular sprites for comparison
         spawn<RegularSprite>(plainTexture_, 100.0f, 500.0f);
         spawn<RegularSprite>(plainTexture_, 200.0f, 500.0f);
+
+        // Bind input for PIP movement (WASD)
+        input().bind(Action::MoveUp, KeyCode::W);
+        input().bind(Action::MoveDown, KeyCode::S);
+        input().bind(Action::MoveLeft, KeyCode::A);
+        input().bind(Action::MoveRight, KeyCode::D);
+        // Bind input for PIP camera (arrow keys)
+        input().bind(Action::CameraAltUp, KeyCode::Up);
+        input().bind(Action::CameraAltDown, KeyCode::Down);
+        input().bind(Action::CameraAltLeft, KeyCode::Left);
+        input().bind(Action::CameraAltRight, KeyCode::Right);
     }
 
     void update(float dt) override {
         LitScene::update(dt);
+        updateViewLayoutsIfNeeded();
+        updatePipControls(dt);
+        updatePipCamera(dt);
 
         // Update mouse light position
         if (auto* mouseL = lighting().getLight(mouseLight_)) {
@@ -222,7 +218,18 @@ public:
         rq().submitUI([] {
             DrawText("Move mouse to control light", 10, 40, 20, WHITE);
             DrawText("Press F1 for debug panel", 10, 65, 20, WHITE);
+            DrawText("Picture-in-picture shows alternate view (WASD move, arrows move camera)", 10, 90, 20, WHITE);
         });
+
+        // Draw PIP border
+        const int border = 3;
+        const Rectangle borderRect{
+            pipViewport_.x - border,
+            pipViewport_.y - border,
+            pipViewport_.width + border * 2,
+            pipViewport_.height + border * 2
+        };
+        DrawRectangleLinesEx(borderRect, static_cast<float>(border), WHITE);
     }
 
     void debugOverlay() override {
@@ -249,10 +256,10 @@ public:
         // Light controls
         if (ImGui::CollapsingHeader("Point Lights", ImGuiTreeNodeFlags_DefaultOpen)) {
             const char* lightNames[] = {"Red Light", "Blue Light", "Torch", "Mouse Light"};
-            size_t lightIndices[] = {staticLight1_, staticLight2_, torchLight_, mouseLight_};
+            LightId lightIds[] = {staticLight1_, staticLight2_, torchLight_, mouseLight_};
 
             for (int i = 0; i < 4; i++) {
-                if (auto* light = lighting().getLight(lightIndices[i])) {
+                if (auto* light = lighting().getLight(lightIds[i])) {
                     ImGui::PushID(i);
                     if (ImGui::TreeNode(lightNames[i])) {
                         ImGui::Checkbox("Enabled", &light->enabled);
@@ -293,18 +300,146 @@ public:
 
 private:
     rlge::Camera camera_;
+    rlge::Camera miniCamera_;
     Texture2D boxDiffuse_{};
     Texture2D boxNormal_{};
     Texture2D plainTexture_{};
     Texture2D bgDiffuse_{};
     Texture2D bgNormal_{};
 
-    size_t staticLight1_{0};
-    size_t staticLight2_{0};
-    size_t torchLight_{0};
-    size_t mouseLight_{0};
+    LightId staticLight1_{LightId::invalid()};
+    LightId staticLight2_{LightId::invalid()};
+    LightId torchLight_{LightId::invalid()};
+    LightId mouseLight_{LightId::invalid()};
 
     float torchTimer_{0.0f};
+    Rectangle pipViewport_{};
+    Vector2 lastWindowSize_{0.0f, 0.0f};
+    float pipMoveSpeed_{400.0f};
+    float pipCamSpeed_{300.0f};
+
+    void configureViews(Vector2 windowSize) {
+        // Main camera centered on the window
+        camera_ = rlge::Camera();
+        camera_.setOffset({windowSize.x * 0.5f, windowSize.y * 0.5f});
+        camera_.setTarget({windowSize.x * 0.5f, windowSize.y * 0.5f});
+
+        // Picture-in-picture viewport in the top-right corner
+        const float margin = 16.0f;
+        const float pipWidth = windowSize.x * 0.3f;
+        const float pipHeight = windowSize.y * 0.3f;
+        pipViewport_ = {
+            windowSize.x - pipWidth - margin,
+            margin,
+            pipWidth,
+            pipHeight
+        };
+
+        miniCamera_ = rlge::Camera();
+        miniCamera_.setOffset({pipViewport_.x + pipViewport_.width * 0.5f,
+                               pipViewport_.y + pipViewport_.height * 0.5f});
+        miniCamera_.setTarget({windowSize.x * 0.5f, windowSize.y * 0.5f});
+        miniCamera_.setZoom(0.8f);
+
+        // Apply views (main + pip)
+        setSingleView(camera_);
+        addView(miniCamera_, pipViewport_);
+    }
+
+    void updateViewLayoutsIfNeeded() {
+        const auto size = runtime().window().size();
+        if (size.x == lastWindowSize_.x && size.y == lastWindowSize_.y) {
+            return;
+        }
+        rebuildBackground(size);
+        configureViews(size);
+        lastWindowSize_ = size;
+    }
+
+    void rebuildBackground(Vector2 windowSize) {
+        if (bgDiffuse_.id != 0) {
+            UnloadTexture(bgDiffuse_);
+        }
+        if (bgNormal_.id != 0) {
+            UnloadTexture(bgNormal_);
+        }
+
+        const int bgW = std::max(1, static_cast<int>(windowSize.x));
+        const int bgH = std::max(1, static_cast<int>(windowSize.y));
+        Image bgImg = GenImageColor(bgW, bgH, {28, 32, 40, 255});
+        const int tile = 64;
+        for (int y = 0; y < bgH; y += tile) {
+            for (int x = 0; x < bgW; x += tile) {
+                Color c = ((x / tile + y / tile) % 2 == 0)
+                              ? Color{36, 42, 52, 255}
+                              : Color{30, 36, 46, 255};
+                ImageDrawRectangle(&bgImg, x, y, tile, tile, c);
+            }
+        }
+        bgDiffuse_ = LoadTextureFromImage(bgImg);
+        UnloadImage(bgImg);
+
+        Image bgNormImg = GenImageColor(bgW, bgH, {128, 128, 255, 255}); // Flat normals
+        bgNormal_ = LoadTextureFromImage(bgNormImg);
+        UnloadImage(bgNormImg);
+    }
+
+    void updatePipControls(float dt) {
+        bool moved = false;
+        const float delta = pipMoveSpeed_ * dt;
+        if (input().down(Action::MoveUp)) {
+            pipViewport_.y -= delta;
+            moved = true;
+        }
+        if (input().down(Action::MoveDown)) {
+            pipViewport_.y += delta;
+            moved = true;
+        }
+        if (input().down(Action::MoveLeft)) {
+            pipViewport_.x -= delta;
+            moved = true;
+        }
+        if (input().down(Action::MoveRight)) {
+            pipViewport_.x += delta;
+            moved = true;
+        }
+
+        if (!moved) return;
+
+        const auto windowSize = runtime().window().size();
+        pipViewport_.x = std::clamp(pipViewport_.x, 0.0f, windowSize.x - pipViewport_.width);
+        pipViewport_.y = std::clamp(pipViewport_.y, 0.0f, windowSize.y - pipViewport_.height);
+
+        miniCamera_.setOffset({
+            pipViewport_.x + pipViewport_.width * 0.5f,
+            pipViewport_.y + pipViewport_.height * 0.5f
+        });
+
+        // Re-apply views with updated PIP
+        setSingleView(camera_);
+        addView(miniCamera_, pipViewport_);
+    }
+
+    void updatePipCamera(float dt) {
+        Vector2 delta{0.0f, 0.0f};
+        const float move = pipCamSpeed_ * dt;
+        if (input().down(Action::CameraAltUp)) {
+            delta.y -= move;
+        }
+        if (input().down(Action::CameraAltDown)) {
+            delta.y += move;
+        }
+        if (input().down(Action::CameraAltLeft)) {
+            delta.x -= move;
+        }
+        if (input().down(Action::CameraAltRight)) {
+            delta.x += move;
+        }
+
+        if (delta.x != 0.0f || delta.y != 0.0f) {
+            miniCamera_.pan(delta);
+        }
+    }
 };
 
 int main() {
@@ -312,7 +447,8 @@ int main() {
         .width = 1920,
         .height = 1080,
         .fps = 144,
-        .title = "RLGE Lighting Demo"
+        .title = "RLGE Lighting Demo",
+        .resizable = true
     });
 
     runtime.pushScene<LightingDemoScene>();

@@ -2,11 +2,12 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <limits>
 
 namespace rlge {
 
 // Light accumulation fragment shader - renders radial gradient lights
-static const char* lightAccumFragmentShader = R"(
+static auto lightAccumFragmentShader = R"(
 #version 330
 
 in vec2 fragTexCoord;
@@ -35,7 +36,7 @@ void main() {
 )";
 
 // Normal map fragment shader - per-pixel lighting using normal map
-static const char* normalMapFragmentShader = R"(
+static auto normalMapFragmentShader = R"(
 #version 330
 
 in vec2 fragTexCoord;
@@ -88,8 +89,8 @@ void main() {
 }
 )";
 
-// Combine fragment shader - multiplies scene by (ambient + lightBuffer)
-static const char* combineFragmentShader = R"(
+// Combine fragment shader - multiplies a scene by (ambient + lightBuffer)
+static auto combineFragmentShader = R"(
 #version 330
 
 in vec2 fragTexCoord;
@@ -118,12 +119,12 @@ void main() {
 
 LightingSystem::~LightingSystem() {
     if (initialized_) {
-        destroyRenderTextures();
-        unloadShaders();
+        destroyRenderTextures_();
+        unloadShaders_();
     }
 }
 
-void LightingSystem::init(int width, int height) {
+void LightingSystem::init(const int width, const int height) {
     if (initialized_) {
         resize(width, height);
         return;
@@ -132,14 +133,19 @@ void LightingSystem::init(int width, int height) {
     width_ = width;
     height_ = height;
 
-    loadShaders();
-    cacheUniformLocations();
-    createRenderTextures(width, height);
+    clearLights();
+    loadShaders_();
+    cacheUniformLocations_();
+    createRenderTextures_(width, height);
 
     initialized_ = true;
 }
 
-void LightingSystem::resize(int width, int height) {
+void LightingSystem::resize(const int width, const int height) {
+    if (!initialized_) {
+        return;
+    }
+
     if (width_ == width && height_ == height) {
         return;
     }
@@ -147,37 +153,70 @@ void LightingSystem::resize(int width, int height) {
     width_ = width;
     height_ = height;
 
-    destroyRenderTextures();
-    createRenderTextures(width, height);
+    destroyRenderTextures_();
+    createRenderTextures_(width, height);
 }
 
-size_t LightingSystem::addPointLight(Vector2 pos, float radius, Color color, float intensity) {
-    lights_.push_back({pos, color, radius, intensity, true});
-    return lights_.size() - 1;
-}
-
-PointLight* LightingSystem::getLight(size_t index) {
-    if (index < lights_.size()) {
-        return &lights_[index];
+LightId LightingSystem::addPointLight(const Vector2 pos, const float radius, const Color color, const float intensity) {
+    std::size_t slot = std::numeric_limits<std::size_t>::max();
+    if (!freeList_.empty()) {
+        slot = freeList_.back();
+        freeList_.pop_back();
+    } else {
+        for (std::size_t i = 0; i < MAX_LIGHTS; ++i) {
+            if (!active_[i]) {
+                slot = i;
+                break;
+            }
+        }
     }
-    return nullptr;
+
+    if (slot == std::numeric_limits<std::size_t>::max()) {
+        return LightId::invalid();
+    }
+
+    lights_[slot] = {pos, color, radius, intensity, true};
+    active_[slot] = true;
+    // Ensure generation is non-zero; zero is a valid generation.
+    const LightId id{static_cast<std::uint16_t>(slot), generations_[slot]};
+    return id;
 }
 
-void LightingSystem::removeLight(size_t index) {
-    if (index < lights_.size()) {
-        lights_.erase(lights_.begin() + static_cast<long>(index));
-    }
+PointLight* LightingSystem::getLight(const LightId id) {
+    const std::size_t idx = id.index;
+    if (idx >= static_cast<std::size_t>(MAX_LIGHTS)) return nullptr;
+    if (!active_[idx]) return nullptr;
+    if (generations_[idx] != id.generation) return nullptr;
+    return &lights_[idx];
+}
+
+void LightingSystem::removeLight(const LightId id) {
+    const std::size_t idx = id.index;
+    if (idx >= static_cast<std::size_t>(MAX_LIGHTS)) return;
+    if (!active_[idx]) return;
+    if (generations_[idx] != id.generation) return;
+
+    active_[idx] = false;
+    generations_[idx] = static_cast<std::uint16_t>(generations_[idx] + 1);
+    freeList_.push_back(idx);
 }
 
 void LightingSystem::clearLights() {
-    lights_.clear();
+    for (auto i = 0; i < MAX_LIGHTS; ++i) {
+        active_[i] = false;
+        generations_[i] = 0;
+    }
+    freeList_.clear();
+    for (std::size_t i = 0; i < MAX_LIGHTS; ++i) {
+        freeList_.push_back(MAX_LIGHTS - 1 - i);
+    }
 }
 
-void LightingSystem::setAmbient(Color color) {
+void LightingSystem::setAmbient(const Color color) {
     ambient_.color = color;
 }
 
-void LightingSystem::beginFrame() {
+void LightingSystem::beginFrame() const {
     if (!initialized_) return;
 
     // Clear light buffer to black
@@ -186,17 +225,26 @@ void LightingSystem::beginFrame() {
     EndTextureMode();
 }
 
-void LightingSystem::renderLights(const Camera2D& camera) {
+void LightingSystem::renderLights(const Camera2D& camera, const Rectangle& viewport) const {
     if (!initialized_) return;
+    if (viewport.width <= 0 || viewport.height <= 0) return;
 
     BeginTextureMode(lightBuffer_);
     BeginBlendMode(BLEND_ADDITIVE);
+    BeginScissorMode(
+        static_cast<int>(viewport.x),
+        static_cast<int>(viewport.y),
+        static_cast<int>(viewport.width),
+        static_cast<int>(viewport.height)
+        );
 
     // Set resolution uniform
-    Vector2 resolution = {static_cast<float>(width_), static_cast<float>(height_)};
+    const Vector2 resolution = {static_cast<float>(width_), static_cast<float>(height_)};
     SetShaderValue(lightAccumShader_, lightAccumLoc_resolution_, &resolution, SHADER_UNIFORM_VEC2);
 
-    for (const auto& light : lights_) {
+    for (auto i = 0; i < MAX_LIGHTS; ++i) {
+        if (!active_[i]) continue;
+        const auto& light = lights_[i];
         if (!light.enabled) continue;
 
         // Convert world position to screen position
@@ -204,30 +252,37 @@ void LightingSystem::renderLights(const Camera2D& camera) {
 
         // Set light uniforms
         SetShaderValue(lightAccumShader_, lightAccumLoc_lightPos_, &screenPos, SHADER_UNIFORM_VEC2);
-        
+
         Vector3 colorVec = {
             light.color.r / 255.0f,
             light.color.g / 255.0f,
             light.color.b / 255.0f
         };
         SetShaderValue(lightAccumShader_, lightAccumLoc_lightColor_, &colorVec, SHADER_UNIFORM_VEC3);
-        
+
         // Scale radius by camera zoom
         float scaledRadius = light.radius * camera.zoom;
         SetShaderValue(lightAccumShader_, lightAccumLoc_lightRadius_, &scaledRadius, SHADER_UNIFORM_FLOAT);
         SetShaderValue(lightAccumShader_, lightAccumLoc_lightIntensity_, &light.intensity, SHADER_UNIFORM_FLOAT);
 
-        // Draw fullscreen quad with shader
+        // Draw viewport quad with shader
         BeginShaderMode(lightAccumShader_);
-        DrawRectangle(0, 0, width_, height_, WHITE);
+        DrawRectangle(
+            static_cast<int>(viewport.x),
+            static_cast<int>(viewport.y),
+            static_cast<int>(viewport.width),
+            static_cast<int>(viewport.height),
+            WHITE
+            );
         EndShaderMode();
     }
 
+    EndScissorMode();
     EndBlendMode();
     EndTextureMode();
 }
 
-void LightingSystem::applyLighting(Texture2D sceneTexture) {
+void LightingSystem::applyLighting(const Texture2D& sceneTexture) const {
     if (!initialized_) return;
 
     // Set combine shader uniforms
@@ -243,45 +298,77 @@ void LightingSystem::applyLighting(Texture2D sceneTexture) {
 
     // Draw scene with combine shader
     BeginShaderMode(combineShader_);
-    
+
     // Handle Y-flip for render texture (Raylib convention)
-    Rectangle srcRect = {
+    const Rectangle srcRect = {
         0.0f, 0.0f,
         static_cast<float>(sceneTexture.width),
         -static_cast<float>(sceneTexture.height)
     };
-    Rectangle destRect = {
+    const Rectangle destRect = {
         0.0f, 0.0f,
         static_cast<float>(width_),
         static_cast<float>(height_)
     };
-    
+
     DrawTexturePro(sceneTexture, srcRect, destRect, {0, 0}, 0.0f, WHITE);
-    
+
     EndShaderMode();
 }
 
-void LightingSystem::loadShaders() {
+std::vector<LightingSystem::ActiveLight> LightingSystem::activeLights() const {
+    std::vector<ActiveLight> out;
+    out.reserve(MAX_LIGHTS);
+    for (auto i = 0; i < MAX_LIGHTS; ++i) {
+        if (!active_[i]) continue;
+        out.push_back(ActiveLight{
+            LightId{static_cast<std::uint16_t>(i), generations_[i]},
+            &lights_[i]
+        });
+    }
+    return out;
+}
+
+LightingSystem::NormalPassData LightingSystem::normalPassData() const {
+    NormalPassData data;
+    data.lights = activeLights();
+    data.ambient = ambient_;
+    data.locs = &normalMapLocs_;
+    data.winWidth = static_cast<float>(width_);
+    data.winHeight = static_cast<float>(height_);
+
+    for (const auto& [id, light] : data.lights) {
+        if (light && light->enabled && data.enabledLightCount < MAX_LIGHTS) {
+            data.enabledLightCount++;
+        }
+    }
+    return data;
+}
+
+void LightingSystem::loadShaders_() {
     lightAccumShader_ = LoadShaderFromMemory(nullptr, lightAccumFragmentShader);
     normalMapShader_ = LoadShaderFromMemory(nullptr, normalMapFragmentShader);
     combineShader_ = LoadShaderFromMemory(nullptr, combineFragmentShader);
 }
 
-void LightingSystem::unloadShaders() {
+void LightingSystem::unloadShaders_() const {
     UnloadShader(lightAccumShader_);
     UnloadShader(normalMapShader_);
     UnloadShader(combineShader_);
 }
 
-void LightingSystem::createRenderTextures(int width, int height) {
+void LightingSystem::createRenderTextures_(const int width, const int height) {
     lightBuffer_ = LoadRenderTexture(width, height);
 }
 
-void LightingSystem::destroyRenderTextures() {
-    UnloadRenderTexture(lightBuffer_);
+void LightingSystem::destroyRenderTextures_() {
+    if (lightBuffer_.texture.id != 0) {
+        UnloadRenderTexture(lightBuffer_);
+        lightBuffer_ = RenderTexture2D{};
+    }
 }
 
-void LightingSystem::cacheUniformLocations() {
+void LightingSystem::cacheUniformLocations_() {
     // Light accumulation shader
     lightAccumLoc_lightPos_ = GetShaderLocation(lightAccumShader_, "u_lightPos");
     lightAccumLoc_lightColor_ = GetShaderLocation(lightAccumShader_, "u_lightColor");

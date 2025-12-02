@@ -1,8 +1,8 @@
 #pragma once
 #include "component.hpp"
+#include "lighting_system.hpp"
 #include "raylib.h"
 #include "render_layer.hpp"
-#include "lighting_system.hpp"
 
 namespace rlge {
     class Entity;
