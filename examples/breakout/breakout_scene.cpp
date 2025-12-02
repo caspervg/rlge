@@ -27,7 +27,8 @@ namespace breakout {
         const auto gridWidth = level->brickColumns * g_cfg.brickWidth + (level->brickColumns - 1) * g_cfg.brickMargin;
         const auto gridHeight = level->brickRows * g_cfg.brickHeight + (level->brickRows - 1) * g_cfg.brickMargin;
         const auto startX = (g_cfg.viewPortWidth - gridWidth) * 0.5f;
-        const auto startY = (g_cfg.viewPortHeight * 0.1f - gridHeight) * 0.5f;
+        // const auto startY = (g_cfg.viewPortHeight * 0.1f - gridHeight) * 0.5f;
+        const auto startY = g_cfg.wallThickness + 20.0f;
         for (const auto& brickConfig : level->bricks) {
             const auto centerScreenX = startX + g_cfg.brickWidth * 0.5f + brickConfig.x * (g_cfg.brickWidth + g_cfg.brickMargin);
             const auto centerScreenY = startY + g_cfg.brickHeight * 0.5f + brickConfig.y * (g_cfg.brickHeight + g_cfg.brickMargin);
@@ -73,6 +74,7 @@ namespace breakout {
     }
 
     void BreakoutScene::resetBall_() {
+        ball_->destroyDeferred();
         ball_ = &spawn<Ball>(*game_->currentLevel());
         ballLaunched_ = false;
         attachBallToPaddle_();

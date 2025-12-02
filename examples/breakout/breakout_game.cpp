@@ -30,6 +30,7 @@ namespace breakout {
 
     void BreakoutGame::restart() {
         runtime_.clearScenes();
+        levelManager_.reset();
         start();
     }
 

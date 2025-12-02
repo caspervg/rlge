@@ -83,7 +83,7 @@ namespace breakout {
                 return;
 
             // Calculate hit position (-1.0 to 1.0)
-            const auto hitOffset = (ballTr->position.x - tr->position.x) / (g_cfg.paddleWidth / 2.0f);
+            const auto hitOffset = (ballTr->position.x - tr->position.x) / (level_.paddleWidth / 2.0f);
 
             // Modify the ball angle based on hit position
             const auto angle = hitOffset * g_cfg.maxBallPaddleDeflectionAngle * DEG2RAD;

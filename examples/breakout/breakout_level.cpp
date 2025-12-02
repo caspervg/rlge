@@ -13,6 +13,9 @@ namespace breakout {
     LevelManager::LevelManager(std::string_view levelFile) {
         const auto levels = cpptoml::parse_file(levelFile.data());
         const auto levelsArr = levels->get_table_array("levels");
+        if (!levelsArr) {
+            throw std::runtime_error{"No levels found in level file"};
+        }
 
         for (const auto& levelTab : levelsArr->get()) {
             Level newLevel = {};
