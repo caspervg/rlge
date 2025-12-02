@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <cstddef>
+#include <array>
 
 #include "raylib.h"
 
@@ -18,6 +19,18 @@ namespace rlge {
 
     struct AmbientLight {
         Color color{50, 50, 50, 255};
+    };
+
+    // Cached uniform locations for normal map shader
+    struct NormalMapUniformLocations {
+        std::array<int, MAX_LIGHTS> lightPos;
+        std::array<int, MAX_LIGHTS> lightColor;
+        std::array<int, MAX_LIGHTS> lightRadius;
+        std::array<int, MAX_LIGHTS> lightIntensity;
+        int lightCount{-1};
+        int ambient{-1};
+        int resolution{-1};
+        int normalMap{-1};
     };
 
     class LightingSystem {
@@ -50,10 +63,17 @@ namespace rlge {
         void applyLighting(Texture2D sceneTexture);
 
         // Shader access
-        [[nodiscard]] Shader normalMapShader() const { return normalMapShader_; }
+        [[nodiscard]] const Shader& normalMapShader() const { return normalMapShader_; }
 
         // Light data access for normal map shader
         [[nodiscard]] const std::vector<PointLight>& lights() const { return lights_; }
+
+        // Cached uniform locations for normal map shader
+        [[nodiscard]] const NormalMapUniformLocations& normalMapLocations() const { return normalMapLocs_; }
+
+        // Get window dimensions
+        [[nodiscard]] int width() const { return width_; }
+        [[nodiscard]] int height() const { return height_; }
 
     private:
         void loadShaders();
@@ -75,22 +95,17 @@ namespace rlge {
         Shader normalMapShader_{};
         Shader combineShader_{};
 
-        // Cached uniform locations
+        // Cached uniform locations for light accumulation shader
         int lightAccumLoc_lightPos_{-1};
         int lightAccumLoc_lightColor_{-1};
         int lightAccumLoc_lightRadius_{-1};
         int lightAccumLoc_lightIntensity_{-1};
         int lightAccumLoc_resolution_{-1};
 
-        int normalMapLoc_lightPos_{-1};
-        int normalMapLoc_lightColor_{-1};
-        int normalMapLoc_lightRadius_{-1};
-        int normalMapLoc_lightIntensity_{-1};
-        int normalMapLoc_lightCount_{-1};
-        int normalMapLoc_ambient_{-1};
-        int normalMapLoc_resolution_{-1};
-        int normalMapLoc_normalMap_{-1};
+        // Cached uniform locations for normal map shader
+        NormalMapUniformLocations normalMapLocs_;
 
+        // Cached uniform locations for combine shader
         int combineLoc_lightBuffer_{-1};
         int combineLoc_ambient_{-1};
     };
