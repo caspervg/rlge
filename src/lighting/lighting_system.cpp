@@ -22,7 +22,8 @@ out vec4 finalColor;
 
 void main() {
     vec2 screenPos = fragTexCoord * u_resolution;
-    float dist = distance(screenPos, u_lightPos);
+    vec2 fragPos = vec2(gl_FragCoord.x, u_resolution.y - gl_FragCoord.y);
+    float dist = distance(fragPos, u_lightPos);
     
     // Smooth falloff
     float attenuation = 1.0 - smoothstep(0.0, u_lightRadius, dist);
@@ -61,8 +62,7 @@ void main() {
     vec3 normal = texture(u_normalMap, fragTexCoord).rgb * 2.0 - 1.0;
     normal = normalize(normal);
     
-    vec2 fragPos = gl_FragCoord.xy;
-    
+    vec2 fragPos = vec2(gl_FragCoord.x, u_resolution.y - gl_FragCoord.y);
     vec3 lighting = u_ambient;
     
     for (int i = 0; i < u_lightCount && i < 16; i++) {
@@ -103,7 +103,8 @@ out vec4 finalColor;
 
 void main() {
     vec4 sceneColor = texture(texture0, fragTexCoord);
-    vec3 lightColor = texture(u_lightBuffer, fragTexCoord).rgb;
+    vec2 uv = vec2(fragTexCoord.x, 1.0 - fragTexCoord.y);
+    vec3 lightColor = texture(u_lightBuffer, uv).rgb;
     
     // Combine scene with lighting (ambient + light buffer)
     vec3 totalLight = u_ambient + lightColor;
