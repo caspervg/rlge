@@ -45,12 +45,25 @@ namespace rlge {
             services_.audio().update();
             services_.gameEvents().dispatchQueued();
 
+            Scene* activeScene = scenes_.top();
+
             BeginDrawing();
             ClearBackground(BLACK);
 
             scenes_.draw();
 
             renderer_.prepareWorld();
+
+            RenderTexture2D* worldTarget = nullptr;
+            if (activeScene) {
+                worldTarget = activeScene->beginWorldRenderTarget();
+            }
+
+            const bool usingTarget = worldTarget && worldTarget->texture.id != 0;
+            if (usingTarget) {
+                BeginTextureMode(*worldTarget);
+                ClearBackground(BLACK);
+            }
 
             for (const auto& view : views_) {
                 if (!view.camera)
@@ -66,11 +79,19 @@ namespace rlge {
                 EndScissorMode();
             }
 
+            if (usingTarget) {
+                EndTextureMode();
+            }
+
+            if (activeScene) {
+                activeScene->afterWorldRender(worldTarget, views_);
+            }
+
             // Render UI once, in screen space
-            if (auto* s = scenes_.top()) {
-                s->ui().layout();
-                s->ui().processInput(input_);
-                s->ui().render(renderer_);
+            if (activeScene) {
+                activeScene->ui().layout();
+                activeScene->ui().processInput(input_);
+                activeScene->ui().render(renderer_);
             }
             if (transitionState_ != TransitionState::None) {
                 drawTransition_();

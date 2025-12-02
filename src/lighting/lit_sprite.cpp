@@ -1,16 +1,14 @@
 #include "lit_sprite.hpp"
 
 #include "entity.hpp"
-#include "scene.hpp"
 #include "runtime.hpp"
+#include "scene.hpp"
 #include "transformer.hpp"
-
-#include <cstdio>
 
 namespace rlge {
 
 LitSprite::LitSprite(Entity& e, Texture2D& diffuse, Texture2D& normalMap,
-                     int frameW, int frameH, LightingSystem& lighting)
+                     const int frameW, const int frameH, LightingSystem& lighting)
     : Component(e)
     , diffuse_(diffuse)
     , normalMap_(normalMap)
@@ -20,7 +18,7 @@ LitSprite::LitSprite(Entity& e, Texture2D& diffuse, Texture2D& normalMap,
     , lighting_(lighting) {}
 
 LitSprite::LitSprite(Entity& e, Texture2D& diffuse, Texture2D& normalMap,
-                     int frameW, int frameH, LightingSystem& lighting, LayerId layer)
+                     const int frameW, const int frameH, LightingSystem& lighting, const LayerId layer)
     : Component(e)
     , diffuse_(diffuse)
     , normalMap_(normalMap)
@@ -59,70 +57,75 @@ void LitSprite::draw() {
 
     const Shader& shader = lighting_.normalMapShader();
     
-    // Capture values (not references) for the draw call lambda to avoid dangling references
-    const auto& lights = lighting_.lights();
-    const auto& ambient = lighting_.ambient();
-    const auto& locs = lighting_.normalMapLocations();
-    const View* primaryView = scene.primaryView();
-    Camera2D cam = primaryView && primaryView->camera ? primaryView->camera->cam2d() : Camera2D{};
-    bool hasCamera = primaryView && primaryView->camera;
-    float winWidth = static_cast<float>(lighting_.width());
-    float winHeight = static_cast<float>(lighting_.height());
-    
-    // Count enabled lights
-    int enabledLightCount = 0;
-    for (size_t i = 0; i < lights.size() && enabledLightCount < MAX_LIGHTS; i++) {
-        if (lights[i].enabled) enabledLightCount++;
-    }
+    auto passData = lighting_.normalPassData();
     
     rq.submitCustom(effectiveLayer, pos.y, shader, 
-        [this, src, dest, origin, rotation, &lights, &ambient, &locs, cam, hasCamera, winWidth, winHeight, enabledLightCount]() {
+        [this, src, dest, origin, rotation, &rq, passData = std::move(passData)]() {
             const Shader& normalShader = lighting_.normalMapShader();
+            const auto* viewCtx = rq.currentView();
+
+            // If there is no active view/camera, fall back to unlit sprite draw
+            if (!viewCtx || !viewCtx->camera) {
+                constexpr auto zeroLights = 0;
+                const Vector2 resolution = {passData.winWidth, passData.winHeight};
+                SetShaderValue(normalShader, passData.locs->resolution, &resolution, SHADER_UNIFORM_VEC2);
+                Vector3 ambientVec = {
+                    passData.ambient.color.r / 255.0f,
+                    passData.ambient.color.g / 255.0f,
+                    passData.ambient.color.b / 255.0f
+                };
+                SetShaderValue(normalShader, passData.locs->ambient, &ambientVec, SHADER_UNIFORM_VEC3);
+                SetShaderValue(normalShader, passData.locs->lightCount, &zeroLights, SHADER_UNIFORM_INT);
+                SetShaderValueTexture(normalShader, passData.locs->normalMap, normalMap_);
+                DrawTexturePro(diffuse_, src, dest, origin, rotation, WHITE);
+                return;
+            }
+
+            const Camera2D& cam = *viewCtx->camera;
             
             // Set resolution uniform
-            Vector2 resolution = {winWidth, winHeight};
-            SetShaderValue(normalShader, locs.resolution, &resolution, SHADER_UNIFORM_VEC2);
+            Vector2 resolution = {passData.winWidth, passData.winHeight};
+            SetShaderValue(normalShader, passData.locs->resolution, &resolution, SHADER_UNIFORM_VEC2);
             
             // Set ambient
-            Vector3 ambientVec = {
-                ambient.color.r / 255.0f,
-                ambient.color.g / 255.0f,
-                ambient.color.b / 255.0f
+            const Vector3 ambientVec = {
+                passData.ambient.color.r / 255.0f,
+                passData.ambient.color.g / 255.0f,
+                passData.ambient.color.b / 255.0f
             };
-            SetShaderValue(normalShader, locs.ambient, &ambientVec, SHADER_UNIFORM_VEC3);
+            SetShaderValue(normalShader, passData.locs->ambient, &ambientVec, SHADER_UNIFORM_VEC3);
             
             // Set light count
-            SetShaderValue(normalShader, locs.lightCount, &enabledLightCount, SHADER_UNIFORM_INT);
+            SetShaderValue(normalShader, passData.locs->lightCount, &passData.enabledLightCount, SHADER_UNIFORM_INT);
             
             // Set light arrays (convert world to screen positions)
-            if (hasCamera) {
-                int shaderLightIndex = 0;
-                for (size_t i = 0; i < lights.size() && shaderLightIndex < MAX_LIGHTS; i++) {
-                    const auto& light = lights[i];
-                    if (!light.enabled) continue;
-                    
-                    // Convert world position to screen position
-                    Vector2 screenPos = GetWorldToScreen2D(light.position, cam);
-                    SetShaderValue(normalShader, locs.lightPos[shaderLightIndex], &screenPos, SHADER_UNIFORM_VEC2);
-                    
-                    Vector3 colorVec = {
-                        light.color.r / 255.0f,
-                        light.color.g / 255.0f,
-                        light.color.b / 255.0f
-                    };
-                    SetShaderValue(normalShader, locs.lightColor[shaderLightIndex], &colorVec, SHADER_UNIFORM_VEC3);
-                    
-                    // Scale radius by camera zoom
-                    float scaledRadius = light.radius * cam.zoom;
-                    SetShaderValue(normalShader, locs.lightRadius[shaderLightIndex], &scaledRadius, SHADER_UNIFORM_FLOAT);
-                    SetShaderValue(normalShader, locs.lightIntensity[shaderLightIndex], &light.intensity, SHADER_UNIFORM_FLOAT);
-                    
-                    shaderLightIndex++;
-                }
+            auto shaderLightIndex = 0;
+            for (const auto& entry : passData.lights) {
+                if (shaderLightIndex >= MAX_LIGHTS) break;
+                if (!entry.light || !entry.light->enabled) continue;
+                const auto& light = *entry.light;
+                
+                // Convert world position to screen position for the active view
+                Vector2 screenPos = GetWorldToScreen2D(light.position, cam);
+                SetShaderValue(normalShader, passData.locs->lightPos[shaderLightIndex], &screenPos, SHADER_UNIFORM_VEC2);
+                
+                Vector3 colorVec = {
+                    light.color.r / 255.0f,
+                    light.color.g / 255.0f,
+                    light.color.b / 255.0f
+                };
+                SetShaderValue(normalShader, passData.locs->lightColor[shaderLightIndex], &colorVec, SHADER_UNIFORM_VEC3);
+                
+                // Scale radius by camera zoom
+                float scaledRadius = light.radius * cam.zoom;
+                SetShaderValue(normalShader, passData.locs->lightRadius[shaderLightIndex], &scaledRadius, SHADER_UNIFORM_FLOAT);
+                SetShaderValue(normalShader, passData.locs->lightIntensity[shaderLightIndex], &light.intensity, SHADER_UNIFORM_FLOAT);
+                
+                shaderLightIndex++;
             }
             
-            // Bind normal map to texture slot 1
-            SetShaderValueTexture(normalShader, locs.normalMap, normalMap_);
+            // Bind a normal map to texture slot 1
+            SetShaderValueTexture(normalShader, passData.locs->normalMap, normalMap_);
             
             // Draw the sprite
             DrawTexturePro(diffuse_, src, dest, origin, rotation, WHITE);

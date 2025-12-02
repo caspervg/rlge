@@ -126,7 +126,11 @@ namespace rlge {
         Interact,
         Menu,
         Confirm,
-        Cancel
+        Cancel,
+        CameraAltLeft,
+        CameraAltRight,
+        CameraAltUp,
+        CameraAltDown
     };
 
     // Mouse button enum
@@ -306,18 +310,20 @@ namespace rlge {
         }
 
         // Raw mouse queries (no action binding required)
-        bool mouseDown(MouseButton button) const {
+        [[nodiscard]] bool mouseDown(MouseButton button) const {
             return IsMouseButtonDown(static_cast<int>(button));
         }
-        bool mousePressed(MouseButton button) const {
+
+        [[nodiscard]] bool mousePressed(MouseButton button) const {
             return IsMouseButtonPressed(static_cast<int>(button));
         }
-        bool mouseReleased(MouseButton button) const {
+
+        [[nodiscard]] bool mouseReleased(MouseButton button) const {
             return IsMouseButtonReleased(static_cast<int>(button));
         }
 
         // Get mouse position
-        Vector2 mousePosition() const {
+        [[nodiscard]] Vector2 mousePosition() const {
             return GetMousePosition();
         }
 
@@ -478,6 +484,6 @@ namespace rlge {
     };
 
     // Type alias using the default Action enum for convenience
-    using DefaultInput = Input<Action>;
+    using DefaultInput = Input<>;
 
 }

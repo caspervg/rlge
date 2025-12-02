@@ -2,6 +2,7 @@
 #include <functional>
 #include <vector>
 #include <unordered_map>
+#include <optional>
 
 #include "raylib.h"
 #include "render_layer.hpp"
@@ -60,16 +61,21 @@ namespace rlge {
 
     class RenderQueue {
     public:
+        struct RenderViewContext {
+            const Camera2D* camera{nullptr};
+            Rectangle viewport{};
+        };
+
         // Constructor with injected LayerRegistry (required for dependency injection)
         explicit RenderQueue(LayerRegistry& layers);
 
         // Get the layer registry
         LayerRegistry& layers() { return layers_; }
-        const LayerRegistry& layers() const { return layers_; }
+        [[nodiscard]] const LayerRegistry& layers() const { return layers_; }
 
         // LayerId-based sprite submission
-        void submitSprite(LayerId layer, float z, Texture2D texture,
-                         Rectangle src, Rectangle dest, Vector2 origin,
+        void submitSprite(LayerId layer, float z, const Texture2D& texture,
+                         const Rectangle& src, const Rectangle& dest, Vector2 origin,
                          float rotation, Color tint = WHITE);
 
         // Custom draw with optional shader (for per-entity effects)
@@ -99,7 +105,12 @@ namespace rlge {
         void flushUI();
 
         // Get performance stats
-        const RenderStats& stats() const { return stats_; }
+        [[nodiscard]] const RenderStats& stats() const { return stats_; }
+
+        // Current view context while flushing world-space (nullptr when not flushing)
+        [[nodiscard]] const RenderViewContext* currentView() const {
+            return currentView_ ? &*currentView_ : nullptr;
+        }
 
     private:
         LayerRegistry& layers_;
@@ -114,9 +125,10 @@ namespace rlge {
         // Stats
         RenderStats stats_;
         bool worldPrepared_ = false;
+        std::optional<RenderViewContext> currentView_;
 
         // Helper methods
-        SpriteBatch& getBatch(LayerId layer, Texture2D texture);
+        SpriteBatch& getBatch(LayerId layer, const Texture2D& texture);
 
         // Comparator for sorting draw commands by layer order then z
         static bool compareDrawCommands(const LayerRegistry& layers,
@@ -124,6 +136,6 @@ namespace rlge {
                                         const DrawCommand& b);
 
         // Comparator for sorting sprite quads by z
-        static bool compareQuadsByZ(const SpriteQuad& a, const SpriteQuad& b);
+        static bool compareQuadsByZ_(const SpriteQuad& a, const SpriteQuad& b);
     };
 }

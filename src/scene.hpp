@@ -58,6 +58,11 @@ namespace rlge {
         virtual void draw();
         virtual void clearUi() { ctx_.ui.root().clearChildren(); }
 
+        // Optional hooks to let scenes redirect world rendering (e.g., to render targets)
+        // and run post-processing before UI is drawn.
+        virtual RenderTexture2D* beginWorldRenderTarget() { return nullptr; }
+        virtual void afterWorldRender(RenderTexture2D* /*target*/, const std::vector<View>& /*views*/) {}
+
         template <typename T, typename... Args>
         T& spawn(Args&&... args) {
             static_assert(std::is_base_of_v<Entity, T>, "T must be Entity");
