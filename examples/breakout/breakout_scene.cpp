@@ -2,10 +2,13 @@
 
 #include <algorithm>
 #include <cmath>
+#include <print>
 
 #include "breakout_events.hpp"
 #include "breakout_level.hpp"
 #include "circle_collider.hpp"
+#include "particle_emitter.hpp"
+#include "particle_fx.hpp"
 #include "runtime.hpp"
 #include "scene.hpp"
 #include "powerup.hpp"
@@ -14,7 +17,8 @@
 namespace breakout {
     using namespace rlge;
 
-    BreakoutScene::BreakoutScene(Runtime& r, BreakoutGame* game) : Scene(r), game_(game) {}
+    BreakoutScene::BreakoutScene(Runtime& r, BreakoutGame* game) :
+        Scene(r), game_(game) {}
 
     void BreakoutScene::enter() {
         const Level* level = game_->currentLevel();
@@ -35,15 +39,19 @@ namespace breakout {
         powerUps_.setCallback([this](const PowerUpType type, const bool activated) {
             if (type == PowerUpType::MultiBall && activated) {
                 spawnExtraBalls_(2);
-            } else if (type == PowerUpType::ExtraLife && activated) {
+            }
+            else if (type == PowerUpType::ExtraLife && activated) {
                 game_->gainLife();
-            } else if (type == PowerUpType::SafetyNet) {
+            }
+            else if (type == PowerUpType::SafetyNet) {
                 if (activated && !safetyNet_) {
                     safetyNet_ = &spawn<SafetyNet>(g_cfg.viewPortHeight - 4.0f);
-                } else if (!activated) {
+                }
+                else if (!activated) {
                     despawnSafetyNet_();
                 }
-            } else if (type == PowerUpType::SlowBall || type == PowerUpType::FastBall) {
+            }
+            else if (type == PowerUpType::SlowBall || type == PowerUpType::FastBall) {
                 applyBallSpeedMultiplier_();
             }
         });
@@ -59,8 +67,10 @@ namespace breakout {
         // const auto startY = (g_cfg.viewPortHeight * 0.1f - gridHeight) * 0.5f;
         const auto startY = g_cfg.wallThickness + 20.0f;
         for (const auto& brickConfig : level->bricks) {
-            const auto centerScreenX = startX + g_cfg.brickWidth * 0.5f + brickConfig.x * (g_cfg.brickWidth + g_cfg.brickMargin);
-            const auto centerScreenY = startY + g_cfg.brickHeight * 0.5f + brickConfig.y * (g_cfg.brickHeight + g_cfg.brickMargin);
+            const auto centerScreenX = startX + g_cfg.brickWidth * 0.5f + brickConfig.x * (g_cfg.brickWidth + g_cfg.
+                brickMargin);
+            const auto centerScreenY = startY + g_cfg.brickHeight * 0.5f + brickConfig.y * (g_cfg.brickHeight + g_cfg.
+                brickMargin);
             bricks_.push_back(&spawn<Brick>(brickConfig, centerScreenX, centerScreenY, powerUps_));
         }
 
@@ -73,8 +83,12 @@ namespace breakout {
         scoreBoard_ = &spawn<ScoreBoard>(*game_);
 
         // Wire up event handlers
-        collisionResponses().addHandler([this](Entity& entity, const CollisionEvent& event) { handleCollisionResponse_(entity, event); });
-        brickDestroyedHandlerId_ = gameEvents().subscribe<BrickDestroyed>([this](const BrickDestroyed& e) { handleBrickDestroyed_(e); });
+        collisionResponses().addHandler([this](Entity& entity, const CollisionEvent& event) {
+            handleCollisionResponse_(entity, event);
+        });
+        brickDestroyedHandlerId_ = gameEvents().subscribe<BrickDestroyed>([this](const BrickDestroyed& e) {
+            handleBrickDestroyed_(e);
+        });
         brickHitHandlerId_ = gameEvents().subscribe<BrickHit>([this](const BrickHit& e) { handleBrickHit_(e); });
         ballLostHandlerId_ = gameEvents().subscribe<BallLost>([this](const BallLost& e) { handleBallLost_(e); });
     }
@@ -96,7 +110,8 @@ namespace breakout {
                 ballBody->setVelocity({0.0f, 0.0f}); // Ensure the ball stays parked on the paddle center
 
                 if (input().pressed(Action::Fire)) {
-                    const Vector2 launchVel = Vector2Scale(game_->currentLevel()->ballVelocityStart, powerUps_.ballSpeedMultiplier());
+                    const Vector2 launchVel = Vector2Scale(game_->currentLevel()->ballVelocityStart,
+                                                           powerUps_.ballSpeedMultiplier());
                     ballBody->setVelocity(launchVel);
                     lastBallSpeedMult_ = powerUps_.ballSpeedMultiplier();
                     ballLaunched_ = true;
@@ -117,12 +132,56 @@ namespace breakout {
     void BreakoutScene::handleBrickDestroyed_(const BrickDestroyed& e) {
         const Level* level = game_->currentLevel();
         const float scoreMult = powerUps_.scoreMultiplier();
-        levelScore_ += static_cast<int>(std::lround(e.points * scoreMult));
+
+        const auto gridWidth = game_->currentLevel()->brickColumns * g_cfg.brickWidth + (game_->currentLevel()->
+            brickColumns - 1) * g_cfg.brickMargin;
+        const auto startX = (g_cfg.viewPortWidth - gridWidth) * 0.5f;
+        const auto startY = g_cfg.wallThickness + 20.0f;
+        const Vector2 brickCenter = {
+            .x = startX + g_cfg.brickWidth * 0.5f + e.brick.x * (g_cfg.brickWidth + g_cfg.brickMargin),
+            .y = startY + g_cfg.brickHeight * 0.5f + e.brick.y * (g_cfg.brickHeight + g_cfg.brickMargin)
+        };
+
+        const auto displayPoints = static_cast<int>(std::lround(e.points * scoreMult));
+        const auto brickColor = e.brick.color;
+
+        const auto scoreCfg = BurstEmitterConfig{
+            .maxParticles = 3,
+            .minLifetime = 0.6f,
+            .maxLifetime = 1.0f,
+            .minSpeed = 30.0f,
+            .maxSpeed = 60.0f,
+            .spread = 0.4f,
+            .direction = -PI / 2.0f,
+            .gravity = {0.0f, 10.0f},
+            .startColor = brickColor,
+            .endColor = Fade(brickColor, 0.0f)
+        };
+
+        spawnBurstEmitter(
+            *this,
+            brickCenter,
+            3,
+            scoreCfg,
+            [displayPoints](const Particle& p) {
+                const auto fontSize = 10 + 8 * (p.life / p.totalLife);
+                const auto fontSizeBorder = 10.5f + 8 * (p.life / p.totalLife);
+                const auto text = TextFormat("+%d", displayPoints);
+                const auto textWidth = MeasureText(text, fontSize);
+                const auto textWidthBorder = MeasureText(text, fontSizeBorder);
+                std::println("{}", p.rotation);
+                DrawTextPro(GetFontDefault(), text, Vector2{p.pos.x - textWidthBorder / 2.0f, p.pos.y}, Vector2{0,0}, p.rotation, fontSizeBorder, 1.0f, WHITE);
+                DrawTextPro(GetFontDefault(), text, Vector2{p.pos.x - textWidth / 2.0f, p.pos.y}, Vector2{0,0}, p.rotation, fontSize, 1.0f, p.color);
+            }
+        );
 
         camera_.shake(g_cfg.brickHitShakeDuration, g_cfg.brickHitShakeIntensity);
 
+        levelScore_ += displayPoints;
+
         auto updateSpeed = [level](Ball* b) {
-            if (!b) return;
+            if (!b)
+                return;
             if (auto* body = b->get<PhysicsBody>()) {
                 const Vector2 vel = body->velocity();
                 if (const auto speed = Vector2Length(vel); speed > 0.0f) {
@@ -154,7 +213,8 @@ namespace breakout {
         if (ball_ && ball_->id() == e.ballId) {
             ball_->destroyDeferred();
             ball_ = nullptr;
-        } else {
+        }
+        else {
             std::erase_if(extraBalls_, [id = e.ballId](Ball* b) {
                 if (b && b->id() == id) {
                     b->destroyDeferred();
@@ -198,14 +258,17 @@ namespace breakout {
             return;
 
         ballTr->position.x = paddleTr->position.x;
-        ballTr->position.y = paddleTr->position.y - (g_cfg.paddleHeight / 2.0f) - game_->currentLevel()->ballRadius - 1.0f;
+        ballTr->position.y = paddleTr->position.y - (g_cfg.paddleHeight / 2.0f) - game_->currentLevel()->ballRadius -
+            1.0f;
     }
 
     void BreakoutScene::spawnExtraBalls_(const int count) {
-        if (!ball_) return;
+        if (!ball_)
+            return;
         auto* originalTr = ball_->get<rlge::Transform>();
         auto* originalBody = ball_->get<rlge::PhysicsBody>();
-        if (!originalTr || !originalBody) return;
+        if (!originalTr || !originalBody)
+            return;
 
         const Vector2 baseVel = originalBody->velocity();
         const float speed = Vector2Length(baseVel);
@@ -244,7 +307,8 @@ namespace breakout {
         }
         const float ratio = newMult / lastBallSpeedMult_;
         auto scaleBall = [ratio](Ball* b) {
-            if (!b) return;
+            if (!b)
+                return;
             if (auto* body = b->get<rlge::PhysicsBody>()) {
                 Vector2 vel = body->velocity();
                 vel = Vector2Scale(vel, ratio);

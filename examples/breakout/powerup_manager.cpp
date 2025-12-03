@@ -77,7 +77,7 @@ float PowerUpManager::getMagnitude(PowerUpType type) const {
 }
 
 float PowerUpManager::paddleWidthMultiplier() const {
-    float mult = 1.0f;
+    auto mult = 1.0f;
     if (isActive(PowerUpType::WidePaddle)) mult *= getMagnitude(PowerUpType::WidePaddle);
     if (isActive(PowerUpType::NarrowPaddle)) mult *= getMagnitude(PowerUpType::NarrowPaddle);
     return mult;

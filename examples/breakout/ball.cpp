@@ -20,6 +20,11 @@ namespace breakout {
         col_ = &add<CircleCollider>(scene().collisions(), ColliderType::Solid, CLM::LAYER_BULLET,
                                     toLayerMask(CLM::LAYER_PLAYER | CLM::LAYER_WORLD), Vector2{0.0f, 0.0f},
                                     level_.ballRadius, false);
+
+        add<ContinuousParticleEmitter>(kTrailCfg,
+                                       [](const Particle& p) {
+                                           DrawCircleV(p.pos, p.size, p.color);
+                                       }).start();
     }
 
     void Ball::update(const float dt) {
@@ -30,7 +35,7 @@ namespace breakout {
 
         if (tr->position.y > g_cfg.viewPortHeight && !outOfFrame_) {
             outOfFrame_ = true;
-            scene().gameEvents().enqueue(BallLost{ id() });
+            scene().gameEvents().enqueue(BallLost{id()});
         }
     }
 

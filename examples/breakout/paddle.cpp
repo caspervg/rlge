@@ -19,7 +19,9 @@ namespace breakout {
         physics_ = &add<PhysicsBody>(conf);
 
         coll_ = &add<BoxCollider>(scene().collisions(), ColliderType::Kinematic, CLM::LAYER_PLAYER,
-                                  toLayerMask(static_cast<uint32_t>(CLM::LAYER_BULLET) | static_cast<uint32_t>(CLM::LAYER_ITEM)),
+                                  toLayerMask(
+                                      static_cast<uint32_t>(CLM::LAYER_BULLET) | static_cast<uint32_t>(
+                                          CLM::LAYER_ITEM)),
                                   Rectangle{-level_.paddleWidth / 2.0f, -g_cfg.paddleHeight / 2.0f,
                                             level_.paddleWidth * 1.0f, g_cfg.paddleHeight * 1.0f},
                                   false);
@@ -32,8 +34,11 @@ namespace breakout {
         if (!tr)
             return;
 
-        const float widthMult = powerUps_.paddleWidthMultiplier();
-        const float effectiveWidth = level_.paddleWidth * widthMult;
+        const auto targetWidthMult = powerUps_.paddleWidthMultiplier();
+        constexpr auto lerpSpeed = 10.0f;
+        smoothedWidthMult_ += (targetWidthMult - smoothedWidthMult_) * dt * lerpSpeed;
+
+        const float effectiveWidth = level_.paddleWidth * smoothedWidthMult_;
 
         if (input().down(Action::MoveLeft)) {
             tr->position.x -= level_.paddleSpeed * dt;
@@ -80,7 +85,8 @@ namespace breakout {
             if (!tr || !ballTr)
                 return;
 
-            const auto hitOffset = (ballTr->position.x - tr->position.x) / ((level_.paddleWidth * powerUps_.paddleWidthMultiplier()) / 2.0f);
+            const auto hitOffset = (ballTr->position.x - tr->position.x) / ((level_.paddleWidth * powerUps_.
+                paddleWidthMultiplier()) / 2.0f);
 
             const auto angle = hitOffset * g_cfg.maxBallPaddleDeflectionAngle * DEG2RAD;
             const auto speed = Vector2Length(ballPhysics->velocity());
@@ -90,6 +96,17 @@ namespace breakout {
                 -fabsf(cosf(angle) * speed)
             };
             ballPhysics->setVelocity(newVel);
+
+            scene().tweens().add(
+                Tween(
+                    0.08f,
+                    [this](float t) {
+                        scaleX_ = 1.0f + 0.2f * (1.0f - t); // 1.2 -> 1.0
+                        scaleY_ = 1.0f - 0.15f * (1.0f - t); // 0.85 -> 1.0
+                    },
+                    easeOutQuad
+                    )
+                );
         }
     }
 
@@ -101,10 +118,14 @@ namespace breakout {
             const auto* tr = get<rlge::Transform>();
             if (!tr)
                 return;
-            const float effectiveWidth = level_.paddleWidth * powerUps_.paddleWidthMultiplier();
+            const float effectiveWidth = level_.paddleWidth * smoothedWidthMult_ * scaleX_;
+            const float effectiveHeight = g_cfg.paddleHeight * scaleY_;
             DrawRectangle(static_cast<int>(tr->position.x - effectiveWidth / 2.0f),
-                          static_cast<int>(tr->position.y - g_cfg.paddleHeight / 2.0f), static_cast<int>(effectiveWidth),
-                          g_cfg.paddleHeight, g_cfg.paddleColor);
+                          static_cast<int>(tr->position.y - effectiveHeight / 2.0f),
+                          static_cast<int>(effectiveWidth),
+                          static_cast<int>(effectiveHeight),
+                          g_cfg.paddleColor
+                );
         });
     }
 } // namespace breakout

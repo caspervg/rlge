@@ -19,6 +19,9 @@ private:
     PowerUpManager& powerUps_;
     rlge::PhysicsBody* physics_{nullptr};
     rlge::BoxCollider* coll_{nullptr};
+    float scaleX_{1.0f};
+    float scaleY_{1.0f};
+    float smoothedWidthMult_{1.0f};
 };
 
 } // namespace breakout
