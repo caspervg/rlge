@@ -51,7 +51,7 @@ namespace breakout {
     private:
         void subscribeToEvents_();
         void unsubscribeFromEvents_() const;
-        void transitionToLevel_(size_t levelIndex);
+        void transitionToLevel_();
         void transitionToGameOver_();
         void loadHighScore_();
         void saveHighScore_();

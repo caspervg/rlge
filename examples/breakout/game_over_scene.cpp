@@ -32,7 +32,9 @@ namespace breakout {
 
     void GameOverScene::exit() { overlay_ = nullptr; }
 
-    void GameOverScene::update(float dt) {
+    void GameOverScene::update(const float dt) {
+        Scene::update(dt);
+
         const auto& in = input();
         if (in.pressed(Action::Confirm)) {
             gameEvents().enqueue(RestartGame{});

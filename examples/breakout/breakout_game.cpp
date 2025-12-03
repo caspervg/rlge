@@ -37,11 +37,10 @@ namespace breakout {
     void BreakoutGame::completeLevel(const int levelScore) {
         incrementScore(levelScore);
 
-        if (hasNextLevel()) {
-            state_.levelIndex++;
-            transitionToLevel_(state_.levelIndex);
-        }
-        else {
+        if (levelManager_.nextLevel()) {
+            // A next level exists and the level manager has now switched to it
+            transitionToLevel_();
+        } else {
             // Game won!
             gameOver();
         }
@@ -73,7 +72,9 @@ namespace breakout {
     void BreakoutGame::subscribeToEvents_() {
         auto& bus = runtime_.services().gameEvents();
 
-        levelCompletedId_ = bus.subscribe<LevelCompleted>([this](const LevelCompleted& e) { completeLevel(e.levelScore); });
+        levelCompletedId_ = bus.subscribe<LevelCompleted>([this](const LevelCompleted& e) {
+            completeLevel(e.levelScore);
+        });
 
         restartGameId_ = bus.subscribe<RestartGame>([this](const RestartGame& _) { restart(); });
     }
@@ -85,9 +86,11 @@ namespace breakout {
         bus.unsubscribe<RestartGame>(restartGameId_);
     }
 
-    void BreakoutGame::transitionToLevel_(const size_t levelIndex) {
+    void BreakoutGame::transitionToLevel_() {
         runtime_.transitionTo<BreakoutScene>(std::make_unique<FadeTransition>(0.35f), this);
-        state_.livesRemaining += levelManager_.getLevel(levelIndex)->lives;
+        state_.levelIndex = levelManager_.currentLevelIndex();
+        state_.livesRemaining += levelManager_.currentLevel()->lives;
+        state_.levelName = levelManager_.currentLevel()->name;
     }
 
     void BreakoutGame::transitionToGameOver_() {

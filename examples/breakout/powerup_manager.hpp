@@ -42,8 +42,8 @@ public:
     void setCallback(EffectCallback cb) { callback_ = std::move(cb); }
 
 private:
-    void applyInstantEffect(PowerUpType type);
-    void notifyCallback(PowerUpType type, bool activated);
+    void applyInstantEffect(PowerUpType type) const;
+    void notifyCallback(PowerUpType type, bool activated) const;
 
 private:
     std::vector<ActiveEffect> effects_;

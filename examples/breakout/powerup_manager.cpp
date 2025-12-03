@@ -84,7 +84,7 @@ float PowerUpManager::paddleWidthMultiplier() const {
 }
 
 float PowerUpManager::ballSpeedMultiplier() const {
-    float mult = 1.0f;
+    auto mult = 1.0f;
     if (isActive(PowerUpType::SlowBall)) mult *= getMagnitude(PowerUpType::SlowBall);
     if (isActive(PowerUpType::FastBall)) mult *= getMagnitude(PowerUpType::FastBall);
     return mult;
@@ -99,13 +99,12 @@ bool PowerUpManager::hasStickyPaddle() const { return isActive(PowerUpType::Stic
 bool PowerUpManager::hasFireBall() const { return isActive(PowerUpType::FireBall); }
 bool PowerUpManager::hasSafetyNet() const { return isActive(PowerUpType::SafetyNet); }
 
-void PowerUpManager::applyInstantEffect(PowerUpType type) {
+void PowerUpManager::applyInstantEffect(const PowerUpType type) const {
     notifyCallback(type, true); // Let scene handle instant effects (ExtraLife, MultiBall)
 }
 
-void PowerUpManager::notifyCallback(PowerUpType type, bool activated) {
+void PowerUpManager::notifyCallback(const PowerUpType type, const bool activated) const {
     if (callback_) callback_(type, activated);
 }
 
 } // namespace breakout
-#include <algorithm>
