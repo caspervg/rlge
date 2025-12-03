@@ -22,10 +22,6 @@
 namespace rlge {
     class Scene;
 
-    /// Represents a viewport with an associated camera for rendering.
-    /// The camera reference must remain valid for the lifetime of the View.
-    /// Views are typically managed by Scene, which ensures the camera
-    /// outlives the View via ViewHandle cleanup on scene destruction.
     struct View {
         ViewId id;
         std::reference_wrapper<Camera> camera;
