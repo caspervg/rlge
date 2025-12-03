@@ -64,9 +64,10 @@ namespace rlge {
         }
 
         // Queue an event to be dispatched later via dispatchQueued().
+        // Uses perfect forwarding to avoid unnecessary copies when possible.
         template <typename Event>
-        void enqueue(const Event& ev) {
-            queue_.emplace_back([this, ev]() { publish(ev); });
+        void enqueue(Event&& ev) {
+            queue_.emplace_back([this, ev = std::forward<Event>(ev)]() mutable { publish(std::move(ev)); });
         }
 
         // Dispatch all queued events in FIFO order.

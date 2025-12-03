@@ -7,9 +7,11 @@
 #include "../component.hpp"
 #include "../transformer.hpp"
 
-namespace {
-    Color colorForLayer(const rlge::ColliderLayerMask layer) {
-        using L = rlge::ColliderLayerMask;
+namespace rlge::detail {
+    // Helper functions for collider debug visualization.
+    // Defined inline to avoid ODR violations when header is included in multiple translation units.
+    inline Color colorForLayer(const ColliderLayerMask layer) {
+        using L = ColliderLayerMask;
         switch (layer) {
         case L::LAYER_WORLD:
             return GRAY;
@@ -26,7 +28,7 @@ namespace {
         }
     }
 
-    Color applyTriggerStyle(Color base, const bool isTrigger) {
+    inline Color applyTriggerStyle(Color base, const bool isTrigger) {
         if (!isTrigger)
             return base;
 
@@ -68,7 +70,7 @@ namespace rlge {
             if (!system_.debug() || !alive_)
                 return;
 
-            const auto shapeColor = applyTriggerStyle(colorForLayer(layer_), trigger_);
+            const auto shapeColor = detail::applyTriggerStyle(detail::colorForLayer(layer_), trigger_);
             constexpr Color aabbColor = {80, 80, 80, 255};
 
             const auto worldRect = axisAlignedWorldBounds();
