@@ -20,6 +20,7 @@ namespace snake {
     class BorderTiles;
     class AppleSprite;
     class FpsCounter;
+    class Scoreboard;
 
     class GameScene final : public rlge::Scene {
     public:
@@ -29,7 +30,6 @@ namespace snake {
         void enter() override;
         void update(float dt) override;
         void exit() override;
-        void buildHUD_();
 
     private:
         Game game_;
@@ -40,6 +40,7 @@ namespace snake {
         BorderTiles* borders_{nullptr};
         AppleSprite* apple_{nullptr};
         FpsCounter* fps_{nullptr};
+        Scoreboard* scoreboard_{nullptr};
         rlge::BurstParticleEmitter* deathFx_{nullptr};
 
         rlge::Camera camera_;
@@ -50,7 +51,6 @@ namespace snake {
         int score_ = 0;
         bool deathPending_{false};
         float deathTimer_{0.0f};
-        Font* uiFont_{nullptr};
     };
 
 } // namespace snake

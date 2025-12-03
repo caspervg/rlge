@@ -13,6 +13,7 @@ This repository also contains example games/demos:
 - `examples/collision_debug`: collider shapes, layer masks, and debug overlays.
 - `examples/shader_demo`: layer and per-entity shaders with live ImGui controls.
 - `examples/lighting_demo`: normal-mapped sprites lit by multiple point lights, with a movable picture-in-picture view.
+- `examples/raygui_demo`: basic in-game UI using raygui widgets controlling a moving box.
 
 ---
 
@@ -24,6 +25,7 @@ This repository also contains example games/demos:
 - Camera system (follow/pan/zoom/rotate, screen <-> world helpers, view bounds) plus multi-view rendering.
 - Dynamic render layers with optional shaders and typed uniform bindings; per-entity shader effects for custom visuals.
 - 2D lighting pipeline (`LitScene`/`LitSprite`) with ambient + multiple point lights, normal-map support, and view-aware light data.
+- raygui for in-game HUD/menus (see `examples/raygui_demo` and the Snake HUD); Dear ImGui kept for debug tooling.
 - Type-safe Input system with support for keyboard, mouse, gamepad, and analog axes.
 - Batched render queue with layers (`Background`, `World`, `Foreground`, `UI`), z-sorting, per-view culling, and render stats.
 - Collision system with layers/masks, triggers vs solids vs kinematic colliders, AABB/OBB/circle/polygon shapes, and optional ImGui debug overlay.
@@ -31,7 +33,6 @@ This repository also contains example games/demos:
 - Asset store for textures/shaders (file or in-memory), prefab factory for named entity constructors, and an audio manager for sounds/music.
 - Particle emitter component with configurable spawn/render functions and helper spawn shapes.
 - Tilemap support using Tiled/JSON (via Tileson) with proper source-rect handling and per-tile flip flags.
-- Retained-mode UI stack (panels, stacks, labels, buttons) with layout, text binding helpers, hit testing, and click callbacks for HUDs/menus.
 - Optional debug overlays via ImGui (toggle with `F1` in the examples).
 
 ## Requirements
@@ -62,6 +63,7 @@ This will produce the following executables:
 - `rlge_breakout`
 - `rlge_shader_demo`
 - `rlge_lighting_demo`
+- `rlge_raygui_demo`
 
 On Windows, they will be under `build/` or a generator-specific subdirectory (for example `build/Debug`).
 
@@ -78,6 +80,7 @@ Each executable runs a focused scenario; use `F1` to toggle the ImGui overlay in
 - `rlge_collision_debug`: move a collider through several shapes; enable collider drawing in the "Collisions" window.
 - `rlge_shader_demo`: layer-level wave shader + per-entity flash shader with ImGui sliders.
 - `rlge_lighting_demo`: point/torch/mouse-follow lights over normal-mapped sprites; resize the PIP viewport with WASD and pan its camera with arrows.
+- `rlge_raygui_demo`: panel with sliders/checks using raygui; tweak a moving box's speed/color.
 
 ## Using RLGE in your own game
 
@@ -214,26 +217,17 @@ private:
 - Audio: `audio().loadSound/playSound`, `audio().loadMusic/playMusic/stopMusic`, call `audio().update()` (runtime does this).
 - Prefabs: register entity constructors once (`runtime.services().prefabs().registerPrefab("enemy", fn)`) and instantiate by name.
 
-### UI overlays and HUD
+### Game UI (raygui) and debug UI (ImGui)
 
-- Each scene owns a retained-mode UI tree (`ui().root()`), laid out in screen space and wired to input processing.
-- Compose overlays with panels, vertical/horizontal stacks, labels, spacers, and buttons; configure sizing, padding, spacing, alignment, and distribution.
-- Bind dynamic text with `ui::bind` and handle clicks via callbacks or `ui().wasClicked(id)`.
-- Example:
+- For in-game HUD/menus, use raygui directly inside a `submitUI` call. Example:
   ```cpp
-  auto& root = ui().root();
-  root.clearChildren();
-  auto& hud = root.addChild<ui::Panel>(ui::LayoutConfig{
-      .size = {200, 60}, .padding = {12, 10}, .anchor = {0.0f, 0.0f}});
-  hud.id("hud");
-  hud.addChild<ui::Label>(
-      ui::bind([score] { return std::format("Score: {}", score); }),
-      ui::LayoutConfig{},
-      ui::LabelStyle{.color = {255, 255, 255, 255}, .fontSize = 22});
-  hud.addChild<ui::Button>("Reset", ui::LayoutConfig{.size = {80, 32}})
-      .id("reset_btn")
-      .onClick([this] { resetGame(); });
+  rq().submitUI([score] {
+      Rectangle panel{10, 10, 200, 60};
+      GuiPanel(panel, "HUD");
+      GuiLabel({20, 30, 160, 20}, TextFormat("Score: %d", score));
+  });
   ```
+- Debug tooling stays on Dear ImGui + rlImGui; toggle with `F1` in the examples. Keep gameplay UI minimal and deterministic with raygui while using ImGui for richer inspectors and debug panels.
 
 ### Collisions
 

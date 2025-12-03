@@ -53,6 +53,16 @@ target_include_directories(rlimgui PUBLIC ${rlimgui_SOURCE_DIR} PRIVATE ${raylib
 target_link_libraries(rlimgui PUBLIC imgui raylib)
 
 FetchContent_Declare(
+        raygui
+        GIT_REPOSITORY "https://github.com/raysan5/raygui.git"
+        GIT_TAG "4.0"
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE
+)
+FetchContent_MakeAvailable(raygui)
+set(RAYGUI_INCLUDE_DIR ${raygui_SOURCE_DIR}/src)
+
+FetchContent_Declare(
         tileson
         GIT_REPOSITORY "https://github.com/SSBMTonberry/tileson.git"
         GIT_TAG "v1.4.0"
@@ -72,16 +82,10 @@ set(PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src/")
 file(GLOB RLGE_SOURCES "${PROJECT_INCLUDE}*.cpp" "${PROJECT_INCLUDE}collision/*.cpp" "${PROJECT_INCLUDE}collision/shape/*.cpp")
 
 add_library(rlge STATIC ${RLGE_SOURCES})
-target_include_directories(rlge PUBLIC ${PROJECT_INCLUDE} "${PROJECT_INCLUDE}/collision/" "${PROJECT_INCLUDE}/collision/shape/" "${PROJECT_INCLUDE}/lighting/")
+target_include_directories(rlge PUBLIC ${PROJECT_INCLUDE} "${PROJECT_INCLUDE}/collision/" "${PROJECT_INCLUDE}/collision/shape/" "${PROJECT_INCLUDE}/lighting/" ${RAYGUI_INCLUDE_DIR})
 target_link_libraries(rlge PUBLIC raylib rlimgui tileson)
 target_sources(rlge PRIVATE
-        src/ui/widget.cpp
-        src/ui/stack.cpp
-        src/ui/panel.cpp
-        src/ui/label.cpp
-        src/ui/button.cpp
-        src/ui/spacer.cpp
-        src/ui/system.cpp
+        src/raygui_impl.cpp
         src/lighting/lighting_system.cpp
         src/lighting/lit_scene.cpp
         src/lighting/lit_sprite.cpp)
@@ -122,8 +126,12 @@ add_executable(rlge_breakout
 )
 target_link_libraries(rlge_breakout PRIVATE rlge raylib rlimgui imgui)
 
-add_executable(rlge_shader_demo examples/shader_demo/main.cpp)
-target_link_libraries(rlge_shader_demo PRIVATE rlge raylib rlimgui imgui)
+add_executable(rlge_shaders examples/shader/main.cpp)
+target_link_libraries(rlge_shaders PRIVATE rlge raylib rlimgui imgui)
 
-add_executable(rlge_lighting_demo examples/lighting_demo/main.cpp)
-target_link_libraries(rlge_lighting_demo PRIVATE rlge raylib rlimgui imgui)
+add_executable(rlge_lighting examples/lighting/main.cpp)
+target_link_libraries(rlge_lighting PRIVATE rlge raylib rlimgui imgui)
+
+add_executable(rlge_raygui examples/raygui/main.cpp examples/util/raygui_helpers.hpp)
+target_include_directories(rlge_raygui PRIVATE ${CMAKE_CURRENT_LIST_DIR}/examples)
+target_link_libraries(rlge_raygui PRIVATE rlge raylib)

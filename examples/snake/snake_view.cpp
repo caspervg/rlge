@@ -6,6 +6,7 @@
 #include <random>
 
 #include "rlgl.h"
+#include "raygui.h"
 #include "transformer.hpp"
 
 namespace snake {
@@ -181,11 +182,9 @@ namespace snake {
 
         rq().submitUI([this] {
             const auto text = std::format("Score: {}", score_);
-            const auto textWidth = MeasureText(text.c_str(), 30);
-            const auto textPosX = kScreenPixelsX / 2 - textWidth / 2;
-            const auto textPosY = 0;
-            DrawRectangle(textPosX - 5, textPosY, textWidth + 10, 30, Fade(BLACK, 0.5f));
-            DrawText(text.c_str(), textPosX, textPosY, 30, WHITE);
+            Rectangle box{10, 10, 180, 36};
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
+            GuiLabel(box, text.c_str());
         });
     }
 

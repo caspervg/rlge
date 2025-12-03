@@ -14,7 +14,6 @@
 #include "render_queue.hpp"
 #include "tween.hpp"
 #include "collision/collision_system.hpp"
-#include "ui/system.hpp"
 
 namespace rlge {
     struct View;
@@ -55,7 +54,6 @@ namespace rlge {
 
         virtual void update(float dt);
         virtual void draw();
-        virtual void clearUi() { ui_.root().clearChildren(); }
 
         // Optional hooks to let scenes redirect world rendering (e.g., to render targets)
         // and run post-processing before UI is drawn.
@@ -97,9 +95,6 @@ namespace rlge {
         AudioManager& audio();
         [[nodiscard]] const AudioManager& audio() const;
 
-        ui::UiSystem& ui();
-        [[nodiscard]] const ui::UiSystem& ui() const;
-
         CollisionSystem& collisions();
         [[nodiscard]] const CollisionSystem& collisions() const;
 
@@ -134,7 +129,6 @@ namespace rlge {
     private:
         Runtime& runtime_;
         GameContext ctx_;
-        ui::UiSystem ui_;
         CollisionSystem collisions_;
         CollisionResponseSystem collisionResponses_;
         TweenSystem tweens_;

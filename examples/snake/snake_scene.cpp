@@ -3,13 +3,12 @@
 #include <format>
 
 #include "game_over_scene.h"
-#include "imgui.h"
 #include "particle_emitter.hpp"
 #include "particle_fx.hpp"
 #include "runtime.hpp"
 #include "snake_fx.hpp"
 #include "snake_view.hpp"
-#include "ui/ui.hpp"
+#include "raygui.h"
 
 namespace snake {
     class GameOverScene;
@@ -38,20 +37,18 @@ namespace snake {
 
         auto& spriteTex = assets().loadTexture("spritesheet", "../examples/snake/assets/spritesheet.png");
         spriteSheet_ = std::make_unique<SpriteSheet>(spriteTex, kPixelsPerTile, kPixelsPerTile);
-        uiFont_ = &assets().loadFont("ui_font", "../examples/snake/assets/fallingskyblack-gyxa.otf", 32);
 
         camera_ = rlge::Camera();
         camera_.setOffset({snake::kTilesX * snake::kPixelsPerTile * snake::kMagnification / 2.0f,
                            snake::kTilesY * snake::kPixelsPerTile * snake::kMagnification / 2.0f});
         setSingleView(camera_);
 
-        buildHUD_();
-
         bg_ = &spawn<Background>();
         borders_ = &spawn<BorderTiles>(game_, *spriteSheet_);
         snakeBody_ = &spawn<SnakeBody>(game_, *spriteSheet_);
         snake_ = &spawn<SnakeHead>(game_, *spriteSheet_);
         apple_ = &spawn<AppleSprite>(game_, *spriteSheet_);
+        scoreboard_ = &spawn<Scoreboard>(score_);
         fps_ = &spawn<FpsCounter>();
         // Particle emitter component on the snake head.
         if (snake_) {
@@ -120,36 +117,6 @@ namespace snake {
     }
 
     void GameScene::exit() { audio().stopMusic(); }
-
-    void GameScene::buildHUD_() {
-        auto& uiSystem = ui();
-        auto& root = uiSystem.root();
-        root.clearChildren();
-
-        const auto [x, _] = runtime().window().size();
-
-        const ui::PanelStyle hudStyle{
-            .background = Fade(BLACK, .5f)
-        };
-
-        auto& hudPanel = root.addChild<ui::Panel>(
-            ui::LayoutConfig{.size = {100.0f, 40.0f}, .padding = {16.0f, 12.0f}},
-            hudStyle);
-
-        hudPanel.addChild<ui::HStack>(
-                    ui::LayoutConfig{},
-                    ui::StackConfig{.spacing = 20.0f, .alignment = ui::Alignment::Center,
-                                    .distribution = ui::Distribution::SpaceBetween}
-                    )
-                .addChild<ui::HStack>(
-                    ui::LayoutConfig{},
-                    ui::StackConfig{.spacing = 12.0f, .alignment = ui::Alignment::Center}
-                    )
-                .addChild<ui::Label>(
-                    ui::bind([this]() { return std::format("Score: {}", score_); }),
-                    ui::LayoutConfig{},
-                    ui::LabelStyle{.color = {100, 255, 100, 255}, .fontSize = 24.0f}, uiFont_);
-    }
 
 
 } // namespace snake

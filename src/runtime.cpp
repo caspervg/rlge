@@ -33,9 +33,6 @@ namespace rlge {
         while (running_ && !WindowShouldClose()) {
             renderer_.beginFrame();
             const float dt = GetFrameTime();
-            if (auto* s = scenes_.top()) {
-                s->ui().beginFrame(window_.size());
-            }
 
             if (IsKeyPressed(debugKey_)) {
                 debugEnabled_ = !debugEnabled_;
@@ -89,12 +86,6 @@ namespace rlge {
                 activeScene->afterWorldRender(worldTarget, views_);
             }
 
-            // Render UI once, in screen space
-            if (activeScene) {
-                activeScene->ui().layout();
-                activeScene->ui().processInput(input_);
-                activeScene->ui().render(renderer_);
-            }
             if (transitionState_ != TransitionState::None) {
                 drawTransition_();
             }
