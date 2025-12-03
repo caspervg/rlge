@@ -1,6 +1,5 @@
 #include <cmath>
 #include <filesystem>
-#include <print>
 
 #include "debug.hpp"
 #include "imgui.h"

@@ -1,6 +1,5 @@
 #include "physics_body.hpp"
 
-#include <print>
 #include <algorithm>
 
 #include "transformer.hpp"

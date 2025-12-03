@@ -1,7 +1,5 @@
 #include "collision_system.hpp"
 
-#include <print>
-
 #include "collider.hpp"
 #include "entity.hpp"
 #include "imgui.h"

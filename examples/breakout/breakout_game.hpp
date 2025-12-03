@@ -1,4 +1,6 @@
 #pragma once
+#include <optional>
+#include <string_view>
 #include "breakout_events.hpp"
 #include "breakout_level.hpp"
 #include "events.hpp"
