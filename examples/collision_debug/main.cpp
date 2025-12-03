@@ -57,7 +57,7 @@ public:
             false);
     }
 
-    void update(float dt) override {
+    void update(const float dt) override {
         RenderEntity::update(dt);
 
         auto* tr = get<rlge::Transform>();
@@ -81,7 +81,7 @@ public:
         RenderEntity::draw();
 
         rq().submitWorld([this] {
-            auto* col = get<BoxCollider>();
+            const auto* col = get<BoxCollider>();
             if (!col)
                 return;
             const Rectangle r = col->axisAlignedWorldBounds();
@@ -98,8 +98,8 @@ public:
         tr.position = {350.0f, 200.0f};
 
         auto& sys = scene().collisions();
-        const Vector2 localCenter{0.0f, 0.0f};
-        constexpr float radius = 24.0f;
+        constexpr Vector2 localCenter{0.0f, 0.0f};
+        constexpr auto radius = 24.0f;
         add<CircleCollider>(
             sys,
             ColliderType::Solid,
@@ -114,7 +114,7 @@ public:
         RenderEntity::draw();
 
         rq().submitWorld([this] {
-            auto* col = get<CircleCollider>();
+            const auto* col = get<CircleCollider>();
             if (!col)
                 return;
             const Vector2 c = col->center();
@@ -132,7 +132,7 @@ public:
         tr.position = {200.0f, 300.0f};
         tr.rotation = 0.25f; // just to see rotation vs. AABB
 
-        const Rectangle local{-40.0f, -10.0f, 80.0f, 20.0f};
+        constexpr Rectangle local{-40.0f, -10.0f, 80.0f, 20.0f};
 
         auto& sys = scene().collisions();
         add<BoxCollider>(
