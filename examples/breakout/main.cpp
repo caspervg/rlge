@@ -1,6 +1,4 @@
-#include "breakout_level.hpp"
 #include "breakout_scene.hpp"
-#include "game_over_scene.h"
 #include "runtime.hpp"
 #include "window.hpp"
 
@@ -24,7 +22,14 @@ int main() {
     runtime.input().bindAxis(Action::MoveLeft, 0, rlge::GamepadAxis::LeftX);
     runtime.input().bindAxis(Action::MoveRight, 0, rlge::GamepadAxis::RightX);
 
-    breakout::BreakoutGame game(runtime, "../examples/breakout/assets/levels.toml");
+    // Use a debug-focused level set when not building with NDEBUG.
+#ifdef NDEBUG
+    constexpr auto levelFile = "../examples/breakout/assets/levels.toml";
+#else
+    constexpr auto levelFile = "../examples/breakout/assets/levels_debug.toml";
+#endif
+
+    breakout::BreakoutGame game(runtime, levelFile);
 
     game.start();
     runtime.run();

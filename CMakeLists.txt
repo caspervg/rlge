@@ -119,13 +119,17 @@ target_link_libraries(rlge_collision_debug PRIVATE rlge raylib rlimgui imgui)
 add_executable(rlge_breakout
         examples/breakout/main.cpp
         examples/breakout/breakout_scene.cpp
-        examples/breakout/breakout_entities.cpp
         examples/breakout/game_over_scene.cpp
         examples/breakout/breakout_level.cpp
         examples/breakout/breakout_game.cpp
         examples/breakout/powerup_manager.cpp
-        examples/breakout/powerup_entity.cpp
+        examples/breakout/powerup.cpp
         examples/breakout/safety_net.cpp
+        examples/breakout/scoreboard.cpp
+        examples/breakout/wall.cpp
+        examples/breakout/paddle.cpp
+        examples/breakout/brick.cpp
+        examples/breakout/ball.cpp
 )
 target_link_libraries(rlge_breakout PRIVATE rlge raylib rlimgui imgui)
 

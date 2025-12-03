@@ -1,4 +1,4 @@
-#include "powerup_entity.hpp"
+#include "powerup.hpp"
 
 #include "breakout_config.hpp"
 #include "powerup_types.hpp"
@@ -8,7 +8,7 @@
 
 namespace breakout {
 
-PowerUp::PowerUp(rlge::Scene& s, PowerUpType type, float x, float y)
+PowerUp::PowerUp(Scene& s, const PowerUpType type, const float x, const float y)
     : RenderEntity(s)
     , type_(type)
     , config_(kPowerUpConfigs.at(type)) {
@@ -16,17 +16,17 @@ PowerUp::PowerUp(rlge::Scene& s, PowerUpType type, float x, float y)
     tr.position = {x, y};
 
     constexpr float size = 20.0f;
-    collider_ = &add<rlge::BoxCollider>(
+    collider_ = &add<BoxCollider>(
         scene().collisions(),
-        rlge::ColliderType::Trigger,
-        rlge::ColliderLayerMask::LAYER_ITEM,
-        rlge::ColliderLayerMask::LAYER_PLAYER,
+        ColliderType::Trigger,
+        ColliderLayerMask::LAYER_ITEM,
+        ColliderLayerMask::LAYER_PLAYER,
         Rectangle{-size / 2, -size / 2, size, size},
         true);
 }
 
 void PowerUp::update(float dt) {
-    rlge::RenderEntity::update(dt);
+    RenderEntity::update(dt);
 
     if (collected_) {
         destroyDeferred();

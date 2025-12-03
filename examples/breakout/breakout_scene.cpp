@@ -8,7 +8,7 @@
 #include "circle_collider.hpp"
 #include "runtime.hpp"
 #include "scene.hpp"
-#include "powerup_entity.hpp"
+#include "powerup.hpp"
 #include "safety_net.hpp"
 
 namespace breakout {
@@ -32,7 +32,7 @@ namespace breakout {
         safetyNet_ = nullptr;
 
         // Setup power-up callbacks for instant effects or scene-side effects
-        powerUps_.setCallback([this](PowerUpType type, bool activated) {
+        powerUps_.setCallback([this](const PowerUpType type, const bool activated) {
             if (type == PowerUpType::MultiBall && activated) {
                 spawnExtraBalls_(2);
             } else if (type == PowerUpType::ExtraLife && activated) {
@@ -96,7 +96,7 @@ namespace breakout {
                 ballBody->setVelocity({0.0f, 0.0f}); // Ensure the ball stays parked on the paddle center
 
                 if (input().pressed(Action::Fire)) {
-                    Vector2 launchVel = Vector2Scale(game_->currentLevel()->ballVelocityStart, powerUps_.ballSpeedMultiplier());
+                    const Vector2 launchVel = Vector2Scale(game_->currentLevel()->ballVelocityStart, powerUps_.ballSpeedMultiplier());
                     ballBody->setVelocity(launchVel);
                     lastBallSpeedMult_ = powerUps_.ballSpeedMultiplier();
                     ballLaunched_ = true;
@@ -121,7 +121,7 @@ namespace breakout {
 
         camera_.shake(g_cfg.brickHitShakeDuration, g_cfg.brickHitShakeIntensity);
 
-        auto updateSpeed = [this, level](Ball* b) {
+        auto updateSpeed = [level](Ball* b) {
             if (!b) return;
             if (auto* body = b->get<PhysicsBody>()) {
                 const Vector2 vel = body->velocity();

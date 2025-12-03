@@ -1,74 +1,7 @@
 #pragma once
-#include "box_collider.hpp"
-#include "breakout_game.hpp"
-#include "breakout_level.hpp"
-#include "circle_collider.hpp"
-#include "entity.hpp"
-#include "physics_body.hpp"
-#include "powerup_manager.hpp"
-#include "powerup_types.hpp"
-#include "render_entity.hpp"
-#include "scene.hpp"
 
-namespace breakout {
-    using namespace rlge;
-
-    class ScoreBoard final : public RenderEntity {
-    public:
-        explicit ScoreBoard(Scene& s, const BreakoutGame& game);
-        void draw() override;
-
-    private:
-        const BreakoutGame& game_;
-    };
-
-    class Wall final : public Entity {
-    public:
-        explicit Wall(Scene& s, float x, float y, float w, float h);
-    };
-
-    class Paddle final : public RenderEntity {
-    public:
-        explicit Paddle(Scene& s, const Level& level, PowerUpManager& powerUps);
-        void update(float dt) override;
-        void onCollision(const CollisionEvent& event);
-        void draw() override;
-
-    private:
-        const Level& level_;
-        PowerUpManager& powerUps_;
-        PhysicsBody* physics_{nullptr};
-        BoxCollider* coll_{nullptr};
-    };
-
-    class Brick final : public RenderEntity {
-    public:
-        explicit Brick(Scene& s, const BrickConfig& config, float screenX, float screenY, PowerUpManager& powerUps);
-        void onCollision(const CollisionEvent& event);
-        void draw() override;
-
-    private:
-        const BrickConfig& config_;
-        PowerUpManager& powerUps_;
-        BoxCollider* coll_{nullptr};
-        bool alive_ = true;
-        int maxHitPoints_{config_.hitPoints};
-        int hitPoints_{config_.hitPoints};
-
-        void spawnPowerUpsIfApplicable();
-        PowerUpType getRandomPowerUpType();
-    };
-
-    class Ball final : public RenderEntity {
-    public:
-        explicit Ball(Scene& s, const Level& level);
-        void update(float dt) override;
-        void draw() override;
-
-    private:
-        const Level& level_;
-        PhysicsBody* physics_{nullptr};
-        CircleCollider* col_{nullptr};
-        bool outOfFrame_ = false;
-    };
-}
+#include "ball.hpp"
+#include "brick.hpp"
+#include "paddle.hpp"
+#include "scoreboard.hpp"
+#include "wall.hpp"
