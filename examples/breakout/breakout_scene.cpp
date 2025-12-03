@@ -1,12 +1,9 @@
 #include "breakout_scene.hpp"
 
-#include <algorithm>
 #include <cmath>
-#include <print>
 
 #include "breakout_events.hpp"
 #include "breakout_level.hpp"
-#include "circle_collider.hpp"
 #include "particle_emitter.hpp"
 #include "particle_fx.hpp"
 #include "runtime.hpp"
