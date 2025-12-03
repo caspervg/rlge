@@ -22,6 +22,9 @@ namespace rlge {
         virtual void update(float dt);
         virtual void draw();
 
+        /// Adds a component to the entity.
+        /// Note: Components cannot be removed after being added. The component
+        /// cache relies on this invariant to avoid cache invalidation overhead.
         template <typename T, typename... Args>
         T& add(Args&&... args) {
             static_assert(std::is_base_of_v<Component, T>, "T must be Component");
@@ -36,6 +39,11 @@ namespace rlge {
         /// Retrieves a component by type. Uses a type-indexed cache for O(1) lookup
         /// after the first access. Falls back to linear search with dynamic_cast
         /// only if the component was added via a base type or an interface type.
+        /// 
+        /// Cache safety: The cache stores pointers to components owned by the
+        /// components_ vector. Since components cannot be removed and unique_ptr
+        /// maintains stable addresses, cached pointers remain valid for the
+        /// entity's lifetime.
         template <typename T>
         T* get() {
             const auto key = std::type_index(typeid(T));
@@ -61,6 +69,7 @@ namespace rlge {
             // Fallback: linear search (needed if component was added as base type or interface)
             for (auto& c : components_) {
                 if (auto* p = dynamic_cast<const T*>(c.get())) {
+                    // const_cast is safe: component addresses are stable and cache is mutable
                     componentCache_[key] = const_cast<void*>(static_cast<const void*>(p));
                     return p;
                 }
