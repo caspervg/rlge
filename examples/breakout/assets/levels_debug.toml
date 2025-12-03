@@ -1,0 +1,25 @@
+# Debug-only levels for rapid power-up testing. Loaded when not built with NDEBUG.
+
+[[levels]]
+name = "Debug PowerUps"
+brickRows = 3
+brickColumns = 5
+bricks = [
+    { position = [0, 0], powerUps = ["WidePaddle"] },
+    { position = [0, 1], powerUps = ["NarrowPaddle"] },
+    { position = [0, 2], powerUps = ["LaserPaddle"] },
+    { position = [0, 3], powerUps = ["StickyPaddle"] },
+    { position = [0, 4], powerUps = ["SafetyNet"] },
+
+    { position = [1, 0], powerUps = ["MultiBall"] },
+    { position = [1, 1], powerUps = ["FireBall"] },
+    { position = [1, 2], powerUps = ["SlowBall"] },
+    { position = [1, 3], powerUps = ["FastBall"] },
+    { position = [1, 4], powerUps = ["ScoreMultiplier"] },
+
+    { position = [2, 0], powerUps = ["ExtraLife"] },
+    { position = [2, 1], powerUps = ["WidePaddle", "ScoreMultiplier"] },
+    { position = [2, 2], powerUps = ["MultiBall", "StickyPaddle"] },
+    { position = [2, 3], powerUps = ["FireBall", "SafetyNet"] },
+    { position = [2, 4], powerUps = ["SlowBall", "FastBall"] },
+]
