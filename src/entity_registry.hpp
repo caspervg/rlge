@@ -16,16 +16,6 @@ namespace rlge {
         bool operator==(const EntityId&) const = default;
     };
 
-    /// Registry for O(1) entity lookup by EntityId.
-    /// 
-    /// Design note: Scene maintains dual entity tracking:
-    /// - EntityRegistry stores raw pointers for O(1) lookup by EntityId
-    /// - Scene stores unique_ptr<Entity> vector for ownership
-    /// 
-    /// This pattern separates concerns: the registry provides fast ID-based access,
-    /// while Scene manages entity lifetime. The Scene::destroy() method ensures both
-    /// containers stay synchronized by removing from both the registry and the
-    /// owned entities vector.
     class EntityRegistry {
     public:
         EntityId create(Entity* ptr) {

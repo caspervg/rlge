@@ -23,9 +23,6 @@ namespace rlge {
 
     using ViewId = std::uint32_t;
 
-    /// Contains references to shared game services that are owned by Runtime.
-    /// All members are references, ensuring GameContext doesn't own any resources.
-    /// Scene-specific systems (like UiSystem, CollisionSystem) are owned directly by Scene.
     struct GameContext {
         AssetStore& assets;
         Input<>& input;
@@ -137,7 +134,7 @@ namespace rlge {
     private:
         Runtime& runtime_;
         GameContext ctx_;
-        ui::UiSystem ui_;  // Scene owns its UI system, like other scene-specific systems
+        ui::UiSystem ui_;
         CollisionSystem collisions_;
         CollisionResponseSystem collisionResponses_;
         TweenSystem tweens_;
