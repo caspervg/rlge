@@ -23,6 +23,9 @@ namespace rlge {
 
     using ViewId = std::uint32_t;
 
+    /// Contains references to shared game services that are owned by Runtime.
+    /// All members are references, ensuring GameContext doesn't own any resources.
+    /// Scene-specific systems (like UiSystem, CollisionSystem) are owned directly by Scene.
     struct GameContext {
         AssetStore& assets;
         Input<>& input;
@@ -30,7 +33,6 @@ namespace rlge {
         LayerRegistry& layers;
         EventBus& gameEvents;
         AudioManager& audio;
-        ui::UiSystem ui;
     };
 
     class ViewHandle {
@@ -56,7 +58,7 @@ namespace rlge {
 
         virtual void update(float dt);
         virtual void draw();
-        virtual void clearUi() { ctx_.ui.root().clearChildren(); }
+        virtual void clearUi() { ui_.root().clearChildren(); }
 
         // Optional hooks to let scenes redirect world rendering (e.g., to render targets)
         // and run post-processing before UI is drawn.
@@ -135,6 +137,7 @@ namespace rlge {
     private:
         Runtime& runtime_;
         GameContext ctx_;
+        ui::UiSystem ui_;  // Scene owns its UI system, like other scene-specific systems
         CollisionSystem collisions_;
         CollisionResponseSystem collisionResponses_;
         TweenSystem tweens_;

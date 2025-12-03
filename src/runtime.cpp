@@ -70,15 +70,13 @@ namespace rlge {
             }
 
             for (const auto& view : views_) {
-                if (!view.camera)
-                    continue;
-
-                view.camera->update(dt);
+                Camera& cam = view.camera.get();
+                cam.update(dt);
 
                 BeginScissorMode(static_cast<int>(view.viewport.x), static_cast<int>(view.viewport.y),
                                  static_cast<int>(view.viewport.width), static_cast<int>(view.viewport.height));
 
-                renderer_.flushPreparedWorld(view.camera->cam2d(), view.viewport);
+                renderer_.flushPreparedWorld(cam.cam2d(), view.viewport);
 
                 EndScissorMode();
             }
@@ -141,7 +139,7 @@ namespace rlge {
 
     ViewId Runtime::addView(Camera& camera, const Rectangle& viewport) {
         const ViewId id = nextViewId_++;
-        views_.push_back(View{id, &camera, viewport});
+        views_.push_back(View{id, std::ref(camera), viewport});
         return id;
     }
 

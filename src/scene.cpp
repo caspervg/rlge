@@ -10,7 +10,8 @@ namespace rlge {
 
     Scene::Scene(Runtime& r)
         : runtime_(r)
-          , ctx_{r.assetStore(), r.input(), r.renderer(), r.layers(), r.services().gameEvents(), r.services().audio(), ui::UiSystem{}}
+          , ctx_{r.assetStore(), r.input(), r.renderer(), r.layers(), r.services().gameEvents(), r.services().audio()}
+          , ui_()
           , collisions_(CollisionSystem())
           , collisionResponses_(CollisionResponseSystem())
           , tweens_(TweenSystem())
@@ -20,7 +21,7 @@ namespace rlge {
         for (auto& cleanup : forwardedGameSubscriptions_) {
             cleanup();
         }
-        ctx_.ui.root().clearChildren();
+        ui_.root().clearChildren();
         entities_.clear();
         viewHandles_.clear();
         sceneEvents_.clear();
@@ -93,9 +94,9 @@ namespace rlge {
 
     const AudioManager& Scene::audio() const { return ctx_.audio; }
 
-    ui::UiSystem& Scene::ui() { return ctx_.ui; }
+    ui::UiSystem& Scene::ui() { return ui_; }
 
-    const ui::UiSystem& Scene::ui() const { return ctx_.ui; }
+    const ui::UiSystem& Scene::ui() const { return ui_; }
 
     CollisionSystem& Scene::collisions() { return collisions_; }
 

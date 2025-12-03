@@ -41,9 +41,8 @@ void LitScene::afterWorldRender(RenderTexture2D* target, const std::vector<View>
 
     // Render lights for each view into the shared light buffer
     for (const auto& view : views) {
-        if (!view.camera)
-            continue;
-        lighting_.renderLights(view.camera->cam2d(), view.viewport);
+        Camera& cam = view.camera.get();
+        lighting_.renderLights(cam.cam2d(), view.viewport);
     }
 
     // Apply lighting to the scene buffer and present to the screen

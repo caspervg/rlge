@@ -49,7 +49,6 @@ namespace rlge {
     private:
         void compact_();
         void flushPendingRemovals_();
-        void resolve_(Collider* a, Collider* b, const CollisionManifold& manifold);
 
     private:
         float spatialGridSize_ = 100.0f;

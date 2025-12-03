@@ -99,7 +99,7 @@ public:
         // Make the camera follow the player entity.
         if (const auto* view = primaryView()) {
             if (const auto* tr = example_entity_->get<rlge::Transform>()) {
-                view->camera->follow(tr->position);
+                view->camera.get().follow(tr->position);
             }
         }
     }
