@@ -5,16 +5,16 @@ name = "Introduction"
 brickRows = 1
 brickColumns = 10
 bricks = [
-    { position = [0, 0], type = "standard", color = [255, 255, 255, 255], hitPoints = 2 },
+    { position = [0, 0], type = "standard", color = [255, 255, 255, 255], hitPoints = 2, powerUps = ["WidePaddle"] },
     { position = [0, 1], type = "standard" },
     { position = [0, 2], type = "standard" },
-    { position = [0, 3], type = "standard", color = [255, 255, 255, 255], hitPoints = 2 },
+    { position = [0, 3], type = "standard", color = [255, 255, 255, 255], hitPoints = 2, powerUps = ["MultiBall"] },
     { position = [0, 4], type = "standard" },
     { position = [0, 5], type = "standard" },
-    { position = [0, 6], type = "standard", color = [255, 255, 255, 255], hitPoints = 2 },
+    { position = [0, 6], type = "standard", color = [255, 255, 255, 255], hitPoints = 2, powerUps = ["ScoreMultiplier"] },
     { position = [0, 7], type = "standard" },
     { position = [0, 8], type = "standard" },
-    { position = [0, 9], type = "standard", color = [255, 255, 255, 255], hitPoints = 2 },
+    { position = [0, 9], type = "standard", color = [255, 255, 255, 255], hitPoints = 2, powerUps = ["SafetyNet"] },
 ]
 
 [[levels]]

@@ -5,6 +5,7 @@
 #include "breakout_config.hpp"
 #include "breakout_events.hpp"
 #include "breakout_game.hpp"
+#include "powerup_entity.hpp"
 
 namespace breakout {
     using namespace rlge;
@@ -32,8 +33,8 @@ namespace breakout {
                          ColliderLayerMask::LAYER_BULLET, Rectangle{-w / 2.0f, -h / 2.0f, w, h}, false);
     }
 
-    Paddle::Paddle(Scene& s, const Level& level) :
-        RenderEntity(s), level_(level) {
+    Paddle::Paddle(Scene& s, const Level& level, PowerUpManager& powerUps) :
+        RenderEntity(s), level_(level), powerUps_(powerUps) {
         auto& tr = add<rlge::Transform>();
         tr.position = {g_cfg.viewPortWidth / 2.0f, g_cfg.viewPortHeight - 20.0f - g_cfg.paddleHeight / 2.0f};
 
@@ -41,7 +42,7 @@ namespace breakout {
         physics_ = &add<PhysicsBody>(conf);
 
         coll_ = &add<BoxCollider>(scene().collisions(), ColliderType::Kinematic, ColliderLayerMask::LAYER_PLAYER,
-                                  ColliderLayerMask::LAYER_BULLET,
+                                  toLayerMask(static_cast<uint32_t>(ColliderLayerMask::LAYER_BULLET) | static_cast<uint32_t>(ColliderLayerMask::LAYER_ITEM)),
                                   Rectangle{-level_.paddleWidth / 2.0f, -g_cfg.paddleHeight / 2.0f,
                                             level_.paddleWidth * 1.0f, g_cfg.paddleHeight * 1.0f},
                                   false);
@@ -54,6 +55,9 @@ namespace breakout {
         if (!tr)
             return;
 
+        const float widthMult = powerUps_.paddleWidthMultiplier();
+        const float effectiveWidth = level_.paddleWidth * widthMult;
+
         if (input().down(Action::MoveLeft)) {
             tr->position.x -= level_.paddleSpeed * dt;
         }
@@ -65,16 +69,35 @@ namespace breakout {
         tr->position.x -= input().axisValue(Action::MoveRight) * level_.paddleSpeed * dt;
 
 
-        const float halfWidth = level_.paddleWidth / 2.0f;
+        const float halfWidth = effectiveWidth / 2.0f;
         if (tr->position.x < halfWidth) {
             tr->position.x = halfWidth;
         }
         if (tr->position.x > g_cfg.viewPortWidth - halfWidth) {
             tr->position.x = g_cfg.viewPortWidth - halfWidth;
         }
+
+        // Keep collider in sync with current width
+        if (coll_) {
+            coll_->setLocalBounds(Rectangle{
+                -effectiveWidth / 2.0f,
+                -g_cfg.paddleHeight / 2.0f,
+                effectiveWidth,
+                static_cast<float>(g_cfg.paddleHeight)
+            });
+        }
     }
 
     void Paddle::onCollision(const CollisionEvent& event) {
+        // Pick up power-ups
+        if (auto* powerUp = dynamic_cast<PowerUp*>(&event.colliderB->entity())) {
+            if (!powerUp->isCollected()) {
+                powerUp->collect();
+                powerUps_.activate(powerUp->type());
+                return;
+            }
+        }
+
         if (auto* ballPhysics = event.colliderB->entity().get<PhysicsBody>()) {
             const auto* tr = get<rlge::Transform>();
             const auto* ballTr = event.colliderB->entity().get<rlge::Transform>();
@@ -83,7 +106,7 @@ namespace breakout {
                 return;
 
             // Calculate hit position (-1.0 to 1.0)
-            const auto hitOffset = (ballTr->position.x - tr->position.x) / (level_.paddleWidth / 2.0f);
+            const auto hitOffset = (ballTr->position.x - tr->position.x) / ((level_.paddleWidth * powerUps_.paddleWidthMultiplier()) / 2.0f);
 
             // Modify the ball angle based on hit position
             const auto angle = hitOffset * g_cfg.maxBallPaddleDeflectionAngle * DEG2RAD;
@@ -105,14 +128,15 @@ namespace breakout {
             const auto* tr = get<rlge::Transform>();
             if (!tr)
                 return;
-            DrawRectangle(static_cast<int>(tr->position.x - level_.paddleWidth / 2.0f),
-                          static_cast<int>(tr->position.y - g_cfg.paddleHeight / 2.0f), level_.paddleWidth,
+            const float effectiveWidth = level_.paddleWidth * powerUps_.paddleWidthMultiplier();
+            DrawRectangle(static_cast<int>(tr->position.x - effectiveWidth / 2.0f),
+                          static_cast<int>(tr->position.y - g_cfg.paddleHeight / 2.0f), static_cast<int>(effectiveWidth),
                           g_cfg.paddleHeight, g_cfg.paddleColor);
         });
     }
 
-    Brick::Brick(Scene& s, const BrickConfig& config, const float screenX, const float screenY) :
-        RenderEntity(s), config_(config) {
+    Brick::Brick(Scene& s, const BrickConfig& config, const float screenX, const float screenY, PowerUpManager& powerUps) :
+        RenderEntity(s), config_(config), powerUps_(powerUps) {
         auto& tr = add<rlge::Transform>();
         tr.position = {screenX, screenY};
 
@@ -130,6 +154,7 @@ namespace breakout {
         if (--hitPoints_ <= 0) {
             alive_ = false;
             coll_->unregisterCollider();
+            spawnPowerUpsIfApplicable();
             scene().gameEvents().enqueue(BrickDestroyed{config_.hitPoints * 10, config_});
             destroyDeferred();
         } else {
@@ -156,6 +181,52 @@ namespace breakout {
         });
     }
 
+    void Brick::spawnPowerUpsIfApplicable() {
+        auto* tr = get<rlge::Transform>();
+        if (!tr)
+            return;
+
+        if (!config_.containedPowerUps.empty()) {
+            for (auto type : config_.containedPowerUps) {
+                scene().spawn<PowerUp>(type, tr->position.x, tr->position.y);
+            }
+            return;
+        }
+
+        if (config_.powerUpDropChance > 0.0f) {
+            const float roll = static_cast<float>(GetRandomValue(0, 1000)) / 1000.0f;
+            if (roll <= config_.powerUpDropChance) {
+                const auto type = getRandomPowerUpType();
+                scene().spawn<PowerUp>(type, tr->position.x, tr->position.y);
+            }
+        }
+    }
+
+    PowerUpType Brick::getRandomPowerUpType() {
+        static const std::vector<std::pair<PowerUpType, int>> weights = {
+            {PowerUpType::WidePaddle, 20},
+            {PowerUpType::MultiBall, 15},
+            {PowerUpType::SlowBall, 15},
+            {PowerUpType::ExtraLife, 5},
+            {PowerUpType::FireBall, 10},
+            {PowerUpType::LaserPaddle, 10},
+            {PowerUpType::ScoreMultiplier, 10},
+            {PowerUpType::SafetyNet, 10},
+            {PowerUpType::FastBall, 3},   // Negative, less common
+            {PowerUpType::NarrowPaddle, 2},  // Negative, rare
+        };
+
+        int total = 0;
+        for (const auto& [type, weight] : weights) total += weight;
+
+        int roll = GetRandomValue(0, total - 1);
+        for (const auto& [type, weight] : weights) {
+            roll -= weight;
+            if (roll < 0) return type;
+        }
+        return PowerUpType::WidePaddle;
+    }
+
     Ball::Ball(Scene& s, const Level& level) :
         RenderEntity(s), level_(level) {
         auto& tr = add<rlge::Transform>();
@@ -180,7 +251,7 @@ namespace breakout {
         if (tr->position.y > g_cfg.viewPortHeight && !outOfFrame_) {
             outOfFrame_ = true;
             // Defer handling so the scene isn't mutated mid-update.
-            scene().gameEvents().enqueue(BallLost{});
+            scene().gameEvents().enqueue(BallLost{ id() });
         }
     }
 

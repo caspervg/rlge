@@ -5,6 +5,8 @@
 #include "circle_collider.hpp"
 #include "entity.hpp"
 #include "physics_body.hpp"
+#include "powerup_manager.hpp"
+#include "powerup_types.hpp"
 #include "render_entity.hpp"
 #include "scene.hpp"
 
@@ -27,29 +29,34 @@ namespace breakout {
 
     class Paddle final : public RenderEntity {
     public:
-        explicit Paddle(Scene& s, const Level& level);
+        explicit Paddle(Scene& s, const Level& level, PowerUpManager& powerUps);
         void update(float dt) override;
         void onCollision(const CollisionEvent& event);
         void draw() override;
 
     private:
         const Level& level_;
+        PowerUpManager& powerUps_;
         PhysicsBody* physics_{nullptr};
         BoxCollider* coll_{nullptr};
     };
 
     class Brick final : public RenderEntity {
     public:
-        explicit Brick(Scene& s, const BrickConfig& config, float screenX, float screenY);
+        explicit Brick(Scene& s, const BrickConfig& config, float screenX, float screenY, PowerUpManager& powerUps);
         void onCollision(const CollisionEvent& event);
         void draw() override;
 
     private:
         const BrickConfig& config_;
+        PowerUpManager& powerUps_;
         BoxCollider* coll_{nullptr};
         bool alive_ = true;
         int maxHitPoints_{config_.hitPoints};
         int hitPoints_{config_.hitPoints};
+
+        void spawnPowerUpsIfApplicable();
+        PowerUpType getRandomPowerUpType();
     };
 
     class Ball final : public RenderEntity {

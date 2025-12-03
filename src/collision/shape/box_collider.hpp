@@ -96,6 +96,8 @@ namespace rlge {
             return worldPts;
         }
 
+        void setLocalBounds(const Rectangle& local) { local_ = local; }
+
     private:
         Rectangle local_;
     };

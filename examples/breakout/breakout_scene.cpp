@@ -1,10 +1,15 @@
 #include "breakout_scene.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 #include "breakout_events.hpp"
 #include "breakout_level.hpp"
 #include "circle_collider.hpp"
 #include "runtime.hpp"
 #include "scene.hpp"
+#include "powerup_entity.hpp"
+#include "safety_net.hpp"
 
 namespace breakout {
     using namespace rlge;
@@ -15,12 +20,36 @@ namespace breakout {
         const Level* level = game_->currentLevel();
         numBricksTotal_ = level->bricks.size();
         numBricksLeft_ = numBricksTotal_;
+        ballLaunched_ = false;
 
         camera_ = rlge::Camera();
         setSingleView(camera_);
 
+        // Reset state
+        powerUps_.deactivateAll();
+        lastBallSpeedMult_ = 1.0f;
+        extraBalls_.clear();
+        safetyNet_ = nullptr;
+
+        // Setup power-up callbacks for instant effects or scene-side effects
+        powerUps_.setCallback([this](PowerUpType type, bool activated) {
+            if (type == PowerUpType::MultiBall && activated) {
+                spawnExtraBalls_(2);
+            } else if (type == PowerUpType::ExtraLife && activated) {
+                game_->gainLife();
+            } else if (type == PowerUpType::SafetyNet) {
+                if (activated && !safetyNet_) {
+                    safetyNet_ = &spawn<SafetyNet>(g_cfg.viewPortHeight - 4.0f);
+                } else if (!activated) {
+                    despawnSafetyNet_();
+                }
+            } else if (type == PowerUpType::SlowBall || type == PowerUpType::FastBall) {
+                applyBallSpeedMultiplier_();
+            }
+        });
+
         // Spawn paddle and ball
-        paddle_ = &spawn<Paddle>(*level);
+        paddle_ = &spawn<Paddle>(*level, powerUps_);
         ball_ = &spawn<Ball>(*level);
 
         // Spawn bricks
@@ -32,7 +61,7 @@ namespace breakout {
         for (const auto& brickConfig : level->bricks) {
             const auto centerScreenX = startX + g_cfg.brickWidth * 0.5f + brickConfig.x * (g_cfg.brickWidth + g_cfg.brickMargin);
             const auto centerScreenY = startY + g_cfg.brickHeight * 0.5f + brickConfig.y * (g_cfg.brickHeight + g_cfg.brickMargin);
-            bricks_.push_back(&spawn<Brick>(brickConfig, centerScreenX, centerScreenY));
+            bricks_.push_back(&spawn<Brick>(brickConfig, centerScreenX, centerScreenY, powerUps_));
         }
 
         // Spawn walls
@@ -58,6 +87,7 @@ namespace breakout {
 
     void BreakoutScene::update(const float dt) {
         Scene::update(dt);
+        powerUps_.update(dt);
 
         if (!ballLaunched_) {
             auto* ballBody = ball_ ? ball_->get<PhysicsBody>() : nullptr;
@@ -66,18 +96,13 @@ namespace breakout {
                 ballBody->setVelocity({0.0f, 0.0f}); // Ensure the ball stays parked on the paddle center
 
                 if (input().pressed(Action::Fire)) {
-                    ballBody->setVelocity(game_->currentLevel()->ballVelocityStart);
+                    Vector2 launchVel = Vector2Scale(game_->currentLevel()->ballVelocityStart, powerUps_.ballSpeedMultiplier());
+                    ballBody->setVelocity(launchVel);
+                    lastBallSpeedMult_ = powerUps_.ballSpeedMultiplier();
                     ballLaunched_ = true;
                 }
             }
         }
-    }
-
-    void BreakoutScene::resetBall_() {
-        ball_->destroyDeferred();
-        ball_ = &spawn<Ball>(*game_->currentLevel());
-        ballLaunched_ = false;
-        attachBallToPaddle_();
     }
 
     void BreakoutScene::handleCollisionResponse_(Entity& entity, const CollisionEvent& event) {
@@ -91,20 +116,28 @@ namespace breakout {
 
     void BreakoutScene::handleBrickDestroyed_(const BrickDestroyed& e) {
         const Level* level = game_->currentLevel();
-        levelScore_ += e.points;
+        const float scoreMult = powerUps_.scoreMultiplier();
+        levelScore_ += static_cast<int>(std::lround(e.points * scoreMult));
 
         camera_.shake(g_cfg.brickHitShakeDuration, g_cfg.brickHitShakeIntensity);
 
-        if (auto* body = ball_ ? ball_->get<PhysicsBody>() : nullptr) {
-            // Increase ball speed
-            const Vector2 vel = body->velocity();
-            if (const auto speed = Vector2Length(vel); speed > 0.0f) {
-                float newSpeed = speed * level->ballVelocityMultiplier;
-                if (level->ballVelocityMaximum > 0.0f && newSpeed > level->ballVelocityMaximum) {
-                    newSpeed = level->ballVelocityMaximum;
+        auto updateSpeed = [this, level](Ball* b) {
+            if (!b) return;
+            if (auto* body = b->get<PhysicsBody>()) {
+                const Vector2 vel = body->velocity();
+                if (const auto speed = Vector2Length(vel); speed > 0.0f) {
+                    float newSpeed = speed * level->ballVelocityMultiplier;
+                    if (level->ballVelocityMaximum > 0.0f && newSpeed > level->ballVelocityMaximum) {
+                        newSpeed = level->ballVelocityMaximum;
+                    }
+                    body->setVelocity(Vector2Scale(Vector2Normalize(vel), newSpeed));
                 }
-                body->setVelocity(Vector2Scale(Vector2Normalize(vel), newSpeed));
             }
+        };
+
+        updateSpeed(ball_);
+        for (auto* b : extraBalls_) {
+            updateSpeed(b);
         }
 
         if (numBricksLeft_ > 0 && --numBricksLeft_ == 0) {
@@ -113,12 +146,45 @@ namespace breakout {
     }
 
     void BreakoutScene::handleBrickHit_(const BrickHit& e) {
-        camera_.shake(g_cfg.brickHitShakeDuration * 0.5, g_cfg.brickHitShakeIntensity * 0.5);
+        camera_.shake(g_cfg.brickHitShakeDuration * 0.5f, g_cfg.brickHitShakeIntensity * 0.5f);
     }
 
     void BreakoutScene::handleBallLost_(const BallLost& e) {
-        if (game_->displayLivesRemaining() > 1) {
-            resetBall_();
+        // Remove references to the lost ball
+        if (ball_ && ball_->id() == e.ballId) {
+            ball_->destroyDeferred();
+            ball_ = nullptr;
+        } else {
+            std::erase_if(extraBalls_, [id = e.ballId](Ball* b) {
+                if (b && b->id() == id) {
+                    b->destroyDeferred();
+                    return true;
+                }
+                return false;
+            });
+        }
+
+        // Promote another ball to primary if available
+        if (!ball_ && !extraBalls_.empty()) {
+            ball_ = extraBalls_.back();
+            extraBalls_.pop_back();
+        }
+
+        const bool hasBalls = ball_ != nullptr || !extraBalls_.empty();
+        if (hasBalls) {
+            return;
+        }
+
+        // No balls left: lose a life and reset
+        powerUps_.deactivateAll();
+        clearExtraBalls_();
+        despawnSafetyNet_();
+        game_->loseLife();
+        if (game_->displayLivesRemaining() > 0) {
+            ball_ = &spawn<Ball>(*game_->currentLevel());
+            ballLaunched_ = false;
+            attachBallToPaddle_();
+            lastBallSpeedMult_ = powerUps_.ballSpeedMultiplier();
         }
     }
 
@@ -133,6 +199,79 @@ namespace breakout {
 
         ballTr->position.x = paddleTr->position.x;
         ballTr->position.y = paddleTr->position.y - (g_cfg.paddleHeight / 2.0f) - game_->currentLevel()->ballRadius - 1.0f;
+    }
+
+    void BreakoutScene::spawnExtraBalls_(const int count) {
+        if (!ball_) return;
+        auto* originalTr = ball_->get<rlge::Transform>();
+        auto* originalBody = ball_->get<rlge::PhysicsBody>();
+        if (!originalTr || !originalBody) return;
+
+        const Vector2 baseVel = originalBody->velocity();
+        const float speed = Vector2Length(baseVel);
+
+        for (int i = 0; i < count; i++) {
+            Ball& newBall = spawn<Ball>(*game_->currentLevel());
+            auto* tr = newBall.get<rlge::Transform>();
+            if (tr) {
+                tr->position = originalTr->position;
+            }
+
+            auto* body = newBall.get<PhysicsBody>();
+            if (body) {
+                const float angleOffset = (i + 1) * 30.0f * DEG2RAD * (i % 2 == 0 ? 1.0f : -1.0f);
+                const float cs = cosf(angleOffset);
+                const float sn = sinf(angleOffset);
+                Vector2 newVel = {
+                    cs * baseVel.x - sn * baseVel.y,
+                    sn * baseVel.x + cs * baseVel.y
+                };
+                if (Vector2Length(newVel) > 0.0f) {
+                    newVel = Vector2Scale(Vector2Normalize(newVel), speed);
+                }
+                body->setVelocity(newVel);
+            }
+
+            extraBalls_.push_back(&newBall);
+        }
+        applyBallSpeedMultiplier_();
+    }
+
+    void BreakoutScene::applyBallSpeedMultiplier_() {
+        const float newMult = powerUps_.ballSpeedMultiplier();
+        if (newMult == lastBallSpeedMult_ || newMult <= 0.0f) {
+            return;
+        }
+        const float ratio = newMult / lastBallSpeedMult_;
+        auto scaleBall = [ratio](Ball* b) {
+            if (!b) return;
+            if (auto* body = b->get<rlge::PhysicsBody>()) {
+                Vector2 vel = body->velocity();
+                vel = Vector2Scale(vel, ratio);
+                body->setVelocity(vel);
+            }
+        };
+        scaleBall(ball_);
+        for (auto* b : extraBalls_) {
+            scaleBall(b);
+        }
+        lastBallSpeedMult_ = newMult;
+    }
+
+    void BreakoutScene::clearExtraBalls_() {
+        for (auto* b : extraBalls_) {
+            if (b) {
+                b->destroyDeferred();
+            }
+        }
+        extraBalls_.clear();
+    }
+
+    void BreakoutScene::despawnSafetyNet_() {
+        if (safetyNet_) {
+            safetyNet_->destroyDeferred();
+            safetyNet_ = nullptr;
+        }
     }
 
 } // namespace breakout

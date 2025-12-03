@@ -54,6 +54,10 @@ namespace breakout {
         }
     }
 
+    void BreakoutGame::gainLife() {
+        state_.livesRemaining++;
+    }
+
     void BreakoutGame::gameOver() {
         state_.isGameOver = true;
         saveHighScore_();
@@ -71,8 +75,6 @@ namespace breakout {
 
         levelCompletedId_ = bus.subscribe<LevelCompleted>([this](const LevelCompleted& e) { completeLevel(e.levelScore); });
 
-        ballLostId_ = bus.subscribe<BallLost>([this](const BallLost& e) { loseLife(); });
-
         restartGameId_ = bus.subscribe<RestartGame>([this](const RestartGame& _) { restart(); });
     }
 
@@ -80,7 +82,6 @@ namespace breakout {
         auto& bus = runtime_.services().gameEvents();
 
         bus.unsubscribe<LevelCompleted>(levelCompletedId_);
-        bus.unsubscribe<BallLost>(ballLostId_);
         bus.unsubscribe<RestartGame>(restartGameId_);
     }
 

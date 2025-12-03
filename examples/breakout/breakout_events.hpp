@@ -1,5 +1,6 @@
 #pragma once
 #include "breakout_level.hpp"
+#include "entity_registry.hpp"
 
 namespace breakout {
 
@@ -26,6 +27,8 @@ namespace breakout {
         BrickConfig brick{};
     };
 
-    struct BallLost {};
+    struct BallLost {
+        rlge::EntityId ballId{0};
+    };
 
 }

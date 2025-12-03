@@ -1,6 +1,8 @@
 #include "breakout_level.hpp"
 
 #include <format>
+#include <optional>
+#include <set>
 
 #include "breakout_entities.hpp"
 #include "include/cpptoml.h"
@@ -85,22 +87,43 @@ namespace breakout {
         return Standard;
     }
 
-    std::unordered_set<BrickConfig> LevelManager::generateBricks_(const int rows, const int columns) {
-        std::unordered_set<BrickConfig> bricks;
+    std::vector<BrickConfig> LevelManager::generateBricks_(const int rows, const int columns) {
+        std::vector<BrickConfig> bricks;
+        bricks.reserve(static_cast<size_t>(rows * columns));
         for (auto r = 0; r < rows; r++) {
             for (auto c = 0; c < columns; c++) {
-                bricks.emplace(BrickConfig{c, r, 1, LIME, Standard});
+                bricks.push_back(BrickConfig{c, r, 1, LIME, Standard});
             }
         }
         return bricks;
     }
 
-    std::unordered_set<BrickConfig> LevelManager::parseBricks_(
+    namespace {
+        std::optional<PowerUpType> powerUpFromString(const std::string& str) {
+            if (str == "WidePaddle") return PowerUpType::WidePaddle;
+            if (str == "NarrowPaddle") return PowerUpType::NarrowPaddle;
+            if (str == "LaserPaddle") return PowerUpType::LaserPaddle;
+            if (str == "StickyPaddle") return PowerUpType::StickyPaddle;
+            if (str == "MultiBall") return PowerUpType::MultiBall;
+            if (str == "FireBall") return PowerUpType::FireBall;
+            if (str == "SlowBall") return PowerUpType::SlowBall;
+            if (str == "FastBall") return PowerUpType::FastBall;
+            if (str == "ExtraLife") return PowerUpType::ExtraLife;
+            if (str == "ScoreMultiplier") return PowerUpType::ScoreMultiplier;
+            if (str == "SafetyNet") return PowerUpType::SafetyNet;
+            return std::nullopt;
+        }
+    }
+
+    std::vector<BrickConfig> LevelManager::parseBricks_(
         const int rows,
         const int columns,
         const std::shared_ptr<cpptoml::table_array>& bricksArr
         ) {
-        std::unordered_set<BrickConfig> bricks{};
+        std::vector<BrickConfig> bricks{};
+        bricks.reserve(bricksArr->get().size());
+        std::set<std::pair<int, int>> occupied;
+
         for (auto i = 0; i < bricksArr->get().size(); i++) {
             const auto brickTab = bricksArr->get()[i]->as_table();
             if (!brickTab)
@@ -129,6 +152,12 @@ namespace breakout {
             brick.y = static_cast<int>(posArr->at(0));
             brick.x = static_cast<int>(posArr->at(1));
 
+            // Avoid duplicates
+            if (occupied.contains({brick.x, brick.y})) {
+                continue;
+            }
+            occupied.insert({brick.x, brick.y});
+
             // Parse type
             auto typeVal = brickTab->get_as<std::string>("type").value_or("standard");
             brick.type = brickTypeFromString_(typeVal);
@@ -144,7 +173,25 @@ namespace breakout {
             else if (colorVal && colorVal->size() == 4) {
                 brick.color = Color(colorVal->at(0), colorVal->at(1), colorVal->at(2), colorVal->at(3));
             }
-            bricks.emplace(brick);
+
+            // Parse explicit power-ups list or single
+            auto powerUpsArr = brickTab->get_array_of<std::string>("powerUps");
+            if (powerUpsArr) {
+                for (const auto& pu : *powerUpsArr) {
+                    if (auto parsed = powerUpFromString(pu)) {
+                        brick.containedPowerUps.push_back(*parsed);
+                    }
+                }
+            } else if (auto single = brickTab->get_as<std::string>("powerUp")) {
+                if (auto parsed = powerUpFromString(*single)) {
+                    brick.containedPowerUps.push_back(*parsed);
+                }
+            }
+
+            // Parse random drop chance
+            brick.powerUpDropChance = static_cast<float>(brickTab->get_as<double>("powerUpDropChance").value_or(0.0));
+
+            bricks.push_back(brick);
         }
 
         return bricks;

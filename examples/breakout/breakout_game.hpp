@@ -35,6 +35,7 @@ namespace breakout {
 
         void completeLevel(int score);   // Called when all bricks are destroyed
         void loseLife();        // Called when the ball is lost
+        void gainLife();        // Called when a life is granted
         void gameOver();        // Transition to game over screen
 
         [[nodiscard]] const SessionState& state() const { return state_; }
@@ -61,7 +62,6 @@ namespace breakout {
         SessionState state_;
 
         EventBus::SubscriptionId levelCompletedId_{0};
-        EventBus::SubscriptionId ballLostId_{0};
         EventBus::SubscriptionId restartGameId_{0};
     };
 }
