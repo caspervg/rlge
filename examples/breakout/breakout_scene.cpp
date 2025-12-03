@@ -169,7 +169,6 @@ namespace breakout {
                 const auto text = TextFormat("+%d", displayPoints);
                 const auto textWidth = MeasureText(text, fontSize);
                 const auto textWidthBorder = MeasureText(text, fontSizeBorder);
-                std::println("{}", p.rotation);
                 DrawTextPro(GetFontDefault(), text, Vector2{p.pos.x - textWidthBorder / 2.0f, p.pos.y}, Vector2{0,0}, p.rotation, fontSizeBorder, 1.0f, WHITE);
                 DrawTextPro(GetFontDefault(), text, Vector2{p.pos.x - textWidth / 2.0f, p.pos.y}, Vector2{0,0}, p.rotation, fontSize, 1.0f, p.color);
             }
