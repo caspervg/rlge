@@ -6,10 +6,10 @@
 #include "breakout_level.hpp"
 #include "particle_emitter.hpp"
 #include "particle_fx.hpp"
-#include "runtime.hpp"
-#include "scene.hpp"
 #include "powerup.hpp"
+#include "runtime.hpp"
 #include "safety_net.hpp"
+#include "scene.hpp"
 
 namespace breakout {
     using namespace rlge;
@@ -196,7 +196,9 @@ namespace breakout {
         }
 
         if (numBricksLeft_ > 0 && --numBricksLeft_ == 0) {
-            gameEvents().enqueue(LevelCompleted{levelScore_});
+            timers().after(0.25, [this] () {
+                gameEvents().enqueue(LevelCompleted{levelScore_});
+            });
         }
     }
 
@@ -269,7 +271,7 @@ namespace breakout {
         const Vector2 baseVel = originalBody->velocity();
         const float speed = Vector2Length(baseVel);
 
-        for (int i = 0; i < count; i++) {
+        for (auto i = 0; i < count; i++) {
             Ball& newBall = spawn<Ball>(*game_->currentLevel());
             auto* tr = newBall.get<rlge::Transform>();
             if (tr) {

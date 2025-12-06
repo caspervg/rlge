@@ -4,19 +4,7 @@
 
 namespace breakout {
 
-void PowerUpManager::update(float dt) {
-    std::erase_if(effects_, [&](ActiveEffect& effect) {
-        if (effect.timeRemaining <= 0.0f) {
-            return false; // Permanent
-        }
-        effect.timeRemaining -= dt;
-        if (effect.timeRemaining <= 0.0f) {
-            notifyCallback(effect.type, false);
-            return true;
-        }
-        return false;
-    });
-}
+void PowerUpManager::update(const float dt) { timers_.update(dt); }
 
 void PowerUpManager::activate(PowerUpType type) {
     const auto& config = kPowerUpConfigs.at(type);
@@ -24,15 +12,6 @@ void PowerUpManager::activate(PowerUpType type) {
     if (config.duration <= 0.0f) {
         applyInstantEffect(type);
         return;
-    }
-
-    // Refresh existing effect
-    for (auto& effect : effects_) {
-        if (effect.type == type) {
-            effect.timeRemaining = config.duration;
-            effect.magnitude = config.magnitude;
-            return;
-        }
     }
 
     // Handle mutually exclusive effects
@@ -46,23 +25,30 @@ void PowerUpManager::activate(PowerUpType type) {
         deactivate(PowerUpType::SlowBall);
     }
 
-    effects_.push_back({type, config.duration, config.magnitude});
-    notifyCallback(type, true);
+    refreshEffect_(type, config.duration, config.magnitude);
 }
 
 void PowerUpManager::deactivate(PowerUpType type) {
     auto it = std::find_if(effects_.begin(), effects_.end(), [type](const ActiveEffect& e) { return e.type == type; });
-    if (it != effects_.end()) {
-        notifyCallback(type, false);
-        effects_.erase(it);
+    if (it == effects_.end())
+        return;
+
+    if (it->countdown) {
+        timers_.cancel(it->countdown);
     }
+    notifyCallback(type, false);
+    effects_.erase(it);
 }
 
 void PowerUpManager::deactivateAll() {
     for (const auto& e : effects_) {
+        if (e.countdown) {
+            timers_.cancel(e.countdown);
+        }
         notifyCallback(e.type, false);
     }
     effects_.clear();
+    timers_.clearCountdowns();
 }
 
 bool PowerUpManager::isActive(PowerUpType type) const {
@@ -105,6 +91,44 @@ void PowerUpManager::applyInstantEffect(const PowerUpType type) const {
 
 void PowerUpManager::notifyCallback(const PowerUpType type, const bool activated) const {
     if (callback_) callback_(type, activated);
+}
+
+void PowerUpManager::refreshEffect_(const PowerUpType type, const float duration, const float magnitude) {
+    for (auto& effect : effects_) {
+        if (effect.type == type) {
+            if (effect.countdown) {
+                timers_.cancel(effect.countdown);
+            }
+            effect.countdown = duration > 0.0f
+                                   ? timers_.countdown(duration, nullptr, [this, type]() { deactivate(type); })
+                                   : rlge::CountdownHandle{};
+            effect.duration = duration;
+            effect.magnitude = magnitude;
+            notifyCallback(type, true);
+            return;
+        }
+    }
+    addTimedEffect_(type, duration, magnitude);
+}
+
+void PowerUpManager::addTimedEffect_(const PowerUpType type, const float duration, const float magnitude) {
+    ActiveEffect newEffect{
+        .type = type,
+        .magnitude = magnitude,
+        .duration = duration,
+        .countdown = {}
+    };
+
+    if (duration > 0.0f) {
+        newEffect.countdown = timers_.countdown(
+            duration,
+            nullptr,
+            [this, type]() { deactivate(type); }
+        );
+    }
+
+    effects_.push_back(std::move(newEffect));
+    notifyCallback(type, true);
 }
 
 } // namespace breakout

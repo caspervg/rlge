@@ -3,13 +3,15 @@
 #include <vector>
 
 #include "powerup_types.hpp"
+#include "timer.hpp"
 
 namespace breakout {
 
 struct ActiveEffect {
     PowerUpType type;
-    float timeRemaining; // <= 0 means permanent until cleared
     float magnitude;
+    float duration; // 0 = instant/permanent
+    rlge::CountdownHandle countdown;
 };
 
 class PowerUpManager {
@@ -44,10 +46,13 @@ public:
 private:
     void applyInstantEffect(PowerUpType type) const;
     void notifyCallback(PowerUpType type, bool activated) const;
+    void refreshEffect_(PowerUpType type, float duration, float magnitude);
+    void addTimedEffect_(PowerUpType type, float duration, float magnitude);
 
 private:
     std::vector<ActiveEffect> effects_;
     EffectCallback callback_;
+    rlge::TimerSystem timers_;
 };
 
 } // namespace breakout
