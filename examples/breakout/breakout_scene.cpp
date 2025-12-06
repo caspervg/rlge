@@ -22,6 +22,7 @@ namespace breakout {
         numBricksTotal_ = level->bricks.size();
         numBricksLeft_ = numBricksTotal_;
         ballLaunched_ = false;
+        canLaunch_ = false;
 
         camera_ = rlge::Camera();
         setSingleView(camera_);
@@ -78,6 +79,7 @@ namespace breakout {
 
         // Spawn scoreboard
         scoreBoard_ = &spawn<ScoreBoard>(*game_);
+        banner_ = &spawn<Banner>();
 
         // Wire up event handlers
         collisionResponses().addHandler([this](Entity& entity, const CollisionEvent& event) {
@@ -88,6 +90,18 @@ namespace breakout {
         });
         brickHitHandlerId_ = gameEvents().subscribe<BrickHit>([this](const BrickHit& e) { handleBrickHit_(e); });
         ballLostHandlerId_ = gameEvents().subscribe<BallLost>([this](const BallLost& e) { handleBallLost_(e); });
+
+        // Level start banner and delayed launch enable
+        if (banner_) {
+            banner_->show("Ready", 1.0f);
+        }
+        timers().countdown(
+            1.0f,
+            nullptr,
+            [this]() {
+                canLaunch_ = true;
+            }
+        );
     }
 
     void BreakoutScene::exit() {
@@ -106,7 +120,7 @@ namespace breakout {
             if (ballBody) {
                 ballBody->setVelocity({0.0f, 0.0f}); // Ensure the ball stays parked on the paddle center
 
-                if (input().pressed(Action::Fire)) {
+                if (canLaunch_ && input().pressed(Action::Fire)) {
                     const Vector2 launchVel = Vector2Scale(game_->currentLevel()->ballVelocityStart,
                                                            powerUps_.ballSpeedMultiplier());
                     ballBody->setVelocity(launchVel);
@@ -243,6 +257,18 @@ namespace breakout {
             ballLaunched_ = false;
             attachBallToPaddle_();
             lastBallSpeedMult_ = powerUps_.ballSpeedMultiplier();
+
+            canLaunch_ = false;
+            if (banner_) {
+                banner_->show("Get Ready", 0.8f);
+            }
+            timers().countdown(
+                0.8f,
+                nullptr,
+                [this]() {
+                    canLaunch_ = true;
+                }
+            );
         }
     }
 

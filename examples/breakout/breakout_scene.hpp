@@ -3,6 +3,7 @@
 #include "breakout_entities.hpp"
 #include "breakout_events.hpp"
 #include "breakout_game.hpp"
+#include "banner.hpp"
 #include "powerup_manager.hpp"
 #include "scene.hpp"
 
@@ -52,5 +53,7 @@ namespace breakout {
         EventBus::SubscriptionId ballLostHandlerId_{0};
         EventBus::SubscriptionId brickDestroyedHandlerId_{0};
         EventBus::SubscriptionId brickHitHandlerId_{0};
+        Banner* banner_{nullptr};
+        bool canLaunch_{false};
     };
 }

@@ -124,6 +124,7 @@ add_executable(rlge_breakout
         examples/breakout/breakout_game.cpp
         examples/breakout/powerup_manager.cpp
         examples/breakout/powerup.cpp
+        examples/breakout/banner.cpp
         examples/breakout/safety_net.cpp
         examples/breakout/scoreboard.cpp
         examples/breakout/wall.cpp
