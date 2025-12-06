@@ -5,17 +5,18 @@
 #include "entity.hpp"
 
 namespace rlge {
-    ViewHandle::ViewHandle(Runtime& r, const ViewId& view) : runtime_(r), id_(view) {}
+    ViewHandle::ViewHandle(Runtime& r, const ViewId& view) :
+        runtime_(r), id_(view) {}
+
     ViewHandle::~ViewHandle() { runtime_.removeView(id_); }
 
-    Scene::Scene(Runtime& r)
-        : runtime_(r)
-          , ctx_{r.assetStore(), r.input(), r.renderer(), r.layers(), r.services().gameEvents(), r.services().audio()}
-          , collisions_(CollisionSystem())
-          , collisionResponses_(CollisionResponseSystem())
-          , tweens_(TweenSystem())
-          , timers_(TimerSystem())
-    {}
+    Scene::Scene(Runtime& r) :
+        runtime_(r)
+        , ctx_{r.assetStore(), r.input(), r.renderer(), r.layers(), r.services().gameEvents(), r.services().audio()}
+        , collisions_(CollisionSystem())
+        , collisionResponses_(CollisionResponseSystem())
+        , tweens_(TweenSystem())
+        , timers_(TimerSystem()) {}
 
     Scene::~Scene() {
         for (auto& cleanup : forwardedGameSubscriptions_) {
@@ -118,8 +119,11 @@ namespace rlge {
 
     const EventBus& Scene::gameEvents() const { return ctx_.gameEvents; }
 
-    void Scene::addView(Camera& camera, const Rectangle& viewport) {
-        const auto viewId = runtime_.addView(camera, viewport);
+    void Scene::addView(Camera& camera, const Rectangle& viewport,
+                        std::function<Rectangle(float width, float height)> onResize,
+                        std::optional<ResizeMode> mode,
+                        std::optional<float> aspectRatio) {
+        const auto viewId = runtime_.addView(camera, viewport, std::move(onResize), mode, aspectRatio);
         viewHandles_.push_back(std::make_unique<ViewHandle>(runtime_, viewId));
     }
 

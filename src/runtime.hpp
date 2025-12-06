@@ -1,7 +1,9 @@
 #pragma once
 #include <algorithm>
+#include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -15,19 +17,14 @@
 #include "render_layer.hpp"
 #include "render_queue.hpp"
 #include "scene.hpp"
-#include "transition.hpp"
+#include "view.hpp"
 #include "timer.hpp"
+#include "transition.hpp"
 #include "window.hpp"
 
 
 namespace rlge {
     class Scene;
-
-    struct View {
-        ViewId id;
-        std::reference_wrapper<Camera> camera;
-        Rectangle viewport;
-    };
 
     class GameServices {
     public:
@@ -98,7 +95,10 @@ namespace rlge {
         Window& window();
         const Window& window() const;
 
-        ViewId addView(Camera& camera, const Rectangle& viewport);
+        ViewId addView(Camera& camera, const Rectangle& viewport,
+            std::function<Rectangle(float width, float height)> onResize = nullptr,
+            std::optional<ResizeMode> mode = std::nullopt,
+            std::optional<float> aspectRatio = std::nullopt);
         void clearViews();
         bool removeView(ViewId id);
 
@@ -110,15 +110,21 @@ namespace rlge {
 
         [[nodiscard]] const std::vector<View>& views() const;
 
+        void setResizeMode(ResizeMode mode, std::optional<float> aspectRatio = std::nullopt);
+        [[nodiscard]] ResizeMode resizeMode() const;
+        [[nodiscard]] float aspectRatio() const;
+
+        void onResize(std::function<void(float,float)> cb);
+
     private:
         void updateTransition_(float dt);
         void drawTransition_();
+        void handleResize_(float width, float height);
 
     private:
         enum class TransitionState { None, Out, In };
         bool running_ = false;
         bool debugEnabled_ = false;
-        KeyboardKey debugKey_ = KEY_F1;
         Window window_;
         AssetStore assets_;
         Input<> input_;
@@ -131,5 +137,14 @@ namespace rlge {
         std::unique_ptr<Transition> pendingTransition_;
         std::function<std::unique_ptr<Scene>()> pendingSceneFactory_;
         TransitionState transitionState_ = TransitionState::None;
+
+        ResizeMode resizeMode_{ResizeMode::Fill};
+        float aspectRatio_{0.0f}; // 0 -> derive from width/height
+        std::vector<std::function<void(int,int)>> resizeCallbacks_{};
+        std::optional<KeyCode> fullscreenKey_{std::nullopt};
+        float lastWidth_{0.0f};
+        float lastHeight_{0.0f};
+
+        std::optional<KeyCode> debugKey_{std::nullopt};
     };
 }

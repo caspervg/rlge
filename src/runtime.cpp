@@ -1,4 +1,5 @@
 #include "runtime.hpp"
+#include "scene.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -10,9 +11,16 @@
 namespace rlge {
     Runtime::Runtime(const WindowConfig& cfg)
         : window_(cfg)
-          , renderer_(layers_) {
+        , renderer_(layers_) {
         layers_.createDefaults();
         assets_.setRoot(std::filesystem::current_path());
+
+        aspectRatio_ = cfg.aspectRatio > 0 ? cfg.aspectRatio : (cfg.width / cfg.height);
+        lastWidth_ = cfg.width;
+        lastHeight_ = cfg.aspectRatio > 0 ? cfg.width / aspectRatio_ : cfg.height;
+        fullscreenKey_ = cfg.fullscreenKey;
+        debugKey_ = cfg.debugKey;
+
         rlImGuiSetup(true);
     }
 
@@ -34,13 +42,26 @@ namespace rlge {
             renderer_.beginFrame();
             const float dt = GetFrameTime();
 
-            if (IsKeyPressed(debugKey_)) {
+            if (fullscreenKey_.has_value() && input_.keyPressed(*fullscreenKey_)) {
+                window_.toggleFullscreen();
+            }
+
+            const float w = GetScreenWidth();
+            const float h = GetScreenHeight();
+            if (lastWidth_ != w || lastHeight_ != h) {
+                handleResize_(w, h);
+                lastWidth_ = w;
+                lastHeight_ = h;
+            }
+
+            if (debugKey_.has_value() && input_.keyPressed(*debugKey_)) {
                 debugEnabled_ = !debugEnabled_;
             }
 
             if (transitionState_ != TransitionState::None) {
                 updateTransition_(dt);
-            } else {
+            }
+            else {
                 scenes_.update(dt);
             }
             services_.timers().update(dt);
@@ -129,9 +150,12 @@ namespace rlge {
 
     const Window& Runtime::window() const { return window_; }
 
-    ViewId Runtime::addView(Camera& camera, const Rectangle& viewport) {
+    ViewId Runtime::addView(Camera& camera, const Rectangle& viewport,
+                            std::function<Rectangle(float width, float height)> onResize,
+                            const std::optional<ResizeMode> mode,
+                            const std::optional<float> aspectRatio) {
         const ViewId id = nextViewId_++;
-        views_.push_back(View{id, std::ref(camera), viewport});
+        views_.push_back(View{id, std::ref(camera), viewport, std::move(onResize), mode, aspectRatio});
         return id;
     }
 
@@ -176,6 +200,17 @@ namespace rlge {
 
     const std::vector<View>& Runtime::views() const { return views_; }
 
+    void Runtime::setResizeMode(const ResizeMode mode, const std::optional<float> aspectRatio) {
+        resizeMode_ = mode;
+        aspectRatio_ = aspectRatio.value_or(aspectRatio_);
+    }
+
+    ResizeMode Runtime::resizeMode() const { return resizeMode_; }
+
+    float Runtime::aspectRatio() const { return aspectRatio_; }
+
+    void Runtime::onResize(std::function<void(float width, float height)> cb) { resizeCallbacks_.push_back(cb); }
+
     void Runtime::updateTransition_(const float dt) {
         if (pendingTransition_->update(dt)) {
             if (transitionState_ == TransitionState::Out) {
@@ -195,6 +230,44 @@ namespace rlge {
     void Runtime::drawTransition_() {
         const auto [x, y] = window_.size();
         pendingTransition_->draw(renderer_, x, y);
+    }
+
+    void Runtime::handleResize_(const float width, const float height) {
+        for (auto& view : views_) {
+            const auto mode = view.resizeMode.value_or(resizeMode_);
+            const auto aspect = view.aspectRatio.value_or(aspectRatio_);
+
+            if (view.onResize) {
+                view.viewport = view.onResize(width, height);
+            }
+            else {
+                if (mode == ResizeMode::Fill) {
+                    view.viewport = {0, 0, width, height};
+                }
+                else {
+                    // Letterbox
+                    const float windowAspect = width / height;
+                    float vw = width, vh = height, vx = 0.f, vy = 0.f;
+
+                    if (windowAspect > aspect) {
+                        vw = height * aspect;
+                        vx = (width - vw) * 0.5f;
+                    }
+                    else if (windowAspect < aspect) {
+                        vh = width / aspect;
+                        vy = (height - vh) * 0.5f;
+                    }
+
+                    view.viewport = {vx, vy, vw, vh};
+                }
+            }
+        }
+
+        for (auto& cb : resizeCallbacks_) {
+            if (cb) {
+                cb(width, height);
+            }
+        }
     }
 
 

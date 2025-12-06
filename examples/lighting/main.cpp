@@ -1,5 +1,5 @@
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 
 #include "debug.hpp"
 #include "imgui.h"
@@ -217,12 +217,12 @@ public:
         // Draw instructions
         rq().submitUI([] {
             DrawText("Move mouse to control light", 10, 40, 20, WHITE);
-            DrawText("Press F1 for debug panel", 10, 65, 20, WHITE);
-            DrawText("Picture-in-picture shows alternate view (WASD move, arrows move camera)", 10, 90, 20, WHITE);
+            DrawText("Press F11 for debug panel", 10, 65, 20, WHITE);
+            DrawText("PiP shows alternate view (WASD move, arrows move camera)", 10, 90, 20, WHITE);
         });
 
         // Draw PIP border
-        const int border = 3;
+        constexpr auto border = 3;
         const Rectangle borderRect{
             pipViewport_.x - border,
             pipViewport_.y - border,
@@ -448,7 +448,8 @@ int main() {
         .height = 1080,
         .fps = 144,
         .title = "RLGE Lighting Demo",
-        .resizable = true
+        .resizable = true,
+        .debugKey = KeyCode::F11
     });
 
     runtime.pushScene<LightingDemoScene>();

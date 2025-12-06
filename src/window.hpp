@@ -1,12 +1,16 @@
 #pragma once
 
+#include <optional>
+
 #include "raylib.h"
+#include "input.hpp"
+#include "view.hpp"
 
 namespace rlge {
 
     struct WindowConfig {
-        int width{1280};
-        int height{720};
+        float width{1280.0f};
+        float height{720.0f};
         int fps{60};
         const char* title{"RLGE Game"};
 
@@ -15,6 +19,16 @@ namespace rlge {
         bool resizable{false};
         bool startFullscreen{false};
         bool borderless{false};
+
+        ResizeMode resizeMode{ResizeMode::Fill};
+        float aspectRatio{0.0f}; // 0 -> derive from width/height
+        std::optional<KeyCode> fullscreenKey{std::nullopt};
+
+    #if NDEBUG
+        std::optional<KeyCode> debugKey{KeyCode::F12};
+    #else
+        std::optional<KeyCode> debugKey{std::nullopt};
+    #endif
     };
 
     class Window {

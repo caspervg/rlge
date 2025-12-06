@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -12,16 +13,14 @@
 #include "input.hpp"
 #include "render_layer.hpp"
 #include "render_queue.hpp"
+#include "timer.hpp"
 #include "tween.hpp"
 #include "collision/collision_system.hpp"
-#include "timer.hpp"
+#include "view.hpp"
 
 namespace rlge {
-    struct View;
     class Runtime;
     class Entity;
-
-    using ViewId = std::uint32_t;
 
     struct GameContext {
         AssetStore& assets;
@@ -42,6 +41,7 @@ namespace rlge {
         ViewId id_;
     };
 
+    class Runtime;
     class Scene {
     public:
         explicit Scene(Runtime& r);
@@ -114,7 +114,10 @@ namespace rlge {
         EventBus& gameEvents();
         [[nodiscard]] const EventBus& gameEvents() const;
 
-        void addView(Camera& camera, const Rectangle& viewport);
+        void addView(Camera& camera, const Rectangle& viewport,
+            std::function<Rectangle(float width, float height)> onResize = nullptr,
+            std::optional<ResizeMode> mode = std::nullopt,
+            std::optional<float> aspectRatio = std::nullopt);
         [[nodiscard]] const View* primaryView() const;
         [[nodiscard]] const std::vector<View>& views() const;
 

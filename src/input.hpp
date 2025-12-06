@@ -322,6 +322,18 @@ namespace rlge {
             return IsMouseButtonReleased(static_cast<int>(button));
         }
 
+        [[nodiscard]] bool keyDown(KeyCode key) const {
+            return IsKeyDown(static_cast<int>(key));
+        }
+
+        [[nodiscard]] bool keyPressed(KeyCode key) const {
+            return IsKeyPressed(static_cast<int>(key));
+        }
+
+        [[nodiscard]] bool keyReleased(KeyCode key) const {
+            return IsKeyReleased(static_cast<int>(key));
+        }
+
         // Get mouse position
         [[nodiscard]] Vector2 mousePosition() const {
             return GetMousePosition();
@@ -359,7 +371,7 @@ namespace rlge {
                 return 0.0f;
 
             const auto& binding = it->second;
-            float value = 0.0f;
+            auto value = 0.0f;
 
             // Check keyboard binding first (provides fallback)
             if (binding.keyBinding.has_value()) {

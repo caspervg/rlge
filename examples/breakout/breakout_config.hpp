@@ -8,8 +8,8 @@ namespace breakout {
     struct Level;
 
     struct Config {
-        int viewPortWidth = 800;
-        int viewPortHeight = 600;
+        float viewPortWidth = 800.0f;
+        float viewPortHeight = 600.0f;
         int brickWidth = 30;
         int brickHeight = 15;
         int brickMargin = 5;
