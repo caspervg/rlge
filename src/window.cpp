@@ -56,6 +56,13 @@ namespace rlge {
         };
     }
 
+    Vector2 Window::renderSize() const {
+        return Vector2{
+            static_cast<float>(GetRenderWidth()),
+            static_cast<float>(GetRenderHeight())
+        };
+    }
+
     bool Window::isFullscreen() const {
         return IsWindowFullscreen();
     }
@@ -73,4 +80,3 @@ namespace rlge {
     }
 
 } // namespace rlge
-

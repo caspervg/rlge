@@ -30,10 +30,15 @@ namespace breakout {
         void applyBallSpeedMultiplier_();
         void clearExtraBalls_();
         void despawnSafetyNet_();
+        Rectangle computeViewport_(float renderWidth, float renderHeight) const;
+        void updateCameraViewport_(const Rectangle& viewport);
 
     private:
         BreakoutGame* game_{nullptr};
         rlge::Camera camera_;
+        float virtualWidth_{g_cfg.viewPortWidth};
+        float virtualHeight_{g_cfg.viewPortHeight};
+        float targetAspect_{virtualWidth_ / virtualHeight_};
         bool ballLaunched_{false};
         int levelScore_{0};
         unsigned int numBricksLeft_{0};

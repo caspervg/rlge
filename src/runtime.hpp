@@ -114,7 +114,7 @@ namespace rlge {
         [[nodiscard]] ResizeMode resizeMode() const;
         [[nodiscard]] float aspectRatio() const;
 
-        void onResize(std::function<void(float,float)> cb);
+        void onResize(std::function<void(float, float)> cb);
 
     private:
         void updateTransition_(float dt);
@@ -140,7 +140,7 @@ namespace rlge {
 
         ResizeMode resizeMode_{ResizeMode::Fill};
         float aspectRatio_{0.0f}; // 0 -> derive from width/height
-        std::vector<std::function<void(int,int)>> resizeCallbacks_{};
+        std::vector<std::function<void(float, float)>> resizeCallbacks_{};
         std::optional<KeyCode> fullscreenKey_{std::nullopt};
         float lastWidth_{0.0f};
         float lastHeight_{0.0f};

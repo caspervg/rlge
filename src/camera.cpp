@@ -62,8 +62,8 @@ namespace rlge {
     const Camera2D& Camera::cam2d() const { return cam_; }
 
     Rectangle Camera::getViewBounds() const {
-        const int screenWidth = GetScreenWidth();
-        const int screenHeight = GetScreenHeight();
+        const int screenWidth = GetRenderWidth();
+        const int screenHeight = GetRenderHeight();
 
         // Calculate world-space bounds
         const Vector2 topLeft = GetScreenToWorld2D({0, 0}, cam_);

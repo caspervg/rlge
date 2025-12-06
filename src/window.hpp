@@ -2,8 +2,8 @@
 
 #include <optional>
 
-#include "raylib.h"
 #include "input.hpp"
+#include "raylib.h"
 #include "view.hpp"
 
 namespace rlge {
@@ -46,6 +46,7 @@ namespace rlge {
         void setIcon(Image image);
 
         [[nodiscard]] Vector2 size() const;
+        [[nodiscard]] Vector2 renderSize() const;
         [[nodiscard]] bool isFullscreen() const;
         [[nodiscard]] bool isFocused() const;
         [[nodiscard]] Vector2 dpiScale() const;

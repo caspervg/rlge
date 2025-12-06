@@ -16,6 +16,7 @@ namespace rlge {
         assets_.setRoot(std::filesystem::current_path());
 
         aspectRatio_ = cfg.aspectRatio > 0 ? cfg.aspectRatio : (cfg.width / cfg.height);
+        resizeMode_ = cfg.resizeMode;
         lastWidth_ = cfg.width;
         lastHeight_ = cfg.aspectRatio > 0 ? cfg.width / aspectRatio_ : cfg.height;
         fullscreenKey_ = cfg.fullscreenKey;
@@ -46,8 +47,8 @@ namespace rlge {
                 window_.toggleFullscreen();
             }
 
-            const float w = GetScreenWidth();
-            const float h = GetScreenHeight();
+            const float w = static_cast<float>(GetRenderWidth());
+            const float h = static_cast<float>(GetRenderHeight());
             if (lastWidth_ != w || lastHeight_ != h) {
                 handleResize_(w, h);
                 lastWidth_ = w;

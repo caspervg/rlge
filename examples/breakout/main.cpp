@@ -7,11 +7,13 @@ using namespace rlge;
 int main() {
     const WindowConfig wcfg{
         .width = breakout::g_cfg.viewPortWidth,
+        .height = breakout::g_cfg.viewPortHeight,
         .fps = 144,
         .title = "RLGE Breakout",
         .resizable = true,
         .startFullscreen = false,
-        .aspectRatio = 16.0f / 9.0f,
+        .resizeMode = ResizeMode::Letterbox,
+        .aspectRatio = breakout::g_cfg.viewPortWidth / breakout::g_cfg.viewPortHeight,
         .fullscreenKey = KeyCode::F11,
         .debugKey = KeyCode::F12,
     };

@@ -10,16 +10,9 @@ namespace breakout {
         runtime_(runtime), levelManager_(levelFilePath.data()) {
         loadHighScore_();
         subscribeToEvents_();
-
-        runtime_.onResize([this](const float width, const float height) {
-            // TODO: Handle resizing more nicely.
-            g_cfg.viewPortHeight = height;
-            g_cfg.viewPortWidth = width;
-            restart();
-        });
     }
 
-    BreakoutGame::~BreakoutGame() { unsubscribeFromEvents_(); }d
+    BreakoutGame::~BreakoutGame() { unsubscribeFromEvents_(); }
 
     void BreakoutGame::start() {
         state_ = {

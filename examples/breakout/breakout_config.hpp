@@ -8,8 +8,9 @@ namespace breakout {
     struct Level;
 
     struct Config {
-        float viewPortWidth = 800.0f;
-        float viewPortHeight = 600.0f;
+        // Virtual playfield size; actual window can be any size and will letterbox to this aspect.
+        float viewPortWidth = 960.0f;
+        float viewPortHeight = 540.0f;
         int brickWidth = 30;
         int brickHeight = 15;
         int brickMargin = 5;

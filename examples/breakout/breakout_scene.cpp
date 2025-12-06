@@ -1,5 +1,6 @@
 #include "breakout_scene.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 #include "breakout_events.hpp"
@@ -25,7 +26,19 @@ namespace breakout {
         canLaunch_ = false;
 
         camera_ = rlge::Camera();
-        setSingleView(camera_);
+        const Vector2 renderSize = runtime().window().renderSize();
+        const Rectangle initialViewport = computeViewport_(renderSize.x, renderSize.y);
+        addView(
+            camera_,
+            initialViewport,
+            [this](float width, float height) {
+                const auto vp = computeViewport_(width, height);
+                updateCameraViewport_(vp);
+                return vp;
+            },
+            ResizeMode::Letterbox,
+            targetAspect_);
+        updateCameraViewport_(initialViewport);
 
         // Reset state
         powerUps_.deactivateAll();
@@ -360,6 +373,35 @@ namespace breakout {
             safetyNet_->destroyDeferred();
             safetyNet_ = nullptr;
         }
+    }
+
+    Rectangle BreakoutScene::computeViewport_(const float renderWidth, const float renderHeight) const {
+        const float windowAspect = renderWidth / renderHeight;
+        float vw = renderWidth;
+        float vh = renderHeight;
+        float vx = 0.0f;
+        float vy = 0.0f;
+
+        if (windowAspect > targetAspect_) {
+            vw = renderHeight * targetAspect_;
+            vx = (renderWidth - vw) * 0.5f;
+        }
+        else if (windowAspect < targetAspect_) {
+            vh = renderWidth / targetAspect_;
+            vy = (renderHeight - vh) * 0.5f;
+        }
+
+        return Rectangle{vx, vy, vw, vh};
+    }
+
+    void BreakoutScene::updateCameraViewport_(const Rectangle& viewport) {
+        const float scaleX = viewport.width > 0.0f ? viewport.width / virtualWidth_ : 1.0f;
+        const float scaleY = viewport.height > 0.0f ? viewport.height / virtualHeight_ : 1.0f;
+        const float scale = std::min(scaleX, scaleY);
+
+        camera_.setTarget({virtualWidth_ * 0.5f, virtualHeight_ * 0.5f});
+        camera_.setOffset({viewport.x + viewport.width * 0.5f, viewport.y + viewport.height * 0.5f});
+        camera_.setZoom(scale);
     }
 
 } // namespace breakout
