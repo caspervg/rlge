@@ -14,6 +14,7 @@
 #include "render_queue.hpp"
 #include "tween.hpp"
 #include "collision/collision_system.hpp"
+#include "timer.hpp"
 
 namespace rlge {
     struct View;
@@ -104,6 +105,9 @@ namespace rlge {
         TweenSystem& tweens();
         [[nodiscard]] const TweenSystem& tweens() const;
 
+        TimerSystem& timers();
+        [[nodiscard]] const TimerSystem& timers() const;
+
         EventBus& sceneEvents();
         [[nodiscard]] const EventBus& sceneEvents() const;
 
@@ -132,6 +136,7 @@ namespace rlge {
         CollisionSystem collisions_;
         CollisionResponseSystem collisionResponses_;
         TweenSystem tweens_;
+        TimerSystem timers_;
         EventBus sceneEvents_;
         EntityRegistry registry_;
         std::vector<std::unique_ptr<Entity>> entities_;

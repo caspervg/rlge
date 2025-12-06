@@ -14,6 +14,7 @@ namespace rlge {
           , collisions_(CollisionSystem())
           , collisionResponses_(CollisionResponseSystem())
           , tweens_(TweenSystem())
+          , timers_(TimerSystem())
     {}
 
     Scene::~Scene() {
@@ -31,6 +32,7 @@ namespace rlge {
     void Scene::resume() {}
 
     void Scene::update(const float dt) {
+        timers_.update(dt);
         tweens_.update(dt);
 
         for (const auto& e : entities_)
@@ -103,6 +105,10 @@ namespace rlge {
     TweenSystem& Scene::tweens() { return tweens_; }
 
     const TweenSystem& Scene::tweens() const { return tweens_; }
+
+    TimerSystem& Scene::timers() { return timers_; }
+
+    const TimerSystem& Scene::timers() const { return timers_; }
 
     EventBus& Scene::sceneEvents() { return sceneEvents_; }
 

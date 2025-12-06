@@ -43,6 +43,7 @@ namespace rlge {
             } else {
                 scenes_.update(dt);
             }
+            services_.timers().update(dt);
             services_.audio().update();
             services_.gameEvents().dispatchQueued();
 

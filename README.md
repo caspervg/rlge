@@ -30,6 +30,7 @@ This repository also contains example games/demos:
 - Batched render queue with layers (`Background`, `World`, `Foreground`, `UI`), z-sorting, per-view culling, and render stats.
 - Collision system with layers/masks, triggers vs solids vs kinematic colliders, AABB/OBB/circle/polygon shapes, and optional ImGui debug overlay.
 - Lightweight PhysicsBody component for gravity/forces/bounce with ground detection and collision response.
+- Timers at three scopes: per-entity via `TimerComponent`, per-scene via `Scene::timers()`, and game-wide via `Runtime::services().timers()`.
 - Asset store for textures/shaders (file or in-memory), prefab factory for named entity constructors, and an audio manager for sounds/music.
 - Particle emitter component with configurable spawn/render functions and helper spawn shapes.
 - Tilemap support using Tiled/JSON (via Tileson) with proper source-rect handling and per-tile flip flags.
@@ -131,6 +132,13 @@ Query input with `down()` (held), `pressed()` (just pressed), or `released()` (j
 - Use `setSingleView(camera)` for a full-screen camera or `runtime().addView(...)` to build split-screen/minimap layouts.
 - Spawn entities with `spawn<T>()`; add components like `Transform`, `Sprite`, `SpriteAnim`, `SheetSprite`, `ParticleEmitter`, or colliders to them.
 - Scenes own local event buses (`sceneEvents()`), tween and collision systems, and auto-cleaned view handles.
+
+#### Timers
+
+- **Scene timers** (`Scene::timers()`): tie scheduled callbacks to scene lifetimes—handy for spawning waves, timed UI prompts, or scripted beats that should reset when the scene is reloaded.
+- **Game timers** (`runtime.services().timers()`): survive scene transitions and pausing of the active scene; useful for global cooldowns, matchmaking timeouts, or metrics/telemetry ticks.
+- Timer scheduling returns `TimerHandle`s scoped to the owning system (scene, game service, or component) so you can't accidentally cancel the wrong timer; `handle.cancel()` is a convenience for cleanup.
+- Timers accept either `std::chrono` durations (milliseconds granularity) or plain `float` seconds via `after(...)` / `every(...)` (optionally with a maximum repetition count). For callback-free gating, `TimerSystem::cooldown(...)` returns a `CooldownHandle` that exposes `ready()`, `consume()`, and `reset()` convenience methods.
 
 ```cpp
 class MyScene : public rlge::Scene {
