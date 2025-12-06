@@ -85,10 +85,12 @@ public:
     }
 
     void draw() override {
+        Entity::draw();
+
         if (auto* tr = get<rlge::Transform>()) {
             const auto indicatorColor = highlight_ ? ORANGE : YELLOW;
-            rq().submit([pos = tr->position, indicatorColor] {
-                DrawCircleV(pos + Vector2{0.0f, -36.0f}, 6.0f, indicatorColor);
+            rq().submitWorld([pos = tr->position, indicatorColor] {
+                DrawCircleV(pos + Vector2{0.0f, +36.0f}, 6.0f, indicatorColor);
             });
         }
     }
@@ -120,7 +122,9 @@ public:
         auto& bgTex = assets().loadTexture("background", "../examples/basic_game/assets/background.bmp");
         auto& playerTex = assets().loadTexture("player", "../examples/basic_game/assets/player.bmp");
 
+        auto const size = runtime().window().size();
         camera_ = rlge::Camera();
+        camera_.setOffset({size.x * 0.5f, size.y * 0.5f});
         setSingleView(camera_);
 
         // Draw order: background first, player on top.
