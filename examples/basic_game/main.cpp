@@ -1,5 +1,6 @@
 #include "debug.hpp"
 #include "runtime.hpp"
+#include "timer.hpp"
 #include "window.hpp"
 #include "imgui.h"
 #include "sprite.hpp"
@@ -51,6 +52,10 @@ public:
 
         auto& anim = add<SpriteAnim>(texture, 32, 32);
         anim.loadStrip(0, 4, 0.15f);
+
+        timers_ = &add<TimerComponent>();
+        blinkHandle_ = timers_->every(0.35f, [this] { highlight_ = !highlight_; });
+        boostCooldown_ = timers_->cooldown(1.5f);
     }
 
     void update(float dt) override {
@@ -62,17 +67,47 @@ public:
         if (!tr)
             return;
 
+        const bool boostPressed = input.down(rlge::Action::Fire);
+        if (boostPressed && timers_->ready(boostCooldown_)) {
+            timers_->consume(boostCooldown_);
+            boosting_ = true;
+            timers_->after(std::chrono::milliseconds(500), [this] { boosting_ = false; });
+        }
+
+        const auto currentSpeed = boosting_ ? baseSpeed_ * boostMultiplier_ : baseSpeed_;
+
         if (input.down(rlge::Action::MoveLeft))
-            tr->position.x -= speed_ * dt;
+            tr->position.x -= currentSpeed * dt;
         if (input.down(rlge::Action::MoveRight))
-            tr->position.x += speed_ * dt;
+            tr->position.x += currentSpeed * dt;
         if (input.down(rlge::Action::MoveUp))
-            tr->rotation += speed_ * dt;
+            tr->rotation += currentSpeed * dt;
     }
 
-    float speed_ = 200.0f;
+    void draw() override {
+        if (auto* tr = get<rlge::Transform>()) {
+            const auto indicatorColor = highlight_ ? ORANGE : YELLOW;
+            rq().submit([pos = tr->position, indicatorColor] {
+                DrawCircleV(pos + Vector2{0.0f, -36.0f}, 6.0f, indicatorColor);
+            });
+        }
+    }
+
+    [[nodiscard]] bool boostReady() const { return timers_ && timers_->ready(boostCooldown_); }
+
+    bool highlighting() const { return highlight_; }
+    bool boosting() const { return boosting_; }
+    float baseSpeed_ = 200.0f;
+    float boostMultiplier_ = 2.25f;
 
     friend class GameScene;
+
+private:
+    TimerComponent* timers_{nullptr};
+    TimerHandle blinkHandle_{};
+    CooldownHandle boostCooldown_{};
+    bool highlight_{false};
+    bool boosting_{false};
 };
 
 class GameScene final : public Scene, public HasDebugOverlay {
@@ -92,6 +127,14 @@ public:
         bg_  = &spawn<Background>(bgTex);
         example_entity_ = &spawn<ExampleEntity>(playerTex);
         fps_ = &spawn<FpsCounter>();
+
+        sceneToggleHandle_ = timers().every(1.25f, 6, [this] {
+            if (bg_)
+                bg_->visible_ = !bg_->visible_;
+            sceneToggleCount_++;
+        });
+
+        globalHeartbeatHandle_ = runtime().services().timers().every(2.0f, [this] { globalHeartbeat_++; });
     }
 
     void update(float dt) override {
@@ -102,6 +145,12 @@ public:
                 view->camera.get().follow(tr->position);
             }
         }
+    }
+
+    void exit() override {
+        if (globalHeartbeatHandle_)
+            globalHeartbeatHandle_.cancel();
+        Scene::exit();
     }
 
     void debugOverlay() override {
@@ -132,8 +181,20 @@ public:
                 ImGui::SliderFloat("Player Y", &tr->position.y, -500.f, 500.f);
                 ImGui::SliderFloat("Player rotation", &tr->rotation, 0.f, 360.f);
             }
-            ImGui::SliderFloat("Player speed", &example_entity_->speed_, 50.f, 600.f);
+            ImGui::Text(
+                "Entity timer blinking: %s", example_entity_->highlighting() ? "ON" : "off"
+            );
+            ImGui::Text(
+                "Boost cooldown ready: %s", example_entity_->boostReady() ? "yes" : "charging"
+            );
+            ImGui::Text("Boosting active: %s", example_entity_->boosting() ? "yes" : "no");
+            ImGui::SliderFloat("Base speed", &example_entity_->baseSpeed_, 50.f, 600.f);
+            ImGui::SliderFloat("Boost multiplier", &example_entity_->boostMultiplier_, 1.2f, 4.0f);
         }
+
+        ImGui::Separator();
+        ImGui::Text("Scene timer toggles: %d / 6", sceneToggleCount_);
+        ImGui::Text("Global timer heartbeats: %d", globalHeartbeat_);
         ImGui::End();
     }
 private:
@@ -141,6 +202,10 @@ private:
     ExampleEntity* example_entity_{nullptr};
     rlge::Camera camera_;
     FpsCounter* fps_{nullptr};
+    TimerHandle sceneToggleHandle_{};
+    TimerHandle globalHeartbeatHandle_{};
+    int sceneToggleCount_{0};
+    int globalHeartbeat_{0};
 };
 
 int main() {
@@ -156,6 +221,7 @@ int main() {
     runtime.input().bind(rlge::Action::MoveLeft, rlge::KeyCode::A);
     runtime.input().bind(rlge::Action::MoveRight, rlge::KeyCode::D);
     runtime.input().bind(rlge::Action::MoveUp, rlge::KeyCode::W);
+    runtime.input().bind(rlge::Action::Fire, rlge::KeyCode::Space);
 
     // Start with our game scene
     runtime.pushScene<GameScene>();
