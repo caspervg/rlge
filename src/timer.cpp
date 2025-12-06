@@ -6,7 +6,7 @@ namespace rlge {
     bool TimerHandle::cancel() const {
         if (!owner_)
             return false;
-        return owner_->cancelId(id_);
+        return owner_->cancel(*this);
     }
 
     bool CooldownHandle::ready() const {
@@ -138,7 +138,7 @@ namespace rlge {
                         --(*timer.remainingRepeats);
                     }
 
-                    if (timer.remainingRepeats->value_or(0) == 0) {
+                    if (timer.remainingRepeats.value_or(0) == 0) {
                         timersToRemove.push_back(id);
                         break;
                     }
