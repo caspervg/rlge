@@ -99,12 +99,12 @@ public:
 
     bool highlighting() const { return highlight_; }
     bool boosting() const { return boosting_; }
-    float baseSpeed_ = 200.0f;
-    float boostMultiplier_ = 2.25f;
 
     friend class GameScene;
 
 private:
+    float baseSpeed_ = 200.0f;
+    float boostMultiplier_ = 2.25f;
     TimerComponent* timers_{nullptr};
     TimerHandle blinkHandle_{};
     CooldownHandle boostCooldown_{};
