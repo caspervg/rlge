@@ -89,7 +89,7 @@ void PowerUp::draw() {
 void PowerUp::collect() {
     collected_ = true;
     if (body_) {
-        body_->body()->SetEnabled(false);
+        body_->setEnabled(false);
     }
 }
 

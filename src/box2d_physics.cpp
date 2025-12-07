@@ -102,8 +102,10 @@ namespace rlge {
     }
 
     Box2DBody::~Box2DBody() {
-        world_.destroyBody(body_);
-        body_ = nullptr;
+        if (body_) {
+            world_.destroyBody(body_);
+            body_ = nullptr;
+        }
     }
 
     void Box2DBody::update(float dt) {
@@ -183,6 +185,14 @@ namespace rlge {
         return toVector2(body_->GetLinearVelocity());
     }
 
+    void Box2DBody::setEnabled(bool enabled) {
+        body_->SetEnabled(enabled);
+    }
+
+    bool Box2DBody::isEnabled() const {
+        return body_->IsEnabled();
+    }
+
     void Box2DBody::applyForce(const Vector2& force, const Vector2& point) {
         body_->ApplyForce(toB2Vec2(force), toB2Vec2(point), true);
     }
@@ -233,7 +243,10 @@ namespace rlge {
         
         event.manifold.colliding = true;
         event.manifold.normal = toVector2(worldManifold.normal);
-        event.manifold.contactPoint = toVector2(worldManifold.points[0]);
+        // Use first contact point if available, otherwise use zero
+        event.manifold.contactPoint = contact->GetManifold()->pointCount > 0 
+            ? toVector2(worldManifold.points[0]) 
+            : Vector2{0.0f, 0.0f};
         
         events_.push_back(event);
         activeContacts_[contact] = true;
@@ -296,7 +309,10 @@ namespace rlge {
             
             event.manifold.colliding = true;
             event.manifold.normal = toVector2(worldManifold.normal);
-            event.manifold.contactPoint = toVector2(worldManifold.points[0]);
+            // Use first contact point if available, otherwise use zero
+            event.manifold.contactPoint = contact->GetManifold()->pointCount > 0 
+                ? toVector2(worldManifold.points[0]) 
+                : Vector2{0.0f, 0.0f};
 
             events_.push_back(event);
 

@@ -52,6 +52,10 @@ namespace rlge {
         void setVelocity(const Vector2& vel);
         [[nodiscard]] Vector2 getVelocity() const;
 
+        // Enable/disable the body
+        void setEnabled(bool enabled);
+        [[nodiscard]] bool isEnabled() const;
+
         // Apply forces/impulses
         void applyForce(const Vector2& force, const Vector2& point);
         void applyForceToCenter(const Vector2& force);

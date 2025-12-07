@@ -43,8 +43,7 @@ namespace breakout {
         if (--hitPoints_ <= 0) {
             alive_ = false;
             if (body_) {
-                // Destroy the body to remove from physics simulation
-                body_->body()->SetEnabled(false);
+                body_->setEnabled(false);
             }
             spawnPowerUpsIfApplicable();
             scene().gameEvents().enqueue(BrickDestroyed{config_.hitPoints * 10, config_});

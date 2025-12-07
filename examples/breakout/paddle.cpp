@@ -74,24 +74,27 @@ namespace breakout {
         physics_->body()->SetTransform(b2Vec2(tr->position.x, tr->position.y), 0.0f);
 
         // Recreate fixture if width changed significantly
-        if (fixture_ && std::abs(smoothedWidthMult_ - 1.0f) > 0.01f) {
-            b2Filter filter = fixture_->GetFilterData();
-            float density = fixture_->GetDensity();
-            float friction = fixture_->GetFriction();
-            float restitution = fixture_->GetRestitution();
-            bool isSensor = fixture_->IsSensor();
-            
-            physics_->body()->DestroyFixture(fixture_);
-            
-            Box2DFixtureConfig fixtureCfg = {
-                .density = density,
-                .friction = friction,
-                .restitution = restitution,
-                .isSensor = isSensor,
-                .layer = static_cast<ColliderLayerMask>(filter.categoryBits),
-                .mask = static_cast<ColliderLayerMask>(filter.maskBits)
-            };
-            fixture_ = physics_->addBoxFixture(effectiveWidth, g_cfg.paddleHeight, fixtureCfg);
+        if (std::abs(smoothedWidthMult_ - 1.0f) > 0.01f) {
+            if (fixture_) {
+                b2Filter filter = fixture_->GetFilterData();
+                float density = fixture_->GetDensity();
+                float friction = fixture_->GetFriction();
+                float restitution = fixture_->GetRestitution();
+                bool isSensor = fixture_->IsSensor();
+                
+                physics_->body()->DestroyFixture(fixture_);
+                fixture_ = nullptr; // Clear pointer after destruction
+                
+                Box2DFixtureConfig fixtureCfg = {
+                    .density = density,
+                    .friction = friction,
+                    .restitution = restitution,
+                    .isSensor = isSensor,
+                    .layer = static_cast<ColliderLayerMask>(filter.categoryBits),
+                    .mask = static_cast<ColliderLayerMask>(filter.maskBits)
+                };
+                fixture_ = physics_->addBoxFixture(effectiveWidth, g_cfg.paddleHeight, fixtureCfg);
+            }
         }
     }
 
