@@ -1,5 +1,5 @@
 #pragma once
-#include "box_collider.hpp"
+#include "box2d_physics.hpp"
 #include "render_entity.hpp"
 
 namespace breakout {
@@ -12,7 +12,7 @@ public:
     void draw() override;
 
 private:
-    rlge::BoxCollider* collider_{nullptr};
+    rlge::Box2DBody* body_{nullptr};
     float pulseTime_{0.0f};
 };
 

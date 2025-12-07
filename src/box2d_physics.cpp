@@ -223,6 +223,8 @@ namespace rlge {
         CollisionEvent event;
         event.colliderA = nullptr; // Box2D doesn't use old Collider type
         event.colliderB = nullptr;
+        event.entityA = &box2dBodyA->entity();
+        event.entityB = &box2dBodyB->entity();
         event.state = CollisionState::Enter;
         
         // Get contact manifold
@@ -240,7 +242,7 @@ namespace rlge {
         box2dBodyA->onCollision(event);
         
         // Swap for body B
-        std::swap(event.colliderA, event.colliderB);
+        std::swap(event.entityA, event.entityB);
         event.manifold.normal = {-event.manifold.normal.x, -event.manifold.normal.y};
         box2dBodyB->onCollision(event);
     }
@@ -257,6 +259,8 @@ namespace rlge {
         CollisionEvent event;
         event.colliderA = nullptr;
         event.colliderB = nullptr;
+        event.entityA = &box2dBodyA->entity();
+        event.entityB = &box2dBodyB->entity();
         event.state = CollisionState::Exit;
         event.manifold.colliding = false;
 
@@ -264,6 +268,8 @@ namespace rlge {
         activeContacts_.erase(contact);
 
         box2dBodyA->onCollision(event);
+        
+        std::swap(event.entityA, event.entityB);
         box2dBodyB->onCollision(event);
     }
 
@@ -281,6 +287,8 @@ namespace rlge {
             CollisionEvent event;
             event.colliderA = nullptr;
             event.colliderB = nullptr;
+            event.entityA = &box2dBodyA->entity();
+            event.entityB = &box2dBodyB->entity();
             event.state = CollisionState::Stay;
             
             b2WorldManifold worldManifold;
@@ -294,7 +302,7 @@ namespace rlge {
 
             box2dBodyA->onCollision(event);
             
-            std::swap(event.colliderA, event.colliderB);
+            std::swap(event.entityA, event.entityB);
             event.manifold.normal = {-event.manifold.normal.x, -event.manifold.normal.y};
             box2dBodyB->onCollision(event);
         }

@@ -96,33 +96,52 @@ namespace breakout {
     }
 
     void Paddle::onCollision(const CollisionEvent& event) {
-        // Note: In Box2D, we need to get the other entity from the collision event
-        // For now, we'll work with what we have
-        
-        // Check if it's a ball collision by examining velocity
-        if (physics_) {
+        auto* otherEntity = event.getOtherEntity(&entity());
+        if (!otherEntity) return;
+
+        // Check for power-up collision
+        if (auto* powerUp = dynamic_cast<PowerUp*>(otherEntity)) {
+            if (!powerUp->isCollected()) {
+                powerUp->collect();
+                powerUps_.activate(powerUp->type());
+                return;
+            }
+        }
+
+        // Check for ball collision - apply deflection
+        if (auto* ballBody = otherEntity->get<Box2DBody>()) {
             const auto* tr = get<rlge::Transform>();
-            if (!tr)
+            const auto* ballTr = otherEntity->get<rlge::Transform>();
+
+            if (!tr || !ballTr)
                 return;
 
-            // Get contact world manifold to find the other body
-            // This is a simplified version - in full implementation we'd track the other entity
-            
-            // Apply paddle deflection effect for ball
-            const auto& vel = physics_->getVelocity();
-            if (Vector2Length(vel) > 100.0f) { // Ball has significant velocity
-                // Simplified deflection - would need proper ball reference in full implementation
-                scene().tweens().add(
-                    Tween(
-                        0.08f,
-                        [this](float t) {
-                            scaleX_ = 1.0f + 0.2f * (1.0f - t);
-                            scaleY_ = 1.0f - 0.15f * (1.0f - t);
-                        },
-                        easeOutQuad
-                    )
-                );
-            }
+            // Calculate hit offset (-1.0 to 1.0) based on paddle width
+            const float effectiveWidth = level_.paddleWidth * powerUps_.paddleWidthMultiplier();
+            const auto hitOffset = (ballTr->position.x - tr->position.x) / (effectiveWidth / 2.0f);
+
+            // Calculate deflection angle
+            const auto angle = hitOffset * g_cfg.maxBallPaddleDeflectionAngle * DEG2RAD;
+            const auto speed = Vector2Length(ballBody->getVelocity());
+
+            // Apply new velocity with deflection
+            const auto newVel = Vector2{
+                sinf(angle) * speed,
+                -fabsf(cosf(angle) * speed)
+            };
+            ballBody->setVelocity(newVel);
+
+            // Visual feedback tween
+            scene().tweens().add(
+                Tween(
+                    0.08f,
+                    [this](float t) {
+                        scaleX_ = 1.0f + 0.2f * (1.0f - t);
+                        scaleY_ = 1.0f - 0.15f * (1.0f - t);
+                    },
+                    easeOutQuad
+                )
+            );
         }
     }
 

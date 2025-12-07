@@ -1,5 +1,5 @@
 #pragma once
-#include "box_collider.hpp"
+#include "box2d_physics.hpp"
 #include "entity.hpp"
 
 namespace breakout {

@@ -1,5 +1,5 @@
 #pragma once
-#include "box_collider.hpp"
+#include "box2d_physics.hpp"
 #include "powerup_types.hpp"
 #include "render_entity.hpp"
 
@@ -21,7 +21,7 @@ namespace breakout {
     private:
         PowerUpType type_;
         PowerUpConfig config_;
-        BoxCollider* collider_{nullptr};
+        Box2DBody* body_{nullptr};
         bool collected_{false};
         float fallSpeed_{120.0f};
 

@@ -12,7 +12,20 @@ namespace breakout {
         auto& tr = add<rlge::Transform>();
         tr.position = {x + w / 2.0f, y + h / 2.0f};
 
-        add<BoxCollider>(scene().collisions(), ColliderType::Kinematic, CLM::LAYER_WORLD,
-                         CLM::LAYER_BULLET, Rectangle{-w / 2.0f, -h / 2.0f, w, h}, false);
+        Box2DBodyConfig bodyCfg = {
+            .bodyType = b2_staticBody,
+            .gravityScale = 0.0f
+        };
+        auto& body = add<Box2DBody>(scene().physics(), bodyCfg);
+
+        Box2DFixtureConfig fixtureCfg = {
+            .density = 1.0f,
+            .friction = 0.0f,
+            .restitution = 1.0f,
+            .isSensor = false,
+            .layer = CLM::LAYER_WORLD,
+            .mask = CLM::LAYER_BULLET
+        };
+        body.addBoxFixture(w, h, fixtureCfg);
     }
 } // namespace breakout

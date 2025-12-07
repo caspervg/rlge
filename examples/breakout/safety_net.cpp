@@ -11,13 +11,22 @@ SafetyNet::SafetyNet(rlge::Scene& s, float y) : RenderEntity(s) {
     tr.position = {g_cfg.viewPortWidth * 0.5f, y};
 
     const float thickness = 8.0f;
-    collider_ = &add<rlge::BoxCollider>(
-        scene().collisions(),
-        rlge::ColliderType::Kinematic,
-        rlge::ColliderLayerMask::LAYER_WORLD,
-        rlge::ColliderLayerMask::LAYER_BULLET,
-        Rectangle{-g_cfg.viewPortWidth * 0.5f, -thickness * 0.5f, static_cast<float>(g_cfg.viewPortWidth), thickness},
-        false);
+    
+    rlge::Box2DBodyConfig bodyCfg = {
+        .bodyType = b2_staticBody,
+        .gravityScale = 0.0f
+    };
+    body_ = &add<rlge::Box2DBody>(scene().physics(), bodyCfg);
+
+    rlge::Box2DFixtureConfig fixtureCfg = {
+        .density = 1.0f,
+        .friction = 0.0f,
+        .restitution = 1.0f,
+        .isSensor = false,
+        .layer = rlge::ColliderLayerMask::LAYER_WORLD,
+        .mask = rlge::ColliderLayerMask::LAYER_BULLET
+    };
+    body_->addBoxFixture(g_cfg.viewPortWidth, thickness, fixtureCfg);
 }
 
 void SafetyNet::update(float dt) {

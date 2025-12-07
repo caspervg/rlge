@@ -16,13 +16,26 @@ PowerUp::PowerUp(Scene& s, const PowerUpType type, const float x, const float y)
     tr.position = {x, y};
 
     constexpr float size = 20.0f;
-    collider_ = &add<BoxCollider>(
-        scene().collisions(),
-        ColliderType::Trigger,
-        ColliderLayerMask::LAYER_ITEM,
-        ColliderLayerMask::LAYER_PLAYER,
-        Rectangle{-size / 2, -size / 2, size, size},
-        true);
+    
+    Box2DBodyConfig bodyCfg = {
+        .bodyType = b2_dynamicBody,
+        .gravityScale = 0.0f,
+        .fixedRotation = true
+    };
+    body_ = &add<Box2DBody>(scene().physics(), bodyCfg);
+
+    Box2DFixtureConfig fixtureCfg = {
+        .density = 1.0f,
+        .friction = 0.0f,
+        .restitution = 0.0f,
+        .isSensor = true,
+        .layer = ColliderLayerMask::LAYER_ITEM,
+        .mask = ColliderLayerMask::LAYER_PLAYER
+    };
+    body_->addBoxFixture(size, size, fixtureCfg);
+    
+    // Set initial downward velocity
+    body_->setVelocity({0.0f, fallSpeed_});
 }
 
 void PowerUp::update(float dt) {
@@ -36,7 +49,6 @@ void PowerUp::update(float dt) {
     auto* tr = get<rlge::Transform>();
     if (!tr) return;
 
-    tr->position.y += fallSpeed_ * dt;
     bobTime_ += dt * 4.0f;
 
     if (tr->position.y > g_cfg.viewPortHeight + 20.0f) {
@@ -76,8 +88,8 @@ void PowerUp::draw() {
 
 void PowerUp::collect() {
     collected_ = true;
-    if (collider_) {
-        collider_->unregisterCollider();
+    if (body_) {
+        body_->body()->SetEnabled(false);
     }
 }
 

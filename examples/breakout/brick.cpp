@@ -14,11 +14,26 @@ namespace breakout {
         auto& tr = add<rlge::Transform>();
         tr.position = {screenX, screenY};
 
-        coll_ = &add<BoxCollider>(scene().collisions(), ColliderType::Kinematic, CLM::LAYER_WORLD,
-                                  CLM::LAYER_BULLET,
-                                  Rectangle{-g_cfg.brickWidth / 2.0f, -g_cfg.brickHeight / 2.0f,
-                                            g_cfg.brickWidth * 1.0f, g_cfg.brickHeight * 1.0f},
-                                  false);
+        Box2DBodyConfig bodyCfg = {
+            .bodyType = b2_kinematicBody,
+            .gravityScale = 0.0f,
+            .fixedRotation = true
+        };
+        body_ = &add<Box2DBody>(scene().physics(), bodyCfg);
+
+        Box2DFixtureConfig fixtureCfg = {
+            .density = 1.0f,
+            .friction = 0.0f,
+            .restitution = 1.0f,
+            .isSensor = false,
+            .layer = CLM::LAYER_WORLD,
+            .mask = CLM::LAYER_BULLET
+        };
+        body_->addBoxFixture(g_cfg.brickWidth, g_cfg.brickHeight, fixtureCfg);
+
+        body_->setOnCollisionEnter([this](const CollisionEvent& event) {
+            onCollision(event);
+        });
     }
 
     void Brick::onCollision(const CollisionEvent& event) {
@@ -27,7 +42,10 @@ namespace breakout {
 
         if (--hitPoints_ <= 0) {
             alive_ = false;
-            coll_->unregisterCollider();
+            if (body_) {
+                // Destroy the body to remove from physics simulation
+                body_->body()->SetEnabled(false);
+            }
             spawnPowerUpsIfApplicable();
             scene().gameEvents().enqueue(BrickDestroyed{config_.hitPoints * 10, config_});
             destroyDeferred();

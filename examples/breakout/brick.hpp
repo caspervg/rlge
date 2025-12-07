@@ -1,5 +1,5 @@
 #pragma once
-#include "box_collider.hpp"
+#include "box2d_physics.hpp"
 #include "breakout_level.hpp"
 #include "powerup_manager.hpp"
 #include "render_entity.hpp"
@@ -15,7 +15,7 @@ public:
 private:
     const BrickConfig& config_;
     PowerUpManager& powerUps_;
-    rlge::BoxCollider* coll_{nullptr};
+    rlge::Box2DBody* body_{nullptr};
     bool alive_ = true;
     int maxHitPoints_{config_.hitPoints};
     int hitPoints_{config_.hitPoints};

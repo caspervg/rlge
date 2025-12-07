@@ -53,6 +53,23 @@ namespace rlge {
         Collider* colliderB = nullptr;
         CollisionManifold manifold;
         CollisionState state = CollisionState::None;
+        
+        // For Box2D integration - store entity pointers when colliders are null
+        class Entity* entityA = nullptr;
+        class Entity* entityB = nullptr;
+        
+        // Helper to get the other entity in the collision (relative to 'self')
+        [[nodiscard]] class Entity* getOtherEntity(const class Entity* self) const {
+            if (colliderA && &colliderA->entity() == self) {
+                return colliderB ? &colliderB->entity() : entityB;
+            }
+            if (colliderB && &colliderB->entity() == self) {
+                return colliderA ? &colliderA->entity() : entityA;
+            }
+            if (entityA == self) return entityB;
+            if (entityB == self) return entityA;
+            return nullptr;
+        }
     };
 
     using CollisionCallback = std::function<void(const CollisionEvent&)>;
