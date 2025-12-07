@@ -200,7 +200,7 @@ public:
         Scene::update(dt);
 
         // Update wave shader time
-        if (auto layer = layers().get(waterLayer_)) {
+        if (const auto layer = layers().get(waterLayer_)) {
             if (layer->get().shaderParams) {
                 // We need to access the typed params to update time
                 // Since we moved the params, we need to get them from the layer
@@ -266,7 +266,7 @@ private:
     static std::filesystem::path findDemoRoot() {
         const auto cwd = std::filesystem::current_path();
 
-        const auto parentCandidate = cwd.parent_path() / "examples" / "shader_demo";
+        const auto parentCandidate = cwd.parent_path() / "examples" / "shader";
         if (std::filesystem::exists(parentCandidate))
             return parentCandidate;
 
@@ -293,7 +293,8 @@ int main() {
         .width = 800,
         .height = 600,
         .fps = 60,
-        .title = "RLGE Shader Demo"
+        .title = "RLGE Shader Demo",
+        .debugKey = KeyCode::F11
     });
 
     // Input bindings
