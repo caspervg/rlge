@@ -1,7 +1,6 @@
 #pragma once
-#include "box_collider.hpp"
+#include "box2d_physics.hpp"
 #include "breakout_level.hpp"
-#include "physics_body.hpp"
 #include "powerup_manager.hpp"
 #include "render_entity.hpp"
 
@@ -17,8 +16,8 @@ public:
 private:
     const Level& level_;
     PowerUpManager& powerUps_;
-    rlge::PhysicsBody* physics_{nullptr};
-    rlge::BoxCollider* coll_{nullptr};
+    rlge::Box2DBody* physics_{nullptr};
+    b2Fixture* fixture_{nullptr};
     float scaleX_{1.0f};
     float scaleY_{1.0f};
     float smoothedWidthMult_{1.0f};

@@ -13,13 +13,24 @@ namespace breakout {
         auto& tr = add<rlge::Transform>();
         tr.position = {g_cfg.viewPortWidth / 2.0f, g_cfg.viewPortHeight / 2.0f};
 
-        PhysicsBodyConfig conf = {
-            .mass = 1.0f, .velocity = level_.ballVelocityStart, .gravity = {0.0f, 0.0f}, .type = BodyType::Dynamic};
-        physics_ = &add<PhysicsBody>(conf);
+        Box2DBodyConfig conf = {
+            .bodyType = b2_dynamicBody,
+            .initialVelocity = level_.ballVelocityStart,
+            .gravityScale = 0.0f,
+            .linearDamping = 0.0f,
+            .fixedRotation = true
+        };
+        physics_ = &add<Box2DBody>(scene().physics(), conf);
 
-        col_ = &add<CircleCollider>(scene().collisions(), ColliderType::Solid, CLM::LAYER_BULLET,
-                                    toLayerMask(CLM::LAYER_PLAYER | CLM::LAYER_WORLD), Vector2{0.0f, 0.0f},
-                                    level_.ballRadius, false);
+        Box2DFixtureConfig fixtureCfg = {
+            .density = 1.0f,
+            .friction = 0.0f,
+            .restitution = 1.0f,
+            .isSensor = false,
+            .layer = CLM::LAYER_BULLET,
+            .mask = toLayerMask(CLM::LAYER_PLAYER | CLM::LAYER_WORLD)
+        };
+        physics_->addCircleFixture(level_.ballRadius, {0.0f, 0.0f}, fixtureCfg);
 
         add<ContinuousParticleEmitter>(kTrailCfg,
                                        [](const Particle& p) {

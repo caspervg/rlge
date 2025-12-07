@@ -101,7 +101,8 @@ target_sources(rlge PRIVATE
         src/lighting/lighting_system.cpp
         src/lighting/lit_scene.cpp
         src/lighting/lit_sprite.cpp
-        src/box2d_physics.cpp)
+        src/box2d_physics.cpp
+        src/box2d_debug.cpp)
 
 # Example game executables
 add_executable(rlge_basic_game examples/basic_game/main.cpp)

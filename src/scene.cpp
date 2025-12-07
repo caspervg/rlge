@@ -182,6 +182,7 @@ namespace rlge {
                 dbg->debugOverlay();
             }
             s->collisions().debugOverlay();
+            s->physics().debugOverlay();
         }
     }
 

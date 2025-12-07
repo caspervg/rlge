@@ -1,8 +1,7 @@
 #pragma once
 #include "breakout_level.hpp"
-#include "circle_collider.hpp"
+#include "box2d_physics.hpp"
 #include "particle_emitter.hpp"
-#include "physics_body.hpp"
 #include "render_entity.hpp"
 
 namespace breakout {
@@ -30,8 +29,7 @@ namespace breakout {
 
     private:
         const Level& level_;
-        rlge::PhysicsBody* physics_{nullptr};
-        rlge::CircleCollider* col_{nullptr};
+        rlge::Box2DBody* physics_{nullptr};
         bool outOfFrame_ = false;
     };
 

@@ -5,6 +5,7 @@
 #include "component.hpp"
 #include "raylib.h"
 #include "collision/collider_types.hpp"
+#include "debug.hpp"
 
 namespace rlge {
     class Entity;
@@ -88,12 +89,13 @@ namespace rlge {
     };
 
     // Box2D world manager per scene
-    class Box2DPhysicsWorld {
+    class Box2DPhysicsWorld : public HasDebugOverlay {
     public:
         explicit Box2DPhysicsWorld(const Vector2& gravity = {0.0f, 981.0f});
         ~Box2DPhysicsWorld();
 
         void step(float dt);
+        void draw(); // Call to render debug shapes
         void setGravity(const Vector2& gravity);
         [[nodiscard]] Vector2 getGravity() const;
 
@@ -105,6 +107,8 @@ namespace rlge {
 
         void setDebug(bool debug) { debug_ = debug; }
         [[nodiscard]] bool debug() const { return debug_; }
+        
+        void debugOverlay() override;
 
         // Create a body (called by Box2DBody component)
         b2Body* createBody(const b2BodyDef& def);
@@ -113,6 +117,7 @@ namespace rlge {
     private:
         std::unique_ptr<b2World> world_;
         Box2DContactListener contactListener_;
+        std::unique_ptr<class Box2DDebugDraw> debugDraw_;
         bool debug_ = false;
         float timeAccumulator_ = 0.0f;
         static constexpr float fixedTimeStep_ = 1.0f / 60.0f;

@@ -1,6 +1,8 @@
 #include "box2d_physics.hpp"
+#include "box2d_debug.hpp"
 #include "entity.hpp"
 #include "transformer.hpp"
+#include "imgui.h"
 #include <algorithm>
 
 namespace rlge {
@@ -30,6 +32,8 @@ namespace rlge {
         b2Vec2 b2Gravity = toB2Vec2(gravity);
         world_ = std::make_unique<b2World>(b2Gravity);
         world_->SetContactListener(&contactListener_);
+        debugDraw_ = std::make_unique<Box2DDebugDraw>();
+        world_->SetDebugDraw(debugDraw_.get());
     }
 
     Box2DPhysicsWorld::~Box2DPhysicsWorld() = default;
@@ -41,6 +45,18 @@ namespace rlge {
             contactListener_.clearEvents();
             world_->Step(fixedTimeStep_, 8, 3);
             timeAccumulator_ -= fixedTimeStep_;
+        }
+    }
+
+    void Box2DPhysicsWorld::draw() {
+        if (debugDraw_ && debugDraw_->enabled()) {
+            world_->DebugDraw();
+        }
+    }
+
+    void Box2DPhysicsWorld::debugOverlay() {
+        if (debugDraw_) {
+            debugDraw_->debugOverlay();
         }
     }
 
