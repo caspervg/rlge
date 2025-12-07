@@ -77,18 +77,31 @@ endif()
 add_library(tileson INTERFACE)
 target_include_directories(tileson INTERFACE ${tileson_SOURCE_DIR} ${tileson_SOURCE_DIR}/include)
 
+FetchContent_Declare(
+        box2d
+        GIT_REPOSITORY "https://github.com/erincatto/box2d.git"
+        GIT_TAG "v3.0.0"
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS TRUE
+)
+set(BOX2D_BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+set(BOX2D_BUILD_TESTBED OFF CACHE BOOL "" FORCE)
+set(BOX2D_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(box2d)
+
 
 set(PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src/")
 file(GLOB RLGE_SOURCES "${PROJECT_INCLUDE}*.cpp" "${PROJECT_INCLUDE}collision/*.cpp" "${PROJECT_INCLUDE}collision/shape/*.cpp")
 
 add_library(rlge STATIC ${RLGE_SOURCES})
 target_include_directories(rlge PUBLIC ${PROJECT_INCLUDE} "${PROJECT_INCLUDE}/collision/" "${PROJECT_INCLUDE}/collision/shape/" "${PROJECT_INCLUDE}/lighting/" ${RAYGUI_INCLUDE_DIR})
-target_link_libraries(rlge PUBLIC raylib rlimgui tileson)
+target_link_libraries(rlge PUBLIC raylib rlimgui tileson box2d)
 target_sources(rlge PRIVATE
         src/raygui_impl.cpp
         src/lighting/lighting_system.cpp
         src/lighting/lit_scene.cpp
-        src/lighting/lit_sprite.cpp)
+        src/lighting/lit_sprite.cpp
+        src/box2d_physics.cpp)
 
 # Example game executables
 add_executable(rlge_basic_game examples/basic_game/main.cpp)

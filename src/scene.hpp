@@ -16,6 +16,7 @@
 #include "timer.hpp"
 #include "tween.hpp"
 #include "collision/collision_system.hpp"
+#include "box2d_physics.hpp"
 #include "view.hpp"
 
 namespace rlge {
@@ -102,6 +103,9 @@ namespace rlge {
         CollisionResponseSystem& collisionResponses();
         [[nodiscard]] const CollisionResponseSystem& collisionResponses() const;
 
+        Box2DPhysicsWorld& physics();
+        [[nodiscard]] const Box2DPhysicsWorld& physics() const;
+
         TweenSystem& tweens();
         [[nodiscard]] const TweenSystem& tweens() const;
 
@@ -138,6 +142,7 @@ namespace rlge {
         GameContext ctx_;
         CollisionSystem collisions_;
         CollisionResponseSystem collisionResponses_;
+        Box2DPhysicsWorld physics_;
         TweenSystem tweens_;
         TimerSystem timers_;
         EventBus sceneEvents_;

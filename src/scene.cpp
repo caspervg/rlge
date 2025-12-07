@@ -15,6 +15,7 @@ namespace rlge {
         , ctx_{r.assetStore(), r.input(), r.renderer(), r.layers(), r.services().gameEvents(), r.services().audio()}
         , collisions_(CollisionSystem())
         , collisionResponses_(CollisionResponseSystem())
+        , physics_(Box2DPhysicsWorld({0.0f, 981.0f}))
         , tweens_(TweenSystem())
         , timers_(TimerSystem()) {}
 
@@ -39,6 +40,7 @@ namespace rlge {
         for (const auto& e : entities_)
             e->update(dt);
 
+        physics_.step(dt);
         collisions_.update(dt);
         collisionResponses_.update(*this);
         sceneEvents_.dispatchQueued();
@@ -102,6 +104,10 @@ namespace rlge {
     CollisionResponseSystem& Scene::collisionResponses() { return collisionResponses_; }
 
     const CollisionResponseSystem& Scene::collisionResponses() const { return collisionResponses_; }
+
+    Box2DPhysicsWorld& Scene::physics() { return physics_; }
+
+    const Box2DPhysicsWorld& Scene::physics() const { return physics_; }
 
     TweenSystem& Scene::tweens() { return tweens_; }
 
