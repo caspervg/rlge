@@ -238,15 +238,19 @@ namespace rlge {
         event.state = CollisionState::Enter;
         
         // Get contact manifold
-        b2WorldManifold worldManifold;
-        contact->GetWorldManifold(&worldManifold);
-        
+        const b2Manifold* manifold = contact->GetManifold();
         event.manifold.colliding = true;
-        event.manifold.normal = toVector2(worldManifold.normal);
-        // Use first contact point if available, otherwise use zero
-        event.manifold.contactPoint = contact->GetManifold()->pointCount > 0 
-            ? toVector2(worldManifold.points[0]) 
-            : Vector2{0.0f, 0.0f};
+        
+        // Get world manifold for normal and contact points
+        if (manifold->pointCount > 0) {
+            b2WorldManifold worldManifold;
+            contact->GetWorldManifold(&worldManifold);
+            event.manifold.normal = toVector2(worldManifold.normal);
+            event.manifold.contactPoint = toVector2(worldManifold.points[0]);
+        } else {
+            event.manifold.normal = {0.0f, 0.0f};
+            event.manifold.contactPoint = {0.0f, 0.0f};
+        }
         
         events_.push_back(event);
         activeContacts_[contact] = true;
@@ -304,15 +308,20 @@ namespace rlge {
             event.entityB = &box2dBodyB->entity();
             event.state = CollisionState::Stay;
             
-            b2WorldManifold worldManifold;
-            contact->GetWorldManifold(&worldManifold);
-            
+            // Get contact manifold
+            const b2Manifold* manifold = contact->GetManifold();
             event.manifold.colliding = true;
-            event.manifold.normal = toVector2(worldManifold.normal);
-            // Use first contact point if available, otherwise use zero
-            event.manifold.contactPoint = contact->GetManifold()->pointCount > 0 
-                ? toVector2(worldManifold.points[0]) 
-                : Vector2{0.0f, 0.0f};
+            
+            // Get world manifold for normal and contact points
+            if (manifold->pointCount > 0) {
+                b2WorldManifold worldManifold;
+                contact->GetWorldManifold(&worldManifold);
+                event.manifold.normal = toVector2(worldManifold.normal);
+                event.manifold.contactPoint = toVector2(worldManifold.points[0]);
+            } else {
+                event.manifold.normal = {0.0f, 0.0f};
+                event.manifold.contactPoint = {0.0f, 0.0f};
+            }
 
             events_.push_back(event);
 
