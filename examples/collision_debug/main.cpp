@@ -6,11 +6,7 @@
 #include "raylib.h"
 #include "render_entity.hpp"
 #include "transformer.hpp"
-#include "collision/collision_system.hpp"
-#include "collision/shape/box_collider.hpp"
-#include "collision/shape/circle_collider.hpp"
-#include "collision/shape/obb_collider.hpp"
-#include "collision/shape/polygon_collider.hpp"
+#include "box2d_physics.hpp"
 
 using namespace rlge;
 
@@ -44,17 +40,23 @@ public:
         auto& tr = add<rlge::Transform>();
         tr.position = {200.0f, 200.0f};
 
-        // Simple local box around the origin of the entity
-        constexpr Rectangle local{-16.0f, -16.0f, 32.0f, 32.0f};
+        Box2DBodyConfig bodyCfg = {
+            .bodyType = b2_dynamicBody,
+            .gravityScale = 0.0f,
+            .linearDamping = 5.0f,
+            .fixedRotation = true
+        };
+        body_ = &add<Box2DBody>(scene().physics(), bodyCfg);
 
-        auto& sys = scene().collisions();
-        add<BoxCollider>(
-            sys,
-            ColliderType::Solid,
-            ColliderLayerMask::LAYER_PLAYER,
-            ColliderLayerMask::LAYER_WORLD,
-            local,
-            false);
+        Box2DFixtureConfig fixtureCfg = {
+            .density = 1.0f,
+            .friction = 0.3f,
+            .restitution = 0.0f,
+            .isSensor = false,
+            .layer = ColliderLayerMask::LAYER_PLAYER,
+            .mask = ColliderLayerMask::LAYER_WORLD
+        };
+        body_->addBoxFixture(32.0f, 32.0f, fixtureCfg);
     }
 
     void update(const float dt) override {
@@ -65,29 +67,40 @@ public:
             return;
 
         const auto& in = scene().input();
-        constexpr auto speed = 150.0f;
+        constexpr auto speed = 300.0f;
 
+        Vector2 force = {0.0f, 0.0f};
         if (in.down(Action::MoveLeft))
-            tr->position.x -= speed * dt;
+            force.x -= speed;
         if (in.down(Action::MoveRight))
-            tr->position.x += speed * dt;
+            force.x += speed;
         if (in.down(Action::MoveUp))
-            tr->position.y -= speed * dt;
+            force.y -= speed;
         if (in.down(Action::MoveDown))
-            tr->position.y += speed * dt;
+            force.y += speed;
+
+        if (force.x != 0.0f || force.y != 0.0f) {
+            body_->applyForceToCenter(force);
+        }
     }
 
     void draw() override {
         RenderEntity::draw();
 
         rq().submitWorld([this] {
-            const auto* col = get<BoxCollider>();
-            if (!col)
+            const auto* tr = get<Transform>();
+            if (!tr)
                 return;
-            const Rectangle r = col->axisAlignedWorldBounds();
-            DrawRectangleRec(r, Color{100, 200, 255, 255});
+            DrawRectangle(
+                static_cast<int>(tr->position.x - 16.0f),
+                static_cast<int>(tr->position.y - 16.0f),
+                32, 32,
+                Color{100, 200, 255, 255});
         });
     }
+
+private:
+    Box2DBody* body_{nullptr};
 };
 
 class StaticCircleEntity final : public RenderEntity {
@@ -97,29 +110,31 @@ public:
         auto& tr = add<rlge::Transform>();
         tr.position = {350.0f, 200.0f};
 
-        auto& sys = scene().collisions();
-        constexpr Vector2 localCenter{0.0f, 0.0f};
-        constexpr auto radius = 24.0f;
-        add<CircleCollider>(
-            sys,
-            ColliderType::Solid,
-            ColliderLayerMask::LAYER_WORLD,
-            ColliderLayerMask::LAYER_PLAYER,
-            localCenter,
-            radius,
-            false);
+        Box2DBodyConfig bodyCfg = {
+            .bodyType = b2_staticBody,
+            .gravityScale = 0.0f
+        };
+        auto& body = add<Box2DBody>(scene().physics(), bodyCfg);
+
+        Box2DFixtureConfig fixtureCfg = {
+            .density = 1.0f,
+            .friction = 0.3f,
+            .restitution = 0.0f,
+            .isSensor = false,
+            .layer = ColliderLayerMask::LAYER_WORLD,
+            .mask = ColliderLayerMask::LAYER_PLAYER
+        };
+        body.addCircleFixture(24.0f, {0.0f, 0.0f}, fixtureCfg);
     }
 
     void draw() override {
         RenderEntity::draw();
 
         rq().submitWorld([this] {
-            const auto* col = get<CircleCollider>();
-            if (!col)
+            const auto* tr = get<Transform>();
+            if (!tr)
                 return;
-            const Vector2 c = col->center();
-            const float r = col->radius();
-            DrawCircleV(c, r, Color{255, 200, 120, 255});
+            DrawCircleV(tr->position, 24.0f, Color{255, 200, 120, 255});
         });
     }
 };
@@ -130,36 +145,55 @@ public:
         : RenderEntity(s) {
         auto& tr = add<rlge::Transform>();
         tr.position = {200.0f, 300.0f};
-        tr.rotation = 0.25f; // just to see rotation vs. AABB
+        tr.rotation = 15.0f; // rotation for visual effect
 
-        constexpr Rectangle local{-40.0f, -10.0f, 80.0f, 20.0f};
+        Box2DBodyConfig bodyCfg = {
+            .bodyType = b2_staticBody,
+            .gravityScale = 0.0f
+        };
+        auto& body = add<Box2DBody>(scene().physics(), bodyCfg);
 
-        auto& sys = scene().collisions();
-        add<BoxCollider>(
-            sys,
-            ColliderType::Solid,
-            ColliderLayerMask::LAYER_WORLD,
-            ColliderLayerMask::LAYER_PLAYER,
-            local,
-            false);
+        Box2DFixtureConfig fixtureCfg = {
+            .density = 1.0f,
+            .friction = 0.3f,
+            .restitution = 0.0f,
+            .isSensor = false,
+            .layer = ColliderLayerMask::LAYER_WORLD,
+            .mask = ColliderLayerMask::LAYER_PLAYER
+        };
+        body.addBoxFixture(80.0f, 20.0f, fixtureCfg);
     }
 
     void draw() override {
         RenderEntity::draw();
 
         rq().submitWorld([this] {
-            const auto* col = get<BoxCollider>();
-            if (!col)
+            const auto* tr = get<Transform>();
+            if (!tr)
                 return;
 
-            auto pts = ensureCCWWinding(col->points()); // world-space, transformed corners
-            if (pts.size() < 4)
-                return;
-
+            // Draw as rotated rectangle
+            const float angle = tr->rotation * DEG2RAD;
+            const float halfW = 40.0f;
+            const float halfH = 10.0f;
+            
+            Vector2 corners[4] = {
+                {-halfW, -halfH},
+                { halfW, -halfH},
+                { halfW,  halfH},
+                {-halfW,  halfH}
+            };
+            
+            // Rotate and translate corners
+            for (int i = 0; i < 4; ++i) {
+                float x = corners[i].x * cosf(angle) - corners[i].y * sinf(angle);
+                float y = corners[i].x * sinf(angle) + corners[i].y * cosf(angle);
+                corners[i] = {x + tr->position.x, y + tr->position.y};
+            }
+            
             constexpr Color c{180, 100, 255, 255};
-            // Draw as two filled triangles so rotation is respected
-            DrawTriangle(pts[0], pts[1], pts[2], c);
-            DrawTriangle(pts[0], pts[2], pts[3], c);
+            DrawTriangle(corners[0], corners[1], corners[2], c);
+            DrawTriangle(corners[0], corners[2], corners[3], c);
         });
     }
 };
@@ -171,7 +205,6 @@ public:
         auto& tr = add<rlge::Transform>();
         tr.position = {450.0f, 260.0f};
 
-        auto& sys = scene().collisions();
         std::vector<Vector2> localPoints{
             {-30.0f, -20.0f},
             { 40.0f, -10.0f},
@@ -180,24 +213,40 @@ public:
             {-35.0f,  10.0f}
         };
 
-        add<PolygonCollider>(
-            sys,
-            ColliderType::Kinematic,
-            ColliderLayerMask::LAYER_WORLD,
-            ColliderLayerMask::LAYER_PLAYER,
-            std::move(localPoints),
-            false);
+        Box2DBodyConfig bodyCfg = {
+            .bodyType = b2_staticBody,
+            .gravityScale = 0.0f
+        };
+        auto& body = add<Box2DBody>(scene().physics(), bodyCfg);
+
+        Box2DFixtureConfig fixtureCfg = {
+            .density = 1.0f,
+            .friction = 0.3f,
+            .restitution = 0.0f,
+            .isSensor = false,
+            .layer = ColliderLayerMask::LAYER_WORLD,
+            .mask = ColliderLayerMask::LAYER_PLAYER
+        };
+        body.addPolygonFixture(localPoints, fixtureCfg);
+        
+        localPoints_ = localPoints;
     }
 
     void draw() override {
         RenderEntity::draw();
 
         rq().submitWorld([this] {
-            auto* col = get<PolygonCollider>();
-            if (!col)
+            const auto* tr = get<Transform>();
+            if (!tr)
                 return;
 
-            auto pts = ensureCCWWinding(col->points()); // world-space polygon
+            // Transform local points to world space
+            std::vector<Vector2> worldPoints;
+            for (const auto& p : localPoints_) {
+                worldPoints.push_back({p.x + tr->position.x, p.y + tr->position.y});
+            }
+            
+            auto pts = ensureCCWWinding(worldPoints);
             const size_t n = pts.size();
             if (n < 3)
                 return;
@@ -209,6 +258,9 @@ public:
             }
         });
     }
+
+private:
+    std::vector<Vector2> localPoints_;
 };
 
 class CollisionDemoScene final : public Scene, public HasDebugOverlay {
@@ -234,8 +286,8 @@ public:
         ImGui::Begin("Collision Demo");
         ImGui::Text("Use WASD to move the box.");
         ImGui::Text("Press F1 to toggle this UI.");
-        ImGui::Text("Enable 'Draw colliders' in the Collisions window");
-        ImGui::Text("to see collider shapes and AABBs.");
+        ImGui::Text("Enable debug drawing in the 'Box2D Physics' window");
+        ImGui::Text("to see Box2D fixtures and shapes.");
         ImGui::End();
     }
 
@@ -249,7 +301,7 @@ int main() {
         .width = 800,
         .height = 450,
         .fps = 60,
-        .title = "RLGE Collision Demo"
+        .title = "RLGE Collision Demo (Box2D)"
     };
 
     Runtime runtime(cfg);

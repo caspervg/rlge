@@ -1,16 +1,16 @@
 # RLGE - Raylib Lightweight Game Engine
 
-RLGE is a small C++23 2D game engine built on top of raylib, ImGui, and rlImGui. It provides a scene stack, entity/component model, event buses, a batched renderer, a collision system, and helper entities for getting simple games on screen quickly.
+RLGE is a small C++23 2D game engine built on top of raylib, Box2D, ImGui, and rlImGui. It provides a scene stack, entity/component model, event buses, a batched renderer, Box2D physics integration, and helper entities for getting simple games on screen quickly.
 
 This repository also contains example games/demos:
 
 - `examples/basic_game`: minimal moving-sprite scene with a stats overlay.
 - `examples/snake`: small game showing scenes, audio, and event flow.
 - `examples/particles`: configurable CPU particle emitters with live tuning.
-- `examples/breakout`: paddle/brick demo using the physics body + collision events.
+- `examples/breakout`: paddle/brick demo using Box2D physics + collision events.
 - `examples/tilemap`: orthogonal Tiled map rendering with flip flag support.
 - `examples/multiview`: split-screen + minimap rendering via multiple cameras.
-- `examples/collision_debug`: collider shapes, layer masks, and debug overlays.
+- `examples/collision_debug`: Box2D shapes, layer masks, and debug overlays.
 - `examples/shader_demo`: layer and per-entity shaders with live ImGui controls.
 - `examples/lighting_demo`: normal-mapped sprites lit by multiple point lights, with a movable picture-in-picture view.
 - `examples/raygui_demo`: basic in-game UI using raygui widgets controlling a moving box.
@@ -19,7 +19,7 @@ This repository also contains example games/demos:
 
 ## Features
 
-- Scene stack with enter/exit/pause/resume; per-scene tween + collision systems and local event bus.
+- Scene stack with enter/exit/pause/resume; per-scene tween + Box2D physics systems and local event bus.
 - Entity/component model with helpers (`Transform`, sprites/animations, sprite sheets, tilemaps, particles, etc.).
 - Two event buses: scene-local and shared game-wide, with queued dispatch and forwarding helpers.
 - Camera system (follow/pan/zoom/rotate, screen <-> world helpers, view bounds) plus multi-view rendering.
@@ -28,8 +28,7 @@ This repository also contains example games/demos:
 - raygui for in-game HUD/menus (see `examples/raygui_demo` and the Snake HUD); Dear ImGui kept for debug tooling.
 - Type-safe Input system with support for keyboard, mouse, gamepad, and analog axes.
 - Batched render queue with layers (`Background`, `World`, `Foreground`, `UI`), z-sorting, per-view culling, and render stats.
-- Collision system with layers/masks, triggers vs solids vs kinematic colliders, AABB/OBB/circle/polygon shapes, and optional ImGui debug overlay.
-- Lightweight PhysicsBody component for gravity/forces/bounce with ground detection and collision response.
+- **Box2D physics integration** with rigid bodies, fixtures (box/circle/polygon), collision filtering, sensors, and contact callbacks. Fixed-timestep simulation per scene with ImGui debug drawing.
 - Timers at three scopes: per-entity via `TimerComponent`, per-scene via `Scene::timers()`, and game-wide via `Runtime::services().timers()`.
 - Asset store for textures/shaders (file or in-memory), prefab factory for named entity constructors, and an audio manager for sounds/music.
 - Particle emitter component with configurable spawn/render functions and helper spawn shapes.
@@ -42,7 +41,7 @@ This repository also contains example games/demos:
 - A C++23-capable compiler
 - Git (for fetching dependencies)
 
-All third-party libraries (raylib, ImGui, rlImGui) are fetched automatically by CMake via `FetchContent`.
+All third-party libraries (raylib, Box2D, ImGui, rlImGui, Tileson) are fetched automatically by CMake via `FetchContent`.
 
 ## Building
 
@@ -237,20 +236,37 @@ private:
   ```
 - Debug tooling stays on Dear ImGui + rlImGui; toggle with `F1` in the examples. Keep gameplay UI minimal and deterministic with raygui while using ImGui for richer inspectors and debug panels.
 
-### Collisions
+### Box2D Physics
 
-- Access the per-scene system via `scene().collisions()`. Add colliders to entities:
+- Access the per-scene Box2D world via `scene().physics()`. Create rigid bodies with the `Box2DBody` component:
   ```cpp
-  add<rlge::BoxCollider>(scene().collisions(),
-                         rlge::ColliderType::Solid,
-                         rlge::ColliderLayerMask::LAYER_PLAYER,
-                         rlge::ColliderLayerMask::LAYER_WORLD,
-                         Rectangle{-8, -8, 16, 16},
-                         false /*trigger*/);
+  // Configure body properties
+  Box2DBodyConfig bodyCfg = {
+      .bodyType = b2_dynamicBody,  // or b2_kinematicBody, b2_staticBody
+      .initialVelocity = {0.0f, 0.0f},
+      .gravityScale = 1.0f,
+      .linearDamping = 0.0f,
+      .fixedRotation = false
+  };
+  auto& body = add<Box2DBody>(scene().physics(), bodyCfg);
+
+  // Add shapes (box, circle, polygon)
+  Box2DFixtureConfig fixtureCfg = {
+      .density = 1.0f,
+      .friction = 0.3f,
+      .restitution = 0.5f,
+      .isSensor = false,
+      .layer = ColliderLayerMask::LAYER_PLAYER,
+      .mask = ColliderLayerMask::LAYER_WORLD
+  };
+  body.addBoxFixture(32.0f, 32.0f, fixtureCfg);
+  body.addCircleFixture(16.0f, {0.0f, 0.0f}, fixtureCfg);
   ```
-- Shapes: axis-aligned boxes, oriented boxes, circles, polygons. Configure trigger/solid/kinematic types and layer masks.
-- Register callbacks with `setOnCollision` for game logic; resolution is handled for non-trigger solids/kinematics.
-- Toggle the ImGui "Collisions" window (F1) to draw collider shapes/AABBs.
+- Box2D bodies automatically sync with entity `Transform` components each frame.
+- Register collision callbacks with `setOnCollisionEnter/Stay/Exit` for gameplay logic.
+- Layer masks use the same enum values as the legacy collision system for filtering.
+- Physics runs at a fixed 60Hz timestep; bodies can be dynamic (affected by forces/gravity), kinematic (velocity-driven), or static (immovable).
+- Toggle the ImGui "Box2D Physics" window (F1) to enable debug drawing of shapes, AABBs, joints, and contact points.
 
 ### Particles, tweens, and tilemaps
 
@@ -265,8 +281,10 @@ Look at the examples for small, focused patterns that combine these systems.
 ### Libraries
 
 - [raylib](https://www.raylib.com/) - windowing, input, rendering (zlib License)
+- [Box2D](https://box2d.org/) - 2D physics engine (MIT License)
 - [Dear ImGui](https://github.com/ocornut/imgui) - immediate-mode GUI (MIT License)
 - [rlImGui](https://github.com/raylib-extras/rlImGui) - ImGui integration for raylib (zlib License)
+- [Tileson](https://github.com/SSBMTonberry/tileson) - Tiled map parser (BSD-2-Clause License)
 - [cpptoml](https://github.com/skystrife/cpptoml) - parsing TOML config files for the Breakout example (MIT License)
 
 ### Assets
