@@ -38,6 +38,13 @@ namespace rlge {
             if (const auto it = componentCache_.find(key); it != componentCache_.end()) {
                 return static_cast<T*>(it->second);
             }
+            // Fallback: search components by dynamic cast so interfaces/base classes work
+            for (auto& comp : components_) {
+                if (auto* ptr = dynamic_cast<T*>(comp.get())) {
+                    componentCache_[key] = ptr;
+                    return ptr;
+                }
+            }
             return nullptr;
         }
 
@@ -46,6 +53,13 @@ namespace rlge {
             const auto key = std::type_index(typeid(T));
             if (const auto it = componentCache_.find(key); it != componentCache_.end()) {
                 return static_cast<const T*>(it->second);
+            }
+            // Fallback: search components by dynamic cast so interfaces/base classes work
+            for (auto& comp : components_) {
+                if (auto* ptr = dynamic_cast<T*>(comp.get())) {
+                    componentCache_[key] = ptr;
+                    return ptr;
+                }
             }
             return nullptr;
         }

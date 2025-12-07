@@ -1,11 +1,26 @@
 #pragma once
+#include <filesystem>
+#include <functional>
 #include <string>
 #include <unordered_map>
-#include <filesystem>
 
 #include "raylib.h"
 
 namespace rlge {
+    using ShaderReloadCallback = std::function<void(const std::string& id, bool success)>;
+
+    struct ShaderAsset {
+        Shader shader{};
+        std::filesystem::path vertPath;
+        std::filesystem::path fragPath;
+        std::filesystem::file_time_type lastVertModTime;
+        std::filesystem::file_time_type lastFragModTime;
+        bool hotReload{false};
+        bool hasError{false};
+        std::string errorMessage;
+        int reloadCount{0};
+    };
+
     class AssetStore final {
     public:
         AssetStore() = default;
@@ -33,13 +48,27 @@ namespace rlge {
         Shader& loadFragmentShader(const std::string& id, const std::string& fragPath);
         Shader& loadShaderFromMemory(const std::string& id, const char* vertSrc, const char* fragSrc);
         Shader& shader(const std::string& id);
+        [[nodiscard]] ShaderAsset& shaderAsset(const std::string& id);
+
+        void hotReload(bool enable);
+        [[nodiscard]] bool hotReload() const;
+        void setShaderReloadCallback(ShaderReloadCallback cb);
 
         void unloadAll();
 
     private:
+        bool reloadShaderAsset_(ShaderAsset& asset) const;
+        bool readFile_(const std::filesystem::path& path, std::string& out) const;
+
+    private:
         std::unordered_map<std::string, Texture2D> textures_;
         std::unordered_map<std::string, Font> fonts_;
-        std::unordered_map<std::string, Shader> shaders_;
+        std::unordered_map<std::string, ShaderAsset> shaderAssets_;
         std::filesystem::path assetRoot_{std::filesystem::current_path()};
+
+        bool hotReload_{false};
+        float hotReloadInterval_ = 0.5f;
+        float hotReloadLastCheck_ = 0.0f;
+        ShaderReloadCallback shaderReloadCallback_{nullptr};
     };
 }
