@@ -143,3 +143,6 @@ target_link_libraries(rlge_lighting PRIVATE rlge raylib rlimgui imgui)
 add_executable(rlge_raygui examples/raygui/main.cpp examples/util/raygui_helpers.hpp)
 target_include_directories(rlge_raygui PRIVATE ${CMAKE_CURRENT_LIST_DIR}/examples)
 target_link_libraries(rlge_raygui PRIVATE rlge raylib)
+
+add_executable(rlge_shader_learning examples/shader_learn/main.cpp)
+target_link_libraries(rlge_shader_learning PRIVATE rlge raylib rlimgui imgui)
