@@ -1,6 +1,7 @@
 #pragma once
 #include "component.hpp"
 #include "shader_params.hpp"
+#include "asset.hpp"
 
 namespace rlge {
 
@@ -9,6 +10,8 @@ namespace rlge {
         virtual ~HasShaderEffect() = default;
         virtual void apply() = 0;
         virtual Shader shader() const = 0;
+        virtual ShaderHandle handle() const = 0;
+        virtual void setShader(Shader shader) = 0;
     };
 
     // ShaderEffect component for per-entity shader effects
@@ -16,9 +19,10 @@ namespace rlge {
     template<typename T>
     class ShaderEffect : public Component, public HasShaderEffect {
     public:
-        ShaderEffect(Entity& e, Shader shader)
+        ShaderEffect(Entity& e, Shader shader, ShaderHandle handle = InvalidShaderHandle)
             : Component(e)
-            , params_(shader) {}
+            , params_(shader)
+            , handle_(handle) {}
 
         // Fluent bind API
         template<typename M>
@@ -38,6 +42,10 @@ namespace rlge {
         // HasShaderEffect interface
         void apply() override { params_.apply(); }
         Shader shader() const override { return params_.shader(); }
+        ShaderHandle handle() const override { return handle_; }
+        void setShader(const Shader shader) override {
+            params_.setShader(shader);
+        }
 
         // Component interface - no update needed by default
         void update(float) override {}
@@ -45,6 +53,7 @@ namespace rlge {
 
     private:
         ShaderParams<T> params_;
+        ShaderHandle handle_{InvalidShaderHandle};
     };
 
 } // namespace rlge

@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "entity.hpp"
+#include "render_queue.hpp"
 #include "scene.hpp"
 #include "shader_effect.hpp"
 

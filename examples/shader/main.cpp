@@ -76,14 +76,14 @@ private:
 // Entity with per-entity flash shader effect
 class FlashingSprite final : public RenderEntity {
 public:
-    FlashingSprite(Scene& scene, Texture2D& texture, Shader flashShader, float x, float y) :
+    FlashingSprite(Scene& scene, Texture2D& texture, Shader flashShader, ShaderHandle flashHandle, float x, float y) :
         RenderEntity(scene)
         , flashShader_(flashShader) {
         auto& tr = add<rlge::Transform>();
         tr.position = {x, y};
 
         // Add a per-entity shader effect
-        add<ShaderEffect<FlashParams>>(flashShader)
+        add<ShaderEffect<FlashParams>>(flashShader, flashHandle)
             .bind("u_intensity", &FlashParams::intensity)
             .bind("u_flashColor", &FlashParams::flashColor);
 
@@ -157,20 +157,22 @@ public:
         assets().setRoot(findDemoRoot());
 
         // Load shaders via the asset store
-        waveShader_ = assets().loadFragmentShader("wave_frag","wave.frag");
-        flashShader_ = assets().loadShaderFromMemory("flash_frag", nullptr, flashFragmentShader);
+        waveShaderHandle_ = assets().loadFragmentShader("wave_frag","wave.frag");
+        flashShaderHandle_ = assets().loadShaderFromMemory("flash_frag", nullptr, flashFragmentShader);
+        auto& waveShader = assets().shader(waveShaderHandle_);
+        auto& flashShader = assets().shader(flashShaderHandle_);
 
         // Create a custom "water" layer with the wave shader
         waterLayer_ = layers().create("water", 25);
 
         // Set up typed shader params for the water layer
-        waveParams_ = ShaderParams<WaveParams>(waveShader_);
+        waveParams_ = ShaderParams<WaveParams>(waveShader);
         waveParams_.bind("u_time", &WaveParams::time)
                    .bind("u_amplitude", &WaveParams::amplitude)
                    .bind("u_frequency", &WaveParams::frequency)
                    .bind("u_speed", &WaveParams::speed);
 
-        layers().setShaderParams(waterLayer_, std::move(waveParams_));
+        layers().setShaderParams(waterLayer_, waveShaderHandle_, std::move(waveParams_));
 
         // Set up camera
         camera_ = rlge::Camera();
@@ -189,7 +191,7 @@ public:
         }
 
         // Spawn flashing sprite (per-entity shader)
-        flashingSprite_ = &spawn<FlashingSprite>(playerTexture_, flashShader_, 400.0f, 350.0f);
+        flashingSprite_ = &spawn<FlashingSprite>(playerTexture_, flashShader, flashShaderHandle_, 400.0f, 350.0f);
 
         // Spawn normal sprites for comparison
         normalSprites_.push_back(&spawn<NormalSprite>(boxTexture_, 100.0f, 400.0f));
@@ -277,8 +279,8 @@ private:
     rlge::Camera camera_;
     Texture2D boxTexture_{};
     Texture2D playerTexture_{};
-    Shader waveShader_{};
-    Shader flashShader_{};
+    ShaderHandle waveShaderHandle_{InvalidShaderHandle};
+    ShaderHandle flashShaderHandle_{InvalidShaderHandle};
     LayerId waterLayer_ = InvalidLayerId;
     ShaderParams<WaveParams> waveParams_{Shader{}};
 

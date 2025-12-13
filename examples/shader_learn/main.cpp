@@ -29,7 +29,7 @@ public:
                 params->apply();
             }
             auto [x, y] = scene().runtime().window().size();
-            DrawRectangle(0, 0,x, y, WHITE);
+            DrawRectangle(0, 0, x, y, WHITE);
         });
     }
 
@@ -44,6 +44,18 @@ private:
     ShaderParams<FullscreenParams>* params_;
 };
 
+class FpsCounter final : public RenderEntity {
+public:
+    explicit FpsCounter(Scene& scene) :
+        RenderEntity(scene) {}
+
+    void draw() override {
+        rq().submitUI([] {
+            DrawFPS(10, 10);
+        });
+    }
+};
+
 class ShaderLearnScene final : public Scene, public HasDebugOverlay {
 public:
     explicit ShaderLearnScene(Runtime& r) :
@@ -53,8 +65,8 @@ public:
         assets().setRoot(findShaderDir_());
         assets().hotReload(true);
 
-        assets().setShaderReloadCallback([this](const std::string& id, const bool success) {
-            if (success) {
+        assets().setShaderReloadCallback([this](ShaderHandle handle, const bool success) {
+            if (success && handle == shaderHandle_) {
                 rebindShaderParams_();
             }
         });
@@ -62,7 +74,8 @@ public:
         const auto [w, h] = runtime().window().size();
         setSingleView(camera_);
 
-        auto& shader = assets().loadShader("fullscreen", "fullscreen.vert", "fullscreen.frag");
+        shaderHandle_ = assets().loadShader("fullscreen", "fullscreen.vert", "fullscreen.frag");
+        auto& shader = assets().shader(shaderHandle_);
 
         shaderLayer_ = layers().create("fullscreen", 0, true);
 
@@ -72,6 +85,7 @@ public:
         shaderParams_->bind("u_mouse", &FullscreenParams::mousePos);
 
         quad_ = &spawn<FullscreenQuad>(shaderLayer_, shader, shaderParams_.get());
+        spawn<FpsCounter>();
     }
 
     void update(const float dt) override {
@@ -93,7 +107,7 @@ private:
         params_.resolution = {static_cast<float>(GetScreenWidth()), static_cast<float>(GetScreenHeight())};
 
         auto [x, y] = GetMousePosition();
-        params_.mousePos = {x / params_.resolution.x, 1.0f - (y / params_.resolution.y)};
+        params_.mousePos = {(x / params_.resolution.x) * 2.0f - 1.0f, 1.0f - (y / params_.resolution.y) * 2.0f};
 
         if (shaderParams_) {
             shaderParams_->params() = params_;
@@ -101,12 +115,13 @@ private:
     }
 
     void rebindShaderParams_() {
-        auto& shader = assets().shader("fullscreen");
+        auto& shader = assets().shader(shaderHandle_);
 
         shaderParams_ = std::make_unique<ShaderParams<FullscreenParams>>(shader);
         shaderParams_->bind("u_time", &FullscreenParams::time);
         shaderParams_->bind("u_resolution", &FullscreenParams::resolution);
         shaderParams_->bind("u_mouse", &FullscreenParams::mousePos);
+        shaderParams_->params() = params_;
 
         if (quad_) {
             quad_->setShaderAndParams(shader, shaderParams_.get());
@@ -131,6 +146,7 @@ private:
 
 private:
     LayerId shaderLayer_ = InvalidLayerId;
+    ShaderHandle shaderHandle_{InvalidShaderHandle};
     std::unique_ptr<ShaderParams<FullscreenParams>> shaderParams_;
     FullscreenQuad* quad_ = nullptr;
     FullscreenParams params_;
@@ -142,7 +158,7 @@ auto main() -> int {
     Runtime runtime(WindowConfig{
         .width = 800,
         .height = 600,
-        .fps = 60,
+        .fps = 240,
         .title = "RLGE Shader Demo",
         .debugKey = KeyCode::F11
     });

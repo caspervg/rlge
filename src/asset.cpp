@@ -2,7 +2,9 @@
 
 #include <fstream>
 #include <ranges>
+#include <sstream>
 #include <utility>
+#include "imgui.h"
 
 namespace rlge {
     AssetStore::~AssetStore() {
@@ -52,15 +54,16 @@ namespace rlge {
         return fonts_.at(id);
     }
 
-    Shader& AssetStore::loadShader(const std::string& id, const std::string& vertPath, const std::string& fragPath) {
-        const auto it = shaderAssets_.find(id);
-        if (it != shaderAssets_.end())
-            return it->second.shader;
+    ShaderHandle AssetStore::loadShader(const std::string& id, const std::string& vertPath, const std::string& fragPath) {
+        if (const auto it = shaderNameToHandle_.find(id); it != shaderNameToHandle_.end()) {
+            return it->second;
+        }
 
         const auto v = path(vertPath);
         const auto f = path(fragPath);
 
         ShaderAsset asset;
+        asset.name = id;
         asset.vertPath = v;
         asset.fragPath = f;
         asset.hotReload = hotReload_;
@@ -72,25 +75,29 @@ namespace rlge {
             if (std::error_code ec; std::filesystem::exists(f, ec)) {
                 asset.lastFragModTime = std::filesystem::last_write_time(f, ec);
             }
-
-            auto [iter, _] = shaderAssets_.emplace(id, std::move(asset));
-            reloadShaderAsset_(iter->second);
-            return iter->second.shader;
         } else {
             asset.shader = LoadShader(v.string().c_str(), f.string().c_str());
-            auto [iter, _] = shaderAssets_.emplace(id, std::move(asset));
-            return iter->second.shader;
         }
+
+        const ShaderHandle handle{nextShaderHandle_++};
+        auto [iter, _] = shaderAssets_.emplace(handle, std::move(asset));
+        shaderNameToHandle_.emplace(id, handle);
+
+        if (hotReload_) {
+            reloadShaderAsset_(iter->second);
+        }
+        return handle;
     }
 
-    Shader& AssetStore::loadVertexShader(const std::string& id, const std::string& vertPath) {
-        const auto it = shaderAssets_.find(id);
-        if (it != shaderAssets_.end())
-            return it->second.shader;
+    ShaderHandle AssetStore::loadVertexShader(const std::string& id, const std::string& vertPath) {
+        if (const auto it = shaderNameToHandle_.find(id); it != shaderNameToHandle_.end()) {
+            return it->second;
+        }
 
         const auto f = path(vertPath);
 
         ShaderAsset asset;
+        asset.name = id;
         asset.vertPath = f;
         asset.hotReload = hotReload_;
 
@@ -98,24 +105,29 @@ namespace rlge {
             if (std::error_code ec; std::filesystem::exists(f, ec)) {
                 asset.lastVertModTime = std::filesystem::last_write_time(f, ec);
             }
-            auto [iter, _] = shaderAssets_.emplace(id, std::move(asset));
-            reloadShaderAsset_(iter->second);
-            return iter->second.shader;
         } else {
             asset.shader = LoadShader(nullptr, f.string().c_str());
-            auto [iter, _] = shaderAssets_.emplace(id, std::move(asset));
-            return iter->second.shader;
         }
+
+        const ShaderHandle handle{nextShaderHandle_++};
+        auto [iter, _] = shaderAssets_.emplace(handle, std::move(asset));
+        shaderNameToHandle_.emplace(id, handle);
+
+        if (hotReload_) {
+            reloadShaderAsset_(iter->second);
+        }
+        return handle;
     }
 
-    Shader& AssetStore::loadFragmentShader(const std::string& id, const std::string& fragPath) {
-        const auto it = shaderAssets_.find(id);
-        if (it != shaderAssets_.end())
-            return it->second.shader;
+    ShaderHandle AssetStore::loadFragmentShader(const std::string& id, const std::string& fragPath) {
+        if (const auto it = shaderNameToHandle_.find(id); it != shaderNameToHandle_.end()) {
+            return it->second;
+        }
 
         const auto f = path(fragPath);
 
         ShaderAsset asset;
+        asset.name = id;
         asset.fragPath = f;
         asset.hotReload = hotReload_;
 
@@ -123,39 +135,53 @@ namespace rlge {
             if (std::error_code ec; std::filesystem::exists(f, ec)) {
                 asset.lastFragModTime = std::filesystem::last_write_time(f, ec);
             }
-            auto [iter, _] = shaderAssets_.emplace(id, std::move(asset));
-            reloadShaderAsset_(iter->second);
-            return iter->second.shader;
         } else {
             asset.shader = LoadShader(nullptr, f.string().c_str());
-            auto [iter, _] = shaderAssets_.emplace(id, std::move(asset));
-            return iter->second.shader;
         }
+
+        const ShaderHandle handle{nextShaderHandle_++};
+        auto [iter, _] = shaderAssets_.emplace(handle, std::move(asset));
+        shaderNameToHandle_.emplace(id, handle);
+
+        if (hotReload_) {
+            reloadShaderAsset_(iter->second);
+        }
+        return handle;
     }
 
-    Shader& AssetStore::loadShaderFromMemory(const std::string& id, const char* vertSrc, const char* fragSrc) {
-        const auto it = shaderAssets_.find(id);
-        if (it != shaderAssets_.end())
-            return it->second.shader;
+    ShaderHandle AssetStore::loadShaderFromMemory(const std::string& id, const char* vertSrc, const char* fragSrc) {
+        if (const auto it = shaderNameToHandle_.find(id); it != shaderNameToHandle_.end()) {
+            return it->second;
+        }
 
         ShaderAsset asset;
+        asset.name = id;
         asset.shader = LoadShaderFromMemory(vertSrc, fragSrc);
         asset.hotReload = false;
 
-        auto [iter, _] = shaderAssets_.emplace(id, std::move(asset));
-        return iter->second.shader;
+        const ShaderHandle handle{nextShaderHandle_++};
+        shaderNameToHandle_.emplace(id, handle);
+        shaderAssets_.emplace(handle, std::move(asset));
+        return handle;
     }
 
-    Shader& AssetStore::shader(const std::string& id) {
-        return shaderAssets_.at(id).shader;
+    Shader& AssetStore::shader(const ShaderHandle handle) {
+        return shaderAssets_.at(handle).shader;
     }
 
-    ShaderAsset& AssetStore::shaderAsset(const std::string& id) {
-        return shaderAssets_.at(id);
+    ShaderAsset& AssetStore::shaderAsset(const ShaderHandle handle) {
+        return shaderAssets_.at(handle);
+    }
+
+    const ShaderAsset& AssetStore::shaderAsset(const ShaderHandle handle) const {
+        return shaderAssets_.at(handle);
     }
 
     void AssetStore::hotReload(const bool enable) {
         hotReload_ = enable;
+        for (auto& [_, asset] : shaderAssets_) {
+            asset.hotReload = enable;
+        }
     }
 
     bool AssetStore::hotReload() const { return hotReload_; }
@@ -164,13 +190,71 @@ namespace rlge {
         shaderReloadCallback_ = std::move(cb);
     }
 
+    void AssetStore::addShaderReloadListener(ShaderReloadCallback cb) {
+        shaderReloadListeners_.push_back(std::move(cb));
+    }
+
+    void AssetStore::update(const float dt) {
+        if (!hotReload_)
+            return;
+
+        hotReloadLastCheck_ += dt;
+        if (hotReloadLastCheck_ < hotReloadInterval_)
+            return;
+
+        hotReloadLastCheck_ = 0.0f;
+
+        for (auto& [handle, asset] : shaderAssets_) {
+            if (!asset.hotReload)
+                continue;
+
+            bool changed = false;
+
+            if (!asset.vertPath.empty()) {
+                std::error_code ec;
+                if (std::filesystem::exists(asset.vertPath, ec)) {
+                    const auto modTime = std::filesystem::last_write_time(asset.vertPath, ec);
+                    if (!ec && modTime != asset.lastVertModTime) {
+                        asset.lastVertModTime = modTime;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (!asset.fragPath.empty()) {
+                std::error_code ec;
+                if (std::filesystem::exists(asset.fragPath, ec)) {
+                    const auto modTime = std::filesystem::last_write_time(asset.fragPath, ec);
+                    if (!ec && modTime != asset.lastFragModTime) {
+                        asset.lastFragModTime = modTime;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (!changed)
+                continue;
+
+            const bool success = reloadShaderAsset_(asset);
+            if (shaderReloadCallback_) {
+                shaderReloadCallback_(handle, success);
+            }
+            for (const auto& listener : shaderReloadListeners_) {
+                if (listener) {
+                    listener(handle, success);
+                }
+            }
+        }
+    }
+
     void AssetStore::unloadAll() {
         for (const auto& asset : shaderAssets_ | std::views::values) {
             if (asset.shader.id != 0) {
-                UnloadShader(asset. shader);
+                UnloadShader(asset.shader);
             }
         }
         shaderAssets_.clear();
+        shaderNameToHandle_.clear();
 
         for (const auto& kv : fonts_) {
             UnloadFont(kv.second);
@@ -232,5 +316,46 @@ namespace rlge {
         ss << file.rdbuf();
         out = ss.str();
         return true;
+    }
+
+    void AssetStore::debugOverlay() {
+        if (ImGui::Begin("Shaders")) {
+            if (shaderAssets_.empty()) {
+                ImGui::TextUnformatted("No shaders loaded.");
+            } else {
+                if (ImGui::BeginTable("shaders_table", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter)) {
+                    ImGui::TableSetupColumn("ID");
+                    ImGui::TableSetupColumn("Reloads");
+                    ImGui::TableSetupColumn("Status");
+                    ImGui::TableSetupColumn("Message");
+                    ImGui::TableHeadersRow();
+
+                    for (const auto& [handle, asset] : shaderAssets_) {
+                        ImGui::TableNextRow();
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::Text("%s (%u)", asset.name.c_str(), handle.value);
+
+                        ImGui::TableSetColumnIndex(1);
+                        ImGui::Text("%d", asset.reloadCount);
+
+                        ImGui::TableSetColumnIndex(2);
+                        if (asset.hasError) {
+                            ImGui::TextColored({1.0f, 0.3f, 0.3f, 1.0f}, "Error");
+                        } else {
+                            ImGui::TextColored({0.3f, 1.0f, 0.3f, 1.0f}, "OK");
+                        }
+
+                        ImGui::TableSetColumnIndex(3);
+                        if (asset.hasError) {
+                            ImGui::TextWrapped("%s", asset.errorMessage.c_str());
+                        } else {
+                            ImGui::TextUnformatted("");
+                        }
+                    }
+                    ImGui::EndTable();
+                }
+            }
+        }
+        ImGui::End();
     }
 }

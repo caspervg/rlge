@@ -10,110 +10,85 @@ uniform vec2 u_mouse;
 
 out vec4 finalColor;
 
-#define S(a, b, t) smoothstep(a, b, t)
-#define sat(x) clamp(x, 0., 1.)
+float dot2(in vec2 v) { return dot(v,v); }
+float dot2(in vec3 v) { return dot(v,v); }
+float ndot(in vec2 a, in vec2 b) { return a.x*b.x - a.y*b.y; }
 
-
-float remap(float a, float b, float c, float d, float t) {
-    return sat(((t - a)/(b - a))) * (d - c) + c;
+float sdPlane(vec3 p) {
+    return p.y;
 }
 
-float remap01(float a, float b, float t) {
-    return sat(remap(a, b, 0., 1., t));
+float sdSphere(vec3 p, float s) {
+    return length(p)-s;
 }
 
-vec2 within(vec2 uv, vec4 rect) {
-    return (uv - rect.xy)/(rect.zw - rect.xy);
+float sdBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
 }
 
-vec4 Eye(vec2 uv) {
-    // Renormalize within rectangle to [-0.5, 0.5]
-    uv = uv - .5;
-    float d = length(uv);
-
-    vec4 irisCol = vec4(.3, .5, 1., 1.);
-    vec4 col = mix(vec4(1.), irisCol, S(.1, .7, d) * 0.5);
-
-    // Eye shadow
-    col.rgb *= 1. - S(.45, .5, d) * 0.5 * sat(-uv.y - uv.x);
-
-    // Iris outline
-    col.rgb = mix(col.rgb, vec3(0.), S(.3, .28, d));
-
-    // Iris
-    irisCol.rgb *= 1. + S(.3, .05, d);
-    col.rgb = mix(col.rgb, irisCol.rgb, S(.28, .25, d));
-
-    // Pupil
-    col.rgb = mix(col.rgb, vec3(0.), S(.16, .14, d));
-
-    // Highlights
-    float highlight = S(.1, .09, length(uv - vec2(-.15, .15))); // highlight 1
-    highlight += S(.07, .05, length(uv + vec2(-.08, .08))); // highlight 2
-    col.rgb = mix(col.rgb, vec3(1.), highlight);
-
-    col.a = S(.5, .48, d);
-    return col;
+float smin(float a, float b, float k) {
+    float h = max(k-abs(a-b), 0.0) / k;
+    return min(a, b) - h*h*h*k*(1./6.);
 }
 
-vec4 Mouth(vec2 uv) {
-    vec4 col = vec4(0.);
-
-    return col;
+mat2 rot2d(float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    return mat2(c, -s, s, c);
 }
 
-vec4 Head(vec2 uv) {
-    vec4 col = vec4(.9, .65, .1, 1.);
+mat3 rot3d(vec3 axis, float angle) {
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
 
-    // Circle, with alpha based on distance from center
-    float d = length(uv);
-    col.a = S(.5, .49, d);
-
-    // Edge shading
-    float edgeShade = remap01(.35, .5, d);
-    edgeShade *= edgeShade;
-    col.rgb *= 1. - edgeShade * .3;
-
-    // Outline
-    col.rgb = mix(col.rgb, vec3(.6, .3, .1), S(.47, .48, d));
-
-    // Highlight with gradient
-    float highlight = S(.41, .405, d);
-    highlight *= remap(.41, -.1, .75, 0., uv.y);
-    col.rgb = mix(col.rgb, vec3(1.), highlight);
-
-    // Cheek
-    d = length(uv - vec2(.25, -.2));
-    float cheek = S(.2, .01, d) * .4;
-    cheek *= S(.17, .16, d);
-    col.rgb = mix(col.rgb, vec3(1., .1, .1), cheek);
-
-    return col;
+    return mat3(
+        oc * axis.x * axis.x + c, oc * axis.x * axis.y - axis.z * s, oc * axis.z * axis.x + axis.y * s,
+        oc * axis.y * axis.x + axis.z * s, oc * axis.y * axis.y + c, oc * axis.y * axis.z - axis.x * s,
+        oc * axis.z * axis.x - axis.y * s, oc * axis.y * axis.z + axis.x * s, oc * axis.z * axis.z + c
+    );
 }
 
-vec4 smiley(vec2 uv) {
-    vec4 col = vec4(0.);
+vec3 rot3d(vec3 p, vec3 axis, float angle) {
+    return mix(dot(axis, p) + axis, p, cos(angle)) + cross(axis, p) * sin(angle);
+}
 
-    // Symmetric head
-    uv.x = abs(uv.x);
+float map(vec3 p) {
+    vec3 spherePos = vec3(sin(u_time)*3., 0, 0);
 
-    vec4 head = Head(uv);
-    vec4 eye = Eye(within(uv, vec4(.03, -.1, .37, .25)));
-    vec4 mouth = Mouth(within(uv, vec4(-.3, -.4, .3, -.1)));
+    float sphere = sdSphere(p - spherePos, 1.0);
 
-    col = mix(col, head, head.a);
-    col = mix(col, eye, eye.a);
-    col = mix(col, mouth, mouth.a);
+    vec3 q = p;
 
-    return col;
+    q = mod(p, 10) - .5;
+    float box = sdBox(p * 4., vec3(.75)) / 4.; lol';'
+    //float box = sdBox(q, vec3(.75));
+
+    float ground = p.y + .75;
+
+    return smin(ground, smin(sphere, box, 2.), .5);
 }
 
 void main() {
-    vec2 uv = gl_FragCoord.xy / u_resolution;
-    uv -= 0.5;
-    uv.x *= u_resolution.x / u_resolution.y;
+    vec2 uv = (gl_FragCoord.xy * 2. - u_resolution.xy ) / u_resolution.y;
+    //vec2 u_mouse_norm = (u_mouse * 2. - u_resolution.xy ) / u_resolution.y;
 
+    vec3 ro = vec3(0, 0, -3);
+    vec3 rd = normalize(vec3(uv, 1));
+    vec3 col = vec3(0);
 
-    // Output to screen
-    finalColor = smiley(uv);
+    float t = 0.;
+    for (int i = 0; i < 100; i++) {
+        vec3 p = ro + rd * t;
+        float d = map(p);
+        t += d; // March the ray!
+
+        if (d < .001 || t > 100.) break;
+    }
+
+    col = vec3(t * .2);
+
+    finalColor = vec4(col, 1);
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -12,11 +13,10 @@
 #include "events.hpp"
 #include "input.hpp"
 #include "render_layer.hpp"
-#include "render_queue.hpp"
 #include "timer.hpp"
 #include "tween.hpp"
-#include "collision/collision_system.hpp"
 #include "view.hpp"
+#include "collision/collision_system.hpp"
 
 namespace rlge {
     class Runtime;
@@ -158,6 +158,20 @@ namespace rlge {
         void drawDebug() const;
         Scene* top();
         [[nodiscard]] const Scene* top() const;
+
+        template<typename Fn>
+        void forEach(Fn&& fn) {
+            for (auto& s : stack_) {
+                if (s) fn(*s);
+            }
+        }
+
+        template<typename Fn>
+        void forEach(Fn&& fn) const {
+            for (const auto& s : stack_) {
+                if (s) fn(*s);
+            }
+        }
 
     private:
         std::vector<std::unique_ptr<Scene>> stack_;

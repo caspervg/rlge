@@ -1,15 +1,31 @@
 #pragma once
+#include <cstdint>
 #include <filesystem>
 #include <functional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
+#include <vector>
 
 #include "raylib.h"
 
 namespace rlge {
-    using ShaderReloadCallback = std::function<void(const std::string& id, bool success)>;
+    struct ShaderHandle {
+        std::uint32_t value{0};
+        explicit constexpr operator bool() const noexcept { return value != 0; }
+        constexpr bool operator==(const ShaderHandle& other) const noexcept { return value == other.value; }
+    };
+
+    constexpr ShaderHandle InvalidShaderHandle{0};
+
+    struct ShaderHandleHash {
+        std::size_t operator()(ShaderHandle h) const noexcept { return static_cast<std::size_t>(h.value); }
+    };
+
+    using ShaderReloadCallback = std::function<void(ShaderHandle handle, bool success)>;
 
     struct ShaderAsset {
+        std::string name;
         Shader shader{};
         std::filesystem::path vertPath;
         std::filesystem::path fragPath;
@@ -43,17 +59,25 @@ namespace rlge {
         Font& font(const std::string& id);
 
         // Shader loading helpers
-        Shader& loadShader(const std::string& id, const std::string& vertPath, const std::string& fragPath);
-        Shader& loadVertexShader(const std::string& id, const std::string& vertPath);
-        Shader& loadFragmentShader(const std::string& id, const std::string& fragPath);
-        Shader& loadShaderFromMemory(const std::string& id, const char* vertSrc, const char* fragSrc);
-        Shader& shader(const std::string& id);
-        [[nodiscard]] ShaderAsset& shaderAsset(const std::string& id);
+        ShaderHandle loadShader(const std::string& id, const std::string& vertPath, const std::string& fragPath);
+        ShaderHandle loadVertexShader(const std::string& id, const std::string& vertPath);
+        ShaderHandle loadFragmentShader(const std::string& id, const std::string& fragPath);
+        ShaderHandle loadShaderFromMemory(const std::string& id, const char* vertSrc, const char* fragSrc);
+        Shader& shader(ShaderHandle handle);
+        [[nodiscard]] ShaderAsset& shaderAsset(ShaderHandle handle);
+        [[nodiscard]] const ShaderAsset& shaderAsset(ShaderHandle handle) const;
+        [[nodiscard]] const std::unordered_map<ShaderHandle, ShaderAsset, ShaderHandleHash>& shaderAssets() const { return shaderAssets_; }
+
+        // Poll shaders for changes when hotReload is enabled.
+        void update(float dt);
 
         void hotReload(bool enable);
         [[nodiscard]] bool hotReload() const;
         void setShaderReloadCallback(ShaderReloadCallback cb);
+        void addShaderReloadListener(ShaderReloadCallback cb);
 
+        // Debug overlay for shader assets (reload counts/errors)
+        void debugOverlay();
         void unloadAll();
 
     private:
@@ -63,12 +87,15 @@ namespace rlge {
     private:
         std::unordered_map<std::string, Texture2D> textures_;
         std::unordered_map<std::string, Font> fonts_;
-        std::unordered_map<std::string, ShaderAsset> shaderAssets_;
+        std::unordered_map<ShaderHandle, ShaderAsset, ShaderHandleHash> shaderAssets_;
+        std::unordered_map<std::string, ShaderHandle> shaderNameToHandle_;
         std::filesystem::path assetRoot_{std::filesystem::current_path()};
 
+        std::uint32_t nextShaderHandle_{1};
         bool hotReload_{false};
         float hotReloadInterval_ = 0.5f;
         float hotReloadLastCheck_ = 0.0f;
         ShaderReloadCallback shaderReloadCallback_{nullptr};
+        std::vector<ShaderReloadCallback> shaderReloadListeners_;
     };
 }

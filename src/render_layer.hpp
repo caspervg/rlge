@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -9,6 +10,7 @@
 
 #include "raylib.h"
 #include "shader_params.hpp"
+#include "asset.hpp"
 
 namespace rlge {
 
@@ -31,6 +33,7 @@ namespace rlge {
         LayerConfig config;
         Shader shader = {0};  // Optional layer shader
         std::unique_ptr<IShaderParams> shaderParams;  // Optional typed params
+        ShaderHandle shaderHandle{InvalidShaderHandle};
     };
 
     // Forward declaration
@@ -60,12 +63,24 @@ namespace rlge {
 
         // Set a simple shader for a layer (no typed params)
         void setShader(LayerId id, Shader shader);
+        void setShader(LayerId id, ShaderHandle handle, Shader shader);
 
         // Set typed shader params for a layer
         template<typename T>
         void setShaderParams(LayerId id, ShaderParams<T> params) {
             if (auto layer = get(id)) {
                 layer->get().shader = params.shader();
+                layer->get().shaderHandle = InvalidShaderHandle;
+                layer->get().shaderParams = std::make_unique<ShaderParamsWrapper<T>>(
+                    std::move(params));
+            }
+        }
+
+        template<typename T>
+        void setShaderParams(LayerId id, ShaderHandle handle, ShaderParams<T> params) {
+            if (auto layer = get(id)) {
+                layer->get().shader = params.shader();
+                layer->get().shaderHandle = handle;
                 layer->get().shaderParams = std::make_unique<ShaderParamsWrapper<T>>(
                     std::move(params));
             }
@@ -77,6 +92,10 @@ namespace rlge {
         // Get all layers sorted by sort order
         std::vector<LayerData*> getSorted();
         std::vector<const LayerData*> getSorted() const;
+        std::vector<std::reference_wrapper<LayerData>> all();
+        std::vector<std::reference_wrapper<const LayerData>> all() const;
+
+        void refreshShader(ShaderHandle handle, Shader newShader);
 
         // Built-in layer ID accessors (created by createDefaults())
         LayerId background() const { return backgroundId_; }

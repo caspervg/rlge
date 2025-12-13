@@ -3,6 +3,7 @@
 #include "collision_system.hpp"
 #include "entity.hpp"
 #include "raylib.h"
+#include "render_queue.hpp"
 #include "scene.hpp"
 #include "../component.hpp"
 #include "../transformer.hpp"

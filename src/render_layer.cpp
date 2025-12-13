@@ -60,6 +60,15 @@ namespace rlge {
     void LayerRegistry::setShader(LayerId id, Shader shader) {
         if (auto layer = get(id)) {
             layer->get().shader = shader;
+            layer->get().shaderHandle = InvalidShaderHandle;
+            layer->get().shaderParams.reset();
+        }
+    }
+
+    void LayerRegistry::setShader(LayerId id, ShaderHandle handle, Shader shader) {
+        if (auto layer = get(id)) {
+            layer->get().shader = shader;
+            layer->get().shaderHandle = handle;
             layer->get().shaderParams.reset();
         }
     }
@@ -92,6 +101,35 @@ namespace rlge {
 
     std::vector<const LayerData*> LayerRegistry::getSorted() const {
         return getSortedImpl(*this);
+    }
+
+    std::vector<std::reference_wrapper<LayerData>> LayerRegistry::all() {
+        std::vector<std::reference_wrapper<LayerData>> result;
+        result.reserve(layers_.size());
+        for (auto& [_, layer] : layers_) {
+            result.push_back(std::ref(layer));
+        }
+        return result;
+    }
+
+    std::vector<std::reference_wrapper<const LayerData>> LayerRegistry::all() const {
+        std::vector<std::reference_wrapper<const LayerData>> result;
+        result.reserve(layers_.size());
+        for (const auto& [_, layer] : layers_) {
+            result.push_back(std::cref(layer));
+        }
+        return result;
+    }
+
+    void LayerRegistry::refreshShader(const ShaderHandle handle, const Shader newShader) {
+        for (auto& [_, layer] : layers_) {
+            if (layer.shaderHandle == handle) {
+                layer.shader = newShader;
+                if (layer.shaderParams) {
+                    layer.shaderParams->setShader(newShader);
+                }
+            }
+        }
     }
 
     void LayerRegistry::createDefaults() {

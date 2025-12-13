@@ -100,6 +100,11 @@ namespace rlge {
             // Store the binding setup for rebinding after copy/move
             bindingSetups_.push_back([uniformName, member](ShaderParams& self) {
                 const int loc = GetShaderLocation(self.shader_, uniformName);
+#ifndef NDEBUG
+                if (loc < 0) {
+                    TraceLog(LOG_WARNING, "Shader uniform '%s' not found on shader id=%d", uniformName, self.shader_.id);
+                }
+#endif
                 UniformBinding binding;
                 binding.location = loc;
                 binding.apply = [&self, member, loc](Shader s, int) {
@@ -123,6 +128,12 @@ namespace rlge {
         // Reference access
         T& params() { return params_; }
         const T& params() const { return params_; }
+
+        // Swap the underlying shader while keeping current values/bindings.
+        void setShader(const Shader shader) {
+            shader_ = shader;
+            rebind();
+        }
 
         // Apply all bound uniforms to the shader
         void apply() {
@@ -156,6 +167,7 @@ namespace rlge {
         virtual ~IShaderParams() = default;
         virtual void apply() = 0;
         virtual Shader shader() const = 0;
+        virtual void setShader(Shader shader) = 0;
     };
 
     // Type-erased wrapper for ShaderParams
@@ -167,6 +179,7 @@ namespace rlge {
 
         void apply() override { params_.apply(); }
         Shader shader() const override { return params_.shader(); }
+        void setShader(const Shader shader) override { params_.setShader(shader); }
 
         ShaderParams<T>& get() { return params_; }
         const ShaderParams<T>& get() const { return params_; }

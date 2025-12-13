@@ -1,5 +1,6 @@
 #include "runtime.hpp"
 #include "scene.hpp"
+#include "entity.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -7,6 +8,7 @@
 #include "imgui.h"
 #include "raylib.h"
 #include "rlImGui.h"
+#include "shader_effect.hpp"
 
 namespace rlge {
     Runtime::Runtime(const WindowConfig& cfg)
@@ -14,6 +16,27 @@ namespace rlge {
         , renderer_(layers_) {
         layers_.createDefaults();
         assets_.setRoot(std::filesystem::current_path());
+        assets_.addShaderReloadListener([this](const ShaderHandle handle, const bool success) {
+            if (!success || !handle)
+                return;
+
+            const Shader& shader = assets_.shader(handle);
+            layers_.refreshShader(handle, shader);
+
+            scenes_.forEach([&](Scene& scene) {
+                for (const auto& ent : scene.entities()) {
+                    if (!ent)
+                        continue;
+                    ent->forEachComponent([&](Component& comp) {
+                        if (auto* effect = dynamic_cast<HasShaderEffect*>(&comp)) {
+                            if (effect->handle() == handle) {
+                                effect->setShader(shader);
+                            }
+                        }
+                    });
+                }
+            });
+        });
 
         aspectRatio_ = cfg.aspectRatio > 0 ? cfg.aspectRatio : (cfg.width / cfg.height);
         resizeMode_ = cfg.resizeMode;
@@ -43,12 +66,14 @@ namespace rlge {
             renderer_.beginFrame();
             const float dt = GetFrameTime();
 
+            assets_.update(dt);
+
             if (fullscreenKey_.has_value() && input_.keyPressed(*fullscreenKey_)) {
                 window_.toggleFullscreen();
             }
 
-            const float w = static_cast<float>(GetRenderWidth());
-            const float h = static_cast<float>(GetRenderHeight());
+            const auto w = static_cast<float>(GetRenderWidth());
+            const auto h = static_cast<float>(GetRenderHeight());
             if (lastWidth_ != w || lastHeight_ != h) {
                 handleResize_(w, h);
                 lastWidth_ = w;
@@ -117,6 +142,7 @@ namespace rlge {
             if (debugEnabled_) {
                 rlImGuiBegin();
                 ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
+                assets_.debugOverlay();
                 scenes_.drawDebug();
                 rlImGuiEnd();
             }

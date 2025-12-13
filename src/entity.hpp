@@ -64,6 +64,13 @@ namespace rlge {
             return nullptr;
         }
 
+        template <typename Fn>
+        void forEachComponent(Fn&& fn) {
+            for (auto& comp : components_) {
+                fn(*comp);
+            }
+        }
+
         void destroy() const;
         void destroyDeferred() const;
 

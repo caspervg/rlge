@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "render_queue.hpp"
 #include "transformer.hpp"
 
 namespace rlge {
