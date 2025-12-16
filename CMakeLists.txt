@@ -90,62 +90,66 @@ target_sources(rlge PRIVATE
         src/lighting/lit_scene.cpp
         src/lighting/lit_sprite.cpp)
 
-# Example game executables
-add_executable(rlge_basic_game examples/basic_game/main.cpp)
-target_link_libraries(rlge_basic_game PRIVATE rlge raylib rlimgui imgui)
+option(RLGE_BUILD_EXAMPLES "Build the bundled RLGE example executables" ON)
 
-add_executable(rlge_particles examples/particles/main.cpp)
-target_link_libraries(rlge_particles PRIVATE rlge raylib rlimgui imgui)
+if(RLGE_BUILD_EXAMPLES)
+    # Example game executables
+    add_executable(rlge_basic_game examples/basic_game/main.cpp)
+    target_link_libraries(rlge_basic_game PRIVATE rlge raylib rlimgui imgui)
 
-add_executable(rlge_snake
-        examples/snake/main.cpp
-        examples/snake/snake_game.cpp
-        examples/snake/snake_fx.cpp
-        examples/snake/snake_view.cpp
-        examples/snake/snake_scene.cpp
-        examples/snake/game_over_scene.cpp
-        examples/snake/game_over_scene.h)
-target_link_libraries(rlge_snake PRIVATE rlge raylib rlimgui imgui)
+    add_executable(rlge_particles examples/particles/main.cpp)
+    target_link_libraries(rlge_particles PRIVATE rlge raylib rlimgui imgui)
 
-add_executable(rlge_tilemap examples/tilemap/main.cpp)
-target_link_libraries(rlge_tilemap PRIVATE rlge raylib rlimgui imgui)
+    add_executable(rlge_snake
+            examples/snake/main.cpp
+            examples/snake/snake_game.cpp
+            examples/snake/snake_fx.cpp
+            examples/snake/snake_view.cpp
+            examples/snake/snake_scene.cpp
+            examples/snake/game_over_scene.cpp
+            examples/snake/game_over_scene.h)
+    target_link_libraries(rlge_snake PRIVATE rlge raylib rlimgui imgui)
 
-add_executable(rlge_multiview examples/multiview/main.cpp)
-target_link_libraries(rlge_multiview PRIVATE rlge raylib rlimgui imgui)
+    add_executable(rlge_tilemap examples/tilemap/main.cpp)
+    target_link_libraries(rlge_tilemap PRIVATE rlge raylib rlimgui imgui)
 
-add_executable(rlge_hybrid3d examples/hybrid3d/main.cpp)
-target_link_libraries(rlge_hybrid3d PRIVATE rlge raylib rlimgui imgui)
+    add_executable(rlge_multiview examples/multiview/main.cpp)
+    target_link_libraries(rlge_multiview PRIVATE rlge raylib rlimgui imgui)
 
-add_executable(rlge_collision_debug examples/collision_debug/main.cpp)
-target_link_libraries(rlge_collision_debug PRIVATE rlge raylib rlimgui imgui)
+    add_executable(rlge_hybrid3d examples/hybrid3d/main.cpp)
+    target_link_libraries(rlge_hybrid3d PRIVATE rlge raylib rlimgui imgui)
 
-add_executable(rlge_breakout
-        examples/breakout/main.cpp
-        examples/breakout/breakout_scene.cpp
-        examples/breakout/game_over_scene.cpp
-        examples/breakout/breakout_level.cpp
-        examples/breakout/breakout_game.cpp
-        examples/breakout/powerup_manager.cpp
-        examples/breakout/powerup.cpp
-        examples/breakout/banner.cpp
-        examples/breakout/safety_net.cpp
-        examples/breakout/scoreboard.cpp
-        examples/breakout/wall.cpp
-        examples/breakout/paddle.cpp
-        examples/breakout/brick.cpp
-        examples/breakout/ball.cpp
-)
-target_link_libraries(rlge_breakout PRIVATE rlge raylib rlimgui imgui)
+    add_executable(rlge_collision_debug examples/collision_debug/main.cpp)
+    target_link_libraries(rlge_collision_debug PRIVATE rlge raylib rlimgui imgui)
 
-add_executable(rlge_shaders examples/shader/main.cpp)
-target_link_libraries(rlge_shaders PRIVATE rlge raylib rlimgui imgui)
+    add_executable(rlge_breakout
+            examples/breakout/main.cpp
+            examples/breakout/breakout_scene.cpp
+            examples/breakout/game_over_scene.cpp
+            examples/breakout/breakout_level.cpp
+            examples/breakout/breakout_game.cpp
+            examples/breakout/powerup_manager.cpp
+            examples/breakout/powerup.cpp
+            examples/breakout/banner.cpp
+            examples/breakout/safety_net.cpp
+            examples/breakout/scoreboard.cpp
+            examples/breakout/wall.cpp
+            examples/breakout/paddle.cpp
+            examples/breakout/brick.cpp
+            examples/breakout/ball.cpp
+    )
+    target_link_libraries(rlge_breakout PRIVATE rlge raylib rlimgui imgui)
 
-add_executable(rlge_lighting examples/lighting/main.cpp)
-target_link_libraries(rlge_lighting PRIVATE rlge raylib rlimgui imgui)
+    add_executable(rlge_shaders examples/shader/main.cpp)
+    target_link_libraries(rlge_shaders PRIVATE rlge raylib rlimgui imgui)
 
-add_executable(rlge_raygui examples/raygui/main.cpp examples/util/raygui_helpers.hpp)
-target_include_directories(rlge_raygui PRIVATE ${CMAKE_CURRENT_LIST_DIR}/examples)
-target_link_libraries(rlge_raygui PRIVATE rlge raylib)
+    add_executable(rlge_lighting examples/lighting/main.cpp)
+    target_link_libraries(rlge_lighting PRIVATE rlge raylib rlimgui imgui)
 
-add_executable(rlge_shader_learning examples/shader_learn/main.cpp)
-target_link_libraries(rlge_shader_learning PRIVATE rlge raylib rlimgui imgui)
+    add_executable(rlge_raygui examples/raygui/main.cpp examples/util/raygui_helpers.hpp)
+    target_include_directories(rlge_raygui PRIVATE ${CMAKE_CURRENT_LIST_DIR}/examples)
+    target_link_libraries(rlge_raygui PRIVATE rlge raylib)
+
+    add_executable(rlge_shader_learning examples/shader_learn/main.cpp)
+    target_link_libraries(rlge_shader_learning PRIVATE rlge raylib rlimgui imgui)
+endif()

@@ -1,6 +1,6 @@
 # RLGE - Raylib Lightweight Game Engine
 
-RLGE is a small C++23 2D game engine built on top of raylib, ImGui, and rlImGui. It provides a scene stack, entity/component model, event buses, a batched renderer, a collision system, and helper entities for getting simple games on screen quickly.
+RLGE is a lightweight C++23 toolkit on top of raylib, ImGui, and rlImGui. It gives you structured building blocks—scenes, cameras, layers, batching, collisions, lighting—without trying to own your whole game loop. Use the pieces you want to get 2D (and some 3D) content on screen quickly.
 
 This repository also contains example games/demos:
 
@@ -88,6 +88,42 @@ Each executable runs a focused scenario; use `F1` to toggle the ImGui overlay in
 - `rlge_hybrid3d`: hybrid 3D/2D scene with an inset view.
 
 ## Using RLGE in your own game
+
+### Pulling RLGE into another CMake project
+
+- Add the repo as a subdirectory or via `FetchContent`, and disable the bundled examples when used as a dependency: `-DRLGE_BUILD_EXAMPLES=OFF`.
+- Link against the `rlge` target only; it transitively links raylib, rlImGui, and tileson. Public include paths are exported by the target.
+- Ensure your project is set to C++23 (`set(CMAKE_CXX_STANDARD 23)`).
+
+`FetchContent` example (replace the repo URL/TAG with your fork/version):
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(rlge
+    GIT_REPOSITORY https://github.com/your-org/rlge.git
+    GIT_TAG main
+)
+FetchContent_MakeAvailable(rlge)
+
+add_executable(my_game src/main.cpp)
+target_link_libraries(my_game PRIVATE rlge)
+```
+
+Vendored checkout example:
+
+```cmake
+add_subdirectory(external/rlge EXCLUDE_FROM_ALL)
+
+add_executable(my_game src/main.cpp)
+target_link_libraries(my_game PRIVATE rlge)
+```
+
+Configure with examples off when embedding:
+
+```bash
+cmake -S . -B build -DRLGE_BUILD_EXAMPLES=OFF
+cmake --build build
+```
 
 ### Bootstrapping a runtime
 
