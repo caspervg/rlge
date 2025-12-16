@@ -69,14 +69,20 @@ namespace rlge {
         [[nodiscard]] CameraProjection projection() const;
 
         // Move both position and target by delta
-        void move(Vector3 delta);
+        void move(const Vector3& delta);
         void move(float dx, float dy, float dz);
 
         // Orbit around current target with yaw/pitch (radians) and radius
         void orbitTarget(float yaw, float pitch, float radius);
 
+        void update(float dt);
+        void shake(float intensity, float duration);
+        [[nodiscard]] Vector3 getShakeOffset() const;
+
         // Helpers
         [[nodiscard]] Ray mouseRay(Vector2 screen) const;
+        [[nodiscard]] Ray mouseRay(const Rectangle& viewport, Vector2 screen) const;
+        [[nodiscard]] Ray mouseRay(const Rectangle& viewport) const;
         [[nodiscard]] Ray mouseRay() const;
         [[nodiscard]] Vector2 worldToScreen(const Vector3& world) const;
 
@@ -84,6 +90,15 @@ namespace rlge {
         [[nodiscard]] const Camera3D& cam3d() const;
 
     private:
+        void updateShake_(float dt);
+
+    private:
         Camera3D cam_{};
+        Vector3 basePosition_{};
+        Vector3 baseTarget_{};
+        float shakeIntensity_{0.0f};
+        float shakeDuration_{0.0f};
+        float shakeTimer_{0.0f};
+        Vector3 shakeOffset_{0.0f, 0.0f, 0.0f};
     };
 }

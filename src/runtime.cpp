@@ -116,15 +116,19 @@ namespace rlge {
 
             for (auto& view : views_) {
                 Camera2DController* cam2d = view.camera2D();
+                Camera3DController* cam3d = view.camera3D();
                 if (cam2d) {
                     cam2d->update(dt);
+                }
+                if (cam3d) {
+                    cam3d->update(dt);
                 }
 
                 BeginScissorMode(static_cast<int>(view.viewport.x), static_cast<int>(view.viewport.y),
                                  static_cast<int>(view.viewport.width), static_cast<int>(view.viewport.height));
 
                 if (view.space == ViewSpace::World3D) {
-                    if (auto* cam3d = view.camera3D()) {
+                    if (cam3d) {
                         renderer_.flushPreparedWorld3D(cam3d->cam3d(), view.viewport, cam2d == nullptr);
                     }
                 }

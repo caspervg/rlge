@@ -41,6 +41,7 @@ namespace rlge {
         LayerId layer = InvalidLayerId;
         float z{0.0f};
         std::function<void(const Camera3D&, const Rectangle&)> draw;
+        Shader shader = {0};  // Optional custom shader
     };
 
     // Performance metrics
@@ -98,6 +99,8 @@ namespace rlge {
 
         // 3D draw submission (uses Camera3D for the active view)
         void submit3D(LayerId layer, float z,
+                      std::function<void(const Camera3D&, const Rectangle& viewport)> fn);
+        void submit3D(LayerId layer, float z, Shader shader,
                       std::function<void(const Camera3D&, const Rectangle& viewport)> fn);
         void submit3D(LayerId layer,
                       std::function<void(const Camera3D&, const Rectangle& viewport)> fn);

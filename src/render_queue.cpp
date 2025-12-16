@@ -45,6 +45,18 @@ namespace rlge {
         worldPrepared_ = false;
     }
 
+    void RenderQueue::submit3D(const LayerId layer, const float z, const Shader shader,
+                               std::function<void(const Camera3D&, const Rectangle& viewport)> fn) {
+        DrawCommand3D cmd;
+        cmd.layer = layer;
+        cmd.z = z;
+        cmd.shader = shader;
+        cmd.draw = std::move(fn);
+        commands3D_.push_back(std::move(cmd));
+        stats_.customCommands3D++;
+        worldPrepared_ = false;
+    }
+
     void RenderQueue::submit3D(const LayerId layer,
                                std::function<void(const Camera3D&, const Rectangle& viewport)> fn) {
         submit3D(layer, 0.0f, std::move(fn));
@@ -204,7 +216,9 @@ namespace rlge {
 
         rlEnableDepthTest();
         rlEnableDepthMask();
-        rlClearScreenBuffers();
+        rlColorMask(false, false, false, false); // keep color buffer untouched
+        rlClearScreenBuffers();                  // now only depth actually clears
+        rlColorMask(true, true, true, true);
 
         BeginMode3D(cam);
         currentView_ = RenderViewContext{nullptr, &cam, viewport};
@@ -228,7 +242,23 @@ namespace rlge {
 
             for (const auto& cmd : commands3D_) {
                 if (cmd.layer == layer->id && cmd.draw) {
+                    const bool hasCmdShader = cmd.shader.id != 0;
+                    if (hasCmdShader && hasLayerShader) {
+                        EndShaderMode();
+                    }
+                    if (hasCmdShader) {
+                        BeginShaderMode(cmd.shader);
+                    }
                     cmd.draw(cam, viewport);
+                    if (hasCmdShader) {
+                        EndShaderMode();
+                    }
+                    if (hasCmdShader && hasLayerShader) {
+                        BeginShaderMode(layer->shader);
+                        if (layer->shaderParams) {
+                            layer->shaderParams->apply();
+                        }
+                    }
                     drawCallsThisView++;
                 }
             }

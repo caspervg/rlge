@@ -122,11 +122,19 @@ namespace rlge {
         cam_.up = {0.0f, 1.0f, 0.0f};
         cam_.fovy = 60.0f;
         cam_.projection = CAMERA_PERSPECTIVE;
+        basePosition_ = cam_.position;
+        baseTarget_ = cam_.target;
     }
 
-    void Camera3DController::setPosition(const Vector3& p) { cam_.position = p; }
+    void Camera3DController::setPosition(const Vector3& p) {
+        cam_.position = p;
+        basePosition_ = p;
+    }
     Vector3 Camera3DController::position() const { return cam_.position; }
-    void Camera3DController::setTarget(const Vector3& t) { cam_.target = t; }
+    void Camera3DController::setTarget(const Vector3& t) {
+        cam_.target = t;
+        baseTarget_ = t;
+    }
     Vector3 Camera3DController::target() const { return cam_.target; }
     void Camera3DController::setUp(const Vector3& u) { cam_.up = u; }
     Vector3 Camera3DController::up() const { return cam_.up; }
@@ -135,9 +143,11 @@ namespace rlge {
     void Camera3DController::setProjection(const CameraProjection proj) { cam_.projection = proj; }
     CameraProjection Camera3DController::projection() const { return static_cast<CameraProjection>(cam_.projection); }
 
-    void Camera3DController::move(const Vector3 delta) {
+    void Camera3DController::move(const Vector3& delta) {
         cam_.position = Vector3Add(cam_.position, delta);
         cam_.target = Vector3Add(cam_.target, delta);
+        basePosition_ = cam_.position;
+        baseTarget_ = cam_.target;
     }
     void Camera3DController::move(const float dx, const float dy, const float dz) { move(Vector3{dx, dy, dz}); }
 
@@ -152,10 +162,52 @@ namespace rlge {
             sy * cp * radius
         };
         cam_.position = Vector3Add(cam_.target, offset);
+        basePosition_ = cam_.position;
+        baseTarget_ = cam_.target;
+    }
+
+    void Camera3DController::update(const float dt) {
+        if (shakeTimer_ >= shakeDuration_) {
+            basePosition_ = cam_.position;
+            baseTarget_ = cam_.target;
+        }
+        updateShake_(dt);
+        cam_.position = Vector3Add(basePosition_, shakeOffset_);
+        cam_.target = Vector3Add(baseTarget_, shakeOffset_);
+    }
+
+    void Camera3DController::shake(const float intensity, const float duration) {
+        shakeIntensity_ = std::max(shakeIntensity_, intensity);
+        shakeDuration_ = duration;
+        shakeTimer_ = 0.0f;
+    }
+
+    Vector3 Camera3DController::getShakeOffset() const {
+        return shakeOffset_;
     }
 
     Ray Camera3DController::mouseRay(const Vector2 screen) const {
         return GetMouseRay(screen, cam_);
+    }
+
+    Ray Camera3DController::mouseRay(const Rectangle& viewport, const Vector2 screen) const {
+        const float vw = std::max(1.0f, viewport.width);
+        const float vh = std::max(1.0f, viewport.height);
+        // Remap screen coords from the viewport to the full render surface so GetMouseRay
+        // computes the correct normalized device coordinates under scissored views.
+        const float rw = static_cast<float>(GetRenderWidth());
+        const float rh = static_cast<float>(GetRenderHeight());
+        const float localX = (screen.x - viewport.x) / vw;
+        const float localY = (screen.y - viewport.y) / vh;
+        Vector2 remapped{
+            std::clamp(localX, 0.0f, 1.0f) * rw,
+            std::clamp(localY, 0.0f, 1.0f) * rh
+        };
+        return GetMouseRay(remapped, cam_);
+    }
+
+    Ray Camera3DController::mouseRay(const Rectangle& viewport) const {
+        return mouseRay(viewport, GetMousePosition());
     }
 
     Ray Camera3DController::mouseRay() const {
@@ -168,5 +220,27 @@ namespace rlge {
 
     Camera3D& Camera3DController::cam3d() { return cam_; }
     const Camera3D& Camera3DController::cam3d() const { return cam_; }
+
+    void Camera3DController::updateShake_(const float dt) {
+        if (shakeTimer_ >= shakeDuration_) {
+            shakeOffset_ = {0.0f, 0.0f, 0.0f};
+            return;
+        }
+
+        shakeTimer_ += dt;
+        const float progress = shakeTimer_ / shakeDuration_;
+        const float falloff = 1.0f - progress;
+        const float amplitude = shakeIntensity_ * falloff;
+
+        auto randUnit = []() {
+            return static_cast<float>(GetRandomValue(-1000, 1000)) / 1000.0f;
+        };
+
+        shakeOffset_ = {
+            randUnit() * amplitude,
+            randUnit() * amplitude,
+            randUnit() * amplitude
+        };
+    }
 
 }

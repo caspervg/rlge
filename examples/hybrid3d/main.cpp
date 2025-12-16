@@ -46,12 +46,26 @@ namespace demo {
             if (IsKeyPressed(KEY_O)) {
                 show2DOverlay_ = !show2DOverlay_;
             }
+            if (IsKeyPressed(KEY_P)) {
+                showPreWorldOverlay_ = !showPreWorldOverlay_;
+            }
+            if (IsKeyPressed(KEY_K)) {
+                cam3d_.shake(0.35f, 0.6f);
+            }
 
             updateCameraPosition_();
         }
 
         void draw() override {
             Scene::draw();
+
+            // Draw directly to the backbuffer before the queued world draws happen.
+            // With a color+depth clear in the 3D flush, this gets wiped; with a depth-only clear, it survives.
+            if (showPreWorldOverlay_) {
+                const auto [w, h] = runtime().window().size();
+                DrawRectangle(0, 0, static_cast<int>(w), 48, ColorAlpha(MAGENTA, 0.35f));
+                DrawText("Pre-3D overlay (cleared if color buffer is wiped)", 12, 12, 18, RAYWHITE);
+            }
 
             // 3D content: grid, a rotating cube, and some billboards
             rq().submitWorld([this] {
@@ -97,7 +111,8 @@ namespace demo {
             rq().submitUI([this] {
                 DrawText("Hybrid 3D + 2D views (main + inset)", 10, 10, 22, RAYWHITE);
                 DrawText("Left/Right: orbit camera  |  Up/Down: adjust height", 10, 38, 18, RAYWHITE);
-                DrawText("B: toggle billboards  |  O: toggle 2D overlay", 10, 60, 18, RAYWHITE);
+                DrawText("B: toggle billboards  |  O: toggle 2D overlay  |  K: shake main 3D cam", 10, 60, 18, RAYWHITE);
+                DrawText("P: toggle pre-3D overlay band (shows color clear behavior)", 10, 82, 18, RAYWHITE);
                 DrawRectangleLinesEx(insetViewport_, 2.0f, ColorAlpha(RAYWHITE, 0.8f));
                 DrawText("Inset", static_cast<int>(insetViewport_.x + 8), static_cast<int>(insetViewport_.y + 8), 16, RAYWHITE);
             });
@@ -198,6 +213,7 @@ namespace demo {
         float heightSpeed_{2.0f};
         bool showBillboards_{true};
         bool show2DOverlay_{true};
+        bool showPreWorldOverlay_{true};
         Rectangle insetViewport_{};
     };
 } // namespace demo
