@@ -114,14 +114,24 @@ namespace rlge {
                 ClearBackground(BLACK);
             }
 
-            for (const auto& view : views_) {
-                Camera& cam = view.camera.get();
-                cam.update(dt);
+            for (auto& view : views_) {
+                Camera2DController* cam2d = view.camera2D();
+                if (cam2d) {
+                    cam2d->update(dt);
+                }
 
                 BeginScissorMode(static_cast<int>(view.viewport.x), static_cast<int>(view.viewport.y),
                                  static_cast<int>(view.viewport.width), static_cast<int>(view.viewport.height));
 
-                renderer_.flushPreparedWorld(cam.cam2d(), view.viewport);
+                if (view.space == ViewSpace::World3D) {
+                    if (auto* cam3d = view.camera3D()) {
+                        renderer_.flushPreparedWorld3D(cam3d->cam3d(), view.viewport, cam2d == nullptr);
+                    }
+                }
+
+                if (cam2d) {
+                    renderer_.flushPreparedWorld2D(cam2d->cam2d(), view.viewport);
+                }
 
                 EndScissorMode();
             }
@@ -177,12 +187,44 @@ namespace rlge {
 
     const Window& Runtime::window() const { return window_; }
 
-    ViewId Runtime::addView(Camera& camera, const Rectangle& viewport,
+    ViewId Runtime::addView(Camera2DController& camera, const Rectangle& viewport,
                             std::function<Rectangle(float width, float height)> onResize,
                             const std::optional<ResizeMode> mode,
                             const std::optional<float> aspectRatio) {
         const ViewId id = nextViewId_++;
-        views_.push_back(View{id, std::ref(camera), viewport, std::move(onResize), mode, aspectRatio});
+        views_.push_back(View{
+            id,
+            std::ref(camera),
+            std::nullopt,
+            viewport,
+            std::move(onResize),
+            mode,
+            aspectRatio,
+            ViewSpace::World2D
+        });
+        return id;
+    }
+
+    ViewId Runtime::addView3D(Camera3DController& camera, const Rectangle& viewport,
+                              std::function<Rectangle(float width, float height)> onResize,
+                              const std::optional<ResizeMode> mode,
+                              const std::optional<float> aspectRatio,
+                              Camera2DController* overlay2D) {
+        const ViewId id = nextViewId_++;
+        std::optional<std::reference_wrapper<Camera2DController>> cam2dRef = std::nullopt;
+        if (overlay2D) {
+            cam2dRef = std::ref(*overlay2D);
+        }
+        views_.push_back(View{
+            id,
+            cam2dRef,
+            std::ref(camera),
+            viewport,
+            std::move(onResize),
+            mode,
+            aspectRatio,
+            ViewSpace::World3D
+        });
         return id;
     }
 

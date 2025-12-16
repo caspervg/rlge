@@ -95,10 +95,15 @@ namespace rlge {
         Window& window();
         const Window& window() const;
 
-        ViewId addView(Camera& camera, const Rectangle& viewport,
+        ViewId addView(Camera2DController& camera, const Rectangle& viewport,
             std::function<Rectangle(float width, float height)> onResize = nullptr,
             std::optional<ResizeMode> mode = std::nullopt,
             std::optional<float> aspectRatio = std::nullopt);
+        ViewId addView3D(Camera3DController& camera, const Rectangle& viewport,
+            std::function<Rectangle(float width, float height)> onResize = nullptr,
+            std::optional<ResizeMode> mode = std::nullopt,
+            std::optional<float> aspectRatio = std::nullopt,
+            Camera2DController* overlay2D = nullptr);
         void clearViews();
         bool removeView(ViewId id);
 

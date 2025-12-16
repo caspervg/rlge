@@ -151,7 +151,7 @@ private:
     FullscreenQuad* quad_ = nullptr;
     FullscreenParams params_;
     float elapsedTime_ = 0.0f;
-    rlge::Camera camera_;
+    rlge::Camera2DController camera_;
 };
 
 auto main() -> int {

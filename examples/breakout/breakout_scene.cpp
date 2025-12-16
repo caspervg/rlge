@@ -25,7 +25,7 @@ namespace breakout {
         ballLaunched_ = false;
         canLaunch_ = false;
 
-        camera_ = rlge::Camera();
+        camera_ = rlge::Camera2DController();
         const Vector2 renderSize = runtime().window().renderSize();
         const Rectangle initialViewport = computeViewport_(renderSize.x, renderSize.y);
         addView(

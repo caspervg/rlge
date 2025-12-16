@@ -50,7 +50,7 @@ public:
         };
         mouseConfig_ = mouseCfg;
 
-        camera_ = rlge::Camera();
+        camera_ = rlge::Camera2DController();
         setSingleView(camera_);
 
         emitterEntity_ = &spawn<ParticleEmitterEntity>(mouseCfg, [this](const Particle& p) {
@@ -333,7 +333,7 @@ private:
     ContinuousParticleEmitter* emitter_{nullptr};
     ContinuousParticleEmitter* rainEmitter_{nullptr};
     FpsCounter* fps_{nullptr};
-    rlge::Camera camera_;
+    rlge::Camera2DController camera_;
     int burstCount_{150};
     bool streaksEnabled_{false};
     ContinuousEmitterConfig mouseConfig_{};

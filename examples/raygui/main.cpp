@@ -90,7 +90,7 @@ public:
     explicit RayguiDemoScene(Runtime& r) : Scene(r) {}
 
     void enter() override {
-        camera_ = rlge::Camera();
+        camera_ = rlge::Camera2DController();
         setSingleView(camera_);
 
         auto& box = spawn<MovingBox>();
@@ -104,7 +104,7 @@ public:
     }
 
 private:
-    rlge::Camera camera_;
+    rlge::Camera2DController camera_;
     UiPanel* ui_{nullptr};
 };
 

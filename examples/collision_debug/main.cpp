@@ -1,7 +1,7 @@
-#include "runtime.hpp"
-#include "window.hpp"
 #include "debug.hpp"
 #include "imgui.h"
+#include "runtime.hpp"
+#include "window.hpp"
 
 #include "raylib.h"
 #include "render_entity.hpp"
@@ -217,7 +217,7 @@ public:
         Scene(r) {}
 
     void enter() override {
-        camera_ = rlge::Camera();
+        camera_ = rlge::Camera2DController();
         setSingleView(camera_);
 
         player_ = &spawn<PlayerEntity>();
@@ -241,7 +241,7 @@ public:
 
 private:
     PlayerEntity* player_{nullptr};
-    rlge::Camera camera_;
+    rlge::Camera2DController camera_;
 };
 
 int main() {

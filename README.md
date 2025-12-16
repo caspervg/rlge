@@ -13,7 +13,8 @@ This repository also contains example games/demos:
 - `examples/collision_debug`: collider shapes, layer masks, and debug overlays.
 - `examples/shader_demo`: layer and per-entity shaders with live ImGui controls.
 - `examples/lighting_demo`: normal-mapped sprites lit by multiple point lights, with a movable picture-in-picture view.
-- `examples/raygui_demo`: basic in-game UI using raygui widgets controlling a moving box.
+- `examples/raygui_demo`: basic in-game UI using raygui; tweak a moving box's speed/color.
+- `examples/hybrid3d`: hybrid view showing a 3D lane (models + billboards) with a 2D world overlay and a 3D inset.
 
 ---
 
@@ -35,6 +36,7 @@ This repository also contains example games/demos:
 - Particle emitter component with configurable spawn/render functions and helper spawn shapes.
 - Tilemap support using Tiled/JSON (via Tileson) with proper source-rect handling and per-tile flip flags.
 - Optional debug overlays via ImGui (toggle with `F1` in the examples).
+- Optional 3D render lane: per-view 3D commands run before 2D batches; views can be 2D-only, 3D-only, or 3D with a 2D overlay.
 
 ## Requirements
 
@@ -65,6 +67,7 @@ This will produce the following executables:
 - `rlge_shader_demo`
 - `rlge_lighting_demo`
 - `rlge_raygui_demo`
+- `rlge_hybrid3d`
 
 On Windows, they will be under `build/` or a generator-specific subdirectory (for example `build/Debug`).
 
@@ -82,6 +85,7 @@ Each executable runs a focused scenario; use `F1` to toggle the ImGui overlay in
 - `rlge_shader_demo`: layer-level wave shader + per-entity flash shader with ImGui sliders.
 - `rlge_lighting_demo`: point/torch/mouse-follow lights over normal-mapped sprites; resize the PIP viewport with WASD and pan its camera with arrows.
 - `rlge_raygui_demo`: panel with sliders/checks using raygui; tweak a moving box's speed/color.
+- `rlge_hybrid3d`: hybrid 3D/2D scene with an inset view.
 
 ## Using RLGE in your own game
 
@@ -169,6 +173,38 @@ private:
 - `RenderEntity` is a convenience base that exposes `rq()`, `assets()`, `input()`, `audio()`, and `events()`.
 - Render stats (`rq().stats()`) are handy for debug overlays.
 
+#### 3D rendering and hybrid scenes
+
+- Use `Camera3DController` for 3D views and `Camera2DController` for 2D.
+- Add a 3D view with an optional 2D overlay: `runtime().addView3D(cam3d, viewport, resizeFn, resizeMode, aspect, &overlayCam2D);`.
+- Submit 3D work with `submit3D` or the helpers:
+  - `rq().submitModel(layer, model, position, scale, tint);`
+  - `rq().submitBillboard(layer, texture, position, size, tint);`
+- 3D commands run first per view (with depth), then 2D batches/commands, then UI. If a view has no 2D camera, the 2D pass is skipped.
+- Hybrid flow example:
+
+```cpp
+rlge::Camera3DController cam3d{};
+rlge::Camera2DController overlay{};
+runtime().addView3D(cam3d, {0,0,w,h},
+    [&](float W,float H){ overlay.setOffset({W*0.5f,H*0.5f}); return Rectangle{0,0,W,H}; },
+    std::nullopt, std::nullopt, &overlay);
+
+rq().submit3D(layers().world(), [](const Camera3D&, const Rectangle& vp){
+    DrawGrid(24, 1.0f);
+});
+rq().submitModel(layers().world(), myModel, {0,1,0}, 1.0f, WHITE);
+rq().submitBillboard(layers().world(), myBillboard, {2,1,2}, 1.0f, WHITE);
+rq().submitWorld(0.1f, []{
+    DrawCircleLines(0,0,80, YELLOW); // rendered in 2D overlay on that view
+});
+rq().submitUI([]{
+    DrawText("Hybrid view", 10, 10, 20, RAYWHITE);
+});
+```
+
+- See `examples/hybrid3d` for a full demo with two 3D views (main + inset) sharing world submissions, each with its own 2D overlay.
+
 ### Lighting
 
 - Derive from `LitScene` to render the world into a target, accumulate lights, and combine lighting before drawing UI/debug overlays.
@@ -180,34 +216,38 @@ private:
 
 - Load shaders through the asset store from disk or memory: `assets().loadShader("wave", "wave.vert", "wave.frag")` or `loadShaderFromMemory`.
 - Apply a shader to a render layer and bind typed uniforms:
-  ```cpp
-  struct WaveParams { float time{0.0f}; float amplitude{0.02f}; };
 
-  auto& shader = assets().loadFragmentShader("wave", "wave.frag");
-  ShaderParams<WaveParams> params(shader);
-  params.bind("u_time", &WaveParams::time)
-        .bind("u_amplitude", &WaveParams::amplitude);
+```cpp
+struct WaveParams { float time{0.0f}; float amplitude{0.02f}; };
 
-  auto waterLayer = layers().create("Water", 5 /*sort*/, true);
-  layers().setShaderParams(waterLayer, std::move(params));
+auto& shader = assets().loadFragmentShader("wave", "wave.frag");
+ShaderParams<WaveParams> params(shader);
+params.bind("u_time", &WaveParams::time)
+      .bind("u_amplitude", &WaveParams::amplitude);
 
-  // Later in update
-  if (auto layer = layers().get(waterLayer)) {
-      if (auto* wrapper = dynamic_cast<ShaderParamsWrapper<WaveParams>*>(layer->get().shaderParams.get())) {
-          wrapper->get().params().time += dt;
-      }
-  }
-  ```
+auto waterLayer = layers().create("Water", 5 /*sort*/, true);
+layers().setShaderParams(waterLayer, std::move(params));
+
+// Later in update
+if (auto layer = layers().get(waterLayer)) {
+    if (auto* wrapper = dynamic_cast<ShaderParamsWrapper<WaveParams>*>(layer->get().shaderParams.get())) {
+        wrapper->get().params().time += dt;
+    }
+}
+```
+
 - Add per-entity effects with `ShaderEffect<T>`; batching is bypassed so custom visuals are isolated:
-  ```cpp
-  static const char* kFlashFrag = "...";
-  auto& flash = assets().loadFragmentShader("flash", kFlashFrag);
-  auto& e = spawn<MyEntity>();
-  e.add<ShaderEffect<FlashParams>>(flash)
-      .bind("u_intensity", &FlashParams::intensity)
-      .bind("u_flashColor", &FlashParams::flashColor);
-  e.get<ShaderEffect<FlashParams>>()->params().intensity = 0.8f;
-  ```
+
+```cpp
+static const char* kFlashFrag = "...";
+auto& flash = assets().loadFragmentShader("flash", kFlashFrag);
+auto& e = spawn<MyEntity>();
+e.add<ShaderEffect<FlashParams>>(flash)
+    .bind("u_intensity", &FlashParams::intensity)
+    .bind("u_flashColor", &FlashParams::flashColor);
+e.get<ShaderEffect<FlashParams>>()->params().intensity = 0.8f;
+```
+
 - Layer shaders and per-entity shaders can be used together; per-entity shaders wrap only that draw call while layer shaders affect everything on the layer.
 
 ### Scene transitions
@@ -228,26 +268,30 @@ private:
 ### Game UI (raygui) and debug UI (ImGui)
 
 - For in-game HUD/menus, use raygui directly inside a `submitUI` call. Example:
-  ```cpp
-  rq().submitUI([score] {
-      Rectangle panel{10, 10, 200, 60};
-      GuiPanel(panel, "HUD");
-      GuiLabel({20, 30, 160, 20}, TextFormat("Score: %d", score));
-  });
-  ```
+
+```cpp
+rq().submitUI([score] {
+    Rectangle panel{10, 10, 200, 60};
+    GuiPanel(panel, "HUD");
+    GuiLabel({20, 30, 160, 20}, TextFormat("Score: %d", score));
+});
+```
+
 - Debug tooling stays on Dear ImGui + rlImGui; toggle with `F1` in the examples. Keep gameplay UI minimal and deterministic with raygui while using ImGui for richer inspectors and debug panels.
 
 ### Collisions
 
 - Access the per-scene system via `scene().collisions()`. Add colliders to entities:
-  ```cpp
-  add<rlge::BoxCollider>(scene().collisions(),
-                         rlge::ColliderType::Solid,
-                         rlge::ColliderLayerMask::LAYER_PLAYER,
-                         rlge::ColliderLayerMask::LAYER_WORLD,
-                         Rectangle{-8, -8, 16, 16},
-                         false /*trigger*/);
-  ```
+
+```cpp
+add<rlge::BoxCollider>(scene().collisions(),
+                       rlge::ColliderType::Solid,
+                       rlge::ColliderLayerMask::LAYER_PLAYER,
+                       rlge::ColliderLayerMask::LAYER_WORLD,
+                       Rectangle{-8, -8, 16, 16},
+                       false /*trigger*/);
+```
+
 - Shapes: axis-aligned boxes, oriented boxes, circles, polygons. Configure trigger/solid/kinematic types and layer masks.
 - Register callbacks with `setOnCollision` for game logic; resolution is handled for non-trigger solids/kinematics.
 - Toggle the ImGui "Collisions" window (F1) to draw collider shapes/AABBs.

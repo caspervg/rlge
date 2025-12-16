@@ -1,14 +1,11 @@
 #include "snake_scene.hpp"
 
-#include <format>
-
 #include "game_over_scene.h"
 #include "particle_emitter.hpp"
 #include "particle_fx.hpp"
 #include "runtime.hpp"
 #include "snake_fx.hpp"
 #include "snake_view.hpp"
-#include "raygui.h"
 
 namespace snake {
     class GameOverScene;
@@ -38,7 +35,7 @@ namespace snake {
         auto& spriteTex = assets().loadTexture("spritesheet", "../examples/snake/assets/spritesheet.png");
         spriteSheet_ = std::make_unique<SpriteSheet>(spriteTex, kPixelsPerTile, kPixelsPerTile);
 
-        camera_ = rlge::Camera();
+        camera_ = rlge::Camera2DController();
         camera_.setOffset({snake::kTilesX * snake::kPixelsPerTile * snake::kMagnification / 2.0f,
                            snake::kTilesY * snake::kPixelsPerTile * snake::kMagnification / 2.0f});
         setSingleView(camera_);

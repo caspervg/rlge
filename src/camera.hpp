@@ -2,9 +2,9 @@
 #include "raylib.h"
 
 namespace rlge {
-    class Camera {
+    class Camera2DController {
     public:
-        Camera();
+        Camera2DController();
 
         void follow(Vector2 pos, float lerp = 0.1f);
 
@@ -51,5 +51,39 @@ namespace rlge {
         float shakeTimer_{0.0f};
         Vector2 shakeOffset_{0.0f, 0.0f};
         Vector2 originalOffset_{0.0f, 0.0f};
+    };
+
+    class Camera3DController {
+    public:
+        Camera3DController();
+
+        void setPosition(const Vector3& p);
+        [[nodiscard]] Vector3 position() const;
+        void setTarget(const Vector3& t);
+        [[nodiscard]] Vector3 target() const;
+        void setUp(const Vector3& u);
+        [[nodiscard]] Vector3 up() const;
+        void setFovy(float f);
+        [[nodiscard]] float fovy() const;
+        void setProjection(CameraProjection proj);
+        [[nodiscard]] CameraProjection projection() const;
+
+        // Move both position and target by delta
+        void move(Vector3 delta);
+        void move(float dx, float dy, float dz);
+
+        // Orbit around current target with yaw/pitch (radians) and radius
+        void orbitTarget(float yaw, float pitch, float radius);
+
+        // Helpers
+        [[nodiscard]] Ray mouseRay(Vector2 screen) const;
+        [[nodiscard]] Ray mouseRay() const;
+        [[nodiscard]] Vector2 worldToScreen(const Vector3& world) const;
+
+        Camera3D& cam3d();
+        [[nodiscard]] const Camera3D& cam3d() const;
+
+    private:
+        Camera3D cam_{};
     };
 }

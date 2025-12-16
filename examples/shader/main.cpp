@@ -175,7 +175,7 @@ public:
         layers().setShaderParams(waterLayer_, waveShaderHandle_, std::move(waveParams_));
 
         // Set up camera
-        camera_ = rlge::Camera();
+        camera_ = rlge::Camera2DController();
         const auto windowSize = runtime().window().size();
         camera_.setOffset({windowSize.x * 0.5f, windowSize.y * 0.5f});
         camera_.setTarget({400, 300});
@@ -276,7 +276,7 @@ private:
         return cwd;
     }
 
-    rlge::Camera camera_;
+    rlge::Camera2DController camera_;
     Texture2D boxTexture_{};
     Texture2D playerTexture_{};
     ShaderHandle waveShaderHandle_{InvalidShaderHandle};

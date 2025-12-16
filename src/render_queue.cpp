@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <ranges>
+#include "rlgl.h"
 
 namespace rlge {
     RenderQueue::RenderQueue(LayerRegistry& layers) :
@@ -31,6 +32,46 @@ namespace rlge {
         commands_.push_back(std::move(cmd));
         stats_.customCommands++;
         worldPrepared_ = false;
+    }
+
+    void RenderQueue::submit3D(const LayerId layer, const float z,
+                               std::function<void(const Camera3D&, const Rectangle& viewport)> fn) {
+        DrawCommand3D cmd;
+        cmd.layer = layer;
+        cmd.z = z;
+        cmd.draw = std::move(fn);
+        commands3D_.push_back(std::move(cmd));
+        stats_.customCommands3D++;
+        worldPrepared_ = false;
+    }
+
+    void RenderQueue::submit3D(const LayerId layer,
+                               std::function<void(const Camera3D&, const Rectangle& viewport)> fn) {
+        submit3D(layer, 0.0f, std::move(fn));
+    }
+
+    void RenderQueue::submitModel(const LayerId layer, const float z, const Model& model, const Vector3 position,
+                                  const float scale, const Color tint) {
+        submit3D(layer, z, [model = std::cref(model), position, scale, tint](const Camera3D&, const Rectangle&) {
+            DrawModel(model.get(), position, scale, tint);
+        });
+    }
+
+    void RenderQueue::submitModel(const LayerId layer, const Model& model, const Vector3 position, const float scale,
+                                  const Color tint) {
+        submitModel(layer, 0.0f, model, position, scale, tint);
+    }
+
+    void RenderQueue::submitBillboard(const LayerId layer, const float z, const Texture2D& texture,
+                                      const Vector3 position, const float size, const Color tint) {
+        submit3D(layer, z, [texture = std::cref(texture), position, size, tint](const Camera3D& cam, const Rectangle&) {
+            DrawBillboard(cam, texture.get(), position, size, tint);
+        });
+    }
+
+    void RenderQueue::submitBillboard(const LayerId layer, const Texture2D& texture, const Vector3 position,
+                                      const float size, const Color tint) {
+        submitBillboard(layer, 0.0f, texture, position, size, tint);
     }
 
     void RenderQueue::submit(const LayerId layer, const float z, std::function<void()> fn) {
@@ -88,6 +129,7 @@ namespace rlge {
             }
         }
         commands_.clear();
+        commands3D_.clear();
         worldPrepared_ = false;
     }
 
@@ -107,9 +149,16 @@ namespace rlge {
                                   return compareDrawCommands(layers_, a, b);
                               });
         }
+        if (!commands3D_.empty()) {
+            std::ranges::sort(commands3D_,
+                              [this](const DrawCommand3D& a, const DrawCommand3D& b) {
+                                  return compareDrawCommands3D(layers_, a, b);
+                              });
+        }
 
         stats_.batchCount = 0;
         stats_.drawCalls = 0;
+        stats_.drawCalls3D = 0;
 
         // Sort quads within batches for world-space layers
         for (auto* layer : sortedLayers) {
@@ -135,14 +184,77 @@ namespace rlge {
             commands_,
             [uiLayerId](const DrawCommand& cmd) { return cmd.layer != uiLayerId; }
         );
-        stats_.drawCalls = stats_.batchCount + worldCommands;
+        const size_t worldCommands3D = std::ranges::count_if(
+            commands3D_,
+            [uiLayerId](const DrawCommand3D& cmd) { return cmd.layer != uiLayerId; }
+        );
+        stats_.drawCalls = stats_.batchCount + worldCommands + worldCommands3D;
+        stats_.drawCalls3D = worldCommands3D;
 
         const auto endTime = std::chrono::high_resolution_clock::now();
         stats_.sortTimeMs = std::chrono::duration<float, std::milli>(endTime - startTime).count();
         worldPrepared_ = true;
     }
 
-    void RenderQueue::flushPreparedWorld(const Camera2D& cam, const Rectangle& viewport) {
+    void RenderQueue::flushPreparedWorld3D(const Camera3D& cam, const Rectangle& viewport, const bool countView) {
+        if (!worldPrepared_)
+            prepareWorld();
+
+        const auto startTime = std::chrono::high_resolution_clock::now();
+
+        rlEnableDepthTest();
+        rlEnableDepthMask();
+        rlClearScreenBuffers();
+
+        BeginMode3D(cam);
+        currentView_ = RenderViewContext{nullptr, &cam, viewport};
+
+        size_t drawCallsThisView = 0;
+
+        // Get sorted world-space layers
+        auto sortedLayers = layers_.getSorted();
+
+        for (const auto* layer : sortedLayers) {
+            if (!layer->config.worldSpace)
+                continue;
+
+            const bool hasLayerShader = layer->shader.id != 0;
+            if (hasLayerShader) {
+                BeginShaderMode(layer->shader);
+                if (layer->shaderParams) {
+                    layer->shaderParams->apply();
+                }
+            }
+
+            for (const auto& cmd : commands3D_) {
+                if (cmd.layer == layer->id && cmd.draw) {
+                    cmd.draw(cam, viewport);
+                    drawCallsThisView++;
+                }
+            }
+
+            if (hasLayerShader) {
+                EndShaderMode();
+            }
+        }
+
+        EndMode3D();
+        rlDisableDepthMask();
+        rlDisableDepthTest();
+
+        currentView_.reset();
+
+        if (countView) {
+            stats_.viewsRendered++;
+        }
+        stats_.executedDrawCalls += drawCallsThisView;
+        stats_.executedDrawCalls3D += drawCallsThisView;
+
+        const auto endTime = std::chrono::high_resolution_clock::now();
+        stats_.flushTimeMs += std::chrono::duration<float, std::milli>(endTime - startTime).count();
+    }
+
+    void RenderQueue::flushPreparedWorld2D(const Camera2D& cam, const Rectangle& viewport) {
         if (!worldPrepared_)
             prepareWorld();
 
@@ -159,8 +271,11 @@ namespace rlge {
             bottomRight.y - topLeft.y
         };
 
+        rlDisableDepthMask();
+        rlDisableDepthTest();
+
         BeginMode2D(cam);
-        currentView_ = RenderViewContext{&cam, viewport};
+        currentView_ = RenderViewContext{&cam, nullptr, viewport};
 
         size_t drawCallsThisView = 0;
 
@@ -327,6 +442,18 @@ namespace rlge {
     bool RenderQueue::compareDrawCommands(const LayerRegistry& layers,
                                           const DrawCommand& a,
                                           const DrawCommand& b) {
+        auto layerA = layers.get(a.layer);
+        auto layerB = layers.get(b.layer);
+        const int orderA = layerA ? layerA->get().config.sortOrder : 0;
+        const int orderB = layerB ? layerB->get().config.sortOrder : 0;
+        if (orderA != orderB)
+            return orderA < orderB;
+        return a.z < b.z;
+    }
+
+    bool RenderQueue::compareDrawCommands3D(const LayerRegistry& layers,
+                                            const DrawCommand3D& a,
+                                            const DrawCommand3D& b) {
         auto layerA = layers.get(a.layer);
         auto layerB = layers.get(b.layer);
         const int orderA = layerA ? layerA->get().config.sortOrder : 0;

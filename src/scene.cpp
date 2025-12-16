@@ -119,7 +119,7 @@ namespace rlge {
 
     const EventBus& Scene::gameEvents() const { return ctx_.gameEvents; }
 
-    void Scene::addView(Camera& camera, const Rectangle& viewport,
+    void Scene::addView(Camera2DController& camera, const Rectangle& viewport,
                         std::function<Rectangle(float width, float height)> onResize,
                         std::optional<ResizeMode> mode,
                         std::optional<float> aspectRatio) {
@@ -127,11 +127,20 @@ namespace rlge {
         viewHandles_.push_back(std::make_unique<ViewHandle>(runtime_, viewId));
     }
 
+    void Scene::addView3D(Camera3DController& camera, const Rectangle& viewport,
+                          std::function<Rectangle(float width, float height)> onResize,
+                          std::optional<ResizeMode> mode,
+                          std::optional<float> aspectRatio,
+                          Camera2DController* overlay2D) {
+        const auto viewId = runtime_.addView3D(camera, viewport, std::move(onResize), mode, aspectRatio, overlay2D);
+        viewHandles_.push_back(std::make_unique<ViewHandle>(runtime_, viewId));
+    }
+
     const View* Scene::primaryView() const { return runtime_.primaryView(); }
 
     const std::vector<View>& Scene::views() const { return runtime_.views(); }
 
-    void Scene::setSingleView(Camera& cam) {
+    void Scene::setSingleView(Camera2DController& cam) {
         viewHandles_.clear();
         const auto [x, y] = runtime().window().size();
         addView(cam, Rectangle{0, 0, x, y});

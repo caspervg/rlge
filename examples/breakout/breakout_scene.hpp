@@ -1,9 +1,9 @@
 #pragma once
+#include "banner.hpp"
 #include "breakout_config.hpp"
 #include "breakout_entities.hpp"
 #include "breakout_events.hpp"
 #include "breakout_game.hpp"
-#include "banner.hpp"
 #include "powerup_manager.hpp"
 #include "scene.hpp"
 
@@ -35,7 +35,7 @@ namespace breakout {
 
     private:
         BreakoutGame* game_{nullptr};
-        rlge::Camera camera_;
+        rlge::Camera2DController camera_;
         float virtualWidth_{g_cfg.viewPortWidth};
         float virtualHeight_{g_cfg.viewPortHeight};
         float targetAspect_{virtualWidth_ / virtualHeight_};

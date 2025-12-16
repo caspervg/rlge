@@ -14,7 +14,7 @@ namespace demo {
             tilemap_ = &rlge::Tilemap::loadTMX(*this, tiles, "../examples/tilemap/assets/map.tmj");
             tilemap_->get<rlge::Transform>()->position = {0, 0};
 
-            cam_ = rlge::Camera();
+            cam_ = rlge::Camera2DController();
             setSingleView(cam_);
         }
 
@@ -43,7 +43,7 @@ namespace demo {
 
     private:
         rlge::Tilemap* tilemap_ = nullptr;
-        rlge::Camera cam_;
+        rlge::Camera2DController cam_;
     };
 }
 

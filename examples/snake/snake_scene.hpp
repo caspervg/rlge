@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "camera.hpp"
-#include "debug.hpp"
 #include "scene.hpp"
 #include "snake_game.hpp"
 
@@ -43,7 +42,7 @@ namespace snake {
         Scoreboard* scoreboard_{nullptr};
         rlge::BurstParticleEmitter* deathFx_{nullptr};
 
-        rlge::Camera camera_;
+        rlge::Camera2DController camera_;
 
         std::unique_ptr<rlge::SpriteSheet> spriteSheet_;
         rlge::EventBus::SubscriptionId appleSubId_{0};

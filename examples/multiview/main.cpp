@@ -117,9 +117,9 @@ namespace demo {
 
     private:
         rlge::Tilemap* tilemap_ = nullptr;
-        rlge::Camera leftCamera_;
-        rlge::Camera rightCamera_;
-        rlge::Camera minimapCamera_;
+        rlge::Camera2DController leftCamera_;
+        rlge::Camera2DController rightCamera_;
+        rlge::Camera2DController minimapCamera_;
     };
 }
 

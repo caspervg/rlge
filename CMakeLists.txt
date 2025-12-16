@@ -113,6 +113,9 @@ target_link_libraries(rlge_tilemap PRIVATE rlge raylib rlimgui imgui)
 add_executable(rlge_multiview examples/multiview/main.cpp)
 target_link_libraries(rlge_multiview PRIVATE rlge raylib rlimgui imgui)
 
+add_executable(rlge_hybrid3d examples/hybrid3d/main.cpp)
+target_link_libraries(rlge_hybrid3d PRIVATE rlge raylib rlimgui imgui)
+
 add_executable(rlge_collision_debug examples/collision_debug/main.cpp)
 target_link_libraries(rlge_collision_debug PRIVATE rlge raylib rlimgui imgui)
 

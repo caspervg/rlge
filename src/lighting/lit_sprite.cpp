@@ -65,7 +65,7 @@ void LitSprite::draw() {
             const auto* viewCtx = rq.currentView();
 
             // If there is no active view/camera, fall back to unlit sprite draw
-            if (!viewCtx || !viewCtx->camera) {
+            if (!viewCtx || !viewCtx->camera2d) {
                 constexpr auto zeroLights = 0;
                 const Vector2 resolution = {passData.winWidth, passData.winHeight};
                 SetShaderValue(normalShader, passData.locs->resolution, &resolution, SHADER_UNIFORM_VEC2);
@@ -81,7 +81,7 @@ void LitSprite::draw() {
                 return;
             }
 
-            const Camera2D& cam = *viewCtx->camera;
+            const Camera2D& cam = *viewCtx->camera2d;
             
             // Set resolution uniform
             Vector2 resolution = {passData.winWidth, passData.winHeight};

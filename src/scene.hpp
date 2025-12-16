@@ -114,14 +114,19 @@ namespace rlge {
         EventBus& gameEvents();
         [[nodiscard]] const EventBus& gameEvents() const;
 
-        void addView(Camera& camera, const Rectangle& viewport,
+        void addView(Camera2DController& camera, const Rectangle& viewport,
             std::function<Rectangle(float width, float height)> onResize = nullptr,
             std::optional<ResizeMode> mode = std::nullopt,
             std::optional<float> aspectRatio = std::nullopt);
+        void addView3D(Camera3DController& camera, const Rectangle& viewport,
+            std::function<Rectangle(float width, float height)> onResize = nullptr,
+            std::optional<ResizeMode> mode = std::nullopt,
+            std::optional<float> aspectRatio = std::nullopt,
+            Camera2DController* overlay2D = nullptr);
         [[nodiscard]] const View* primaryView() const;
         [[nodiscard]] const std::vector<View>& views() const;
 
-        void setSingleView(Camera& cam);
+        void setSingleView(Camera2DController& cam);
 
         template <typename Event>
         void forwardGameEvent() {

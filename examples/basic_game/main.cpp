@@ -1,11 +1,11 @@
 #include "debug.hpp"
-#include "runtime.hpp"
-#include "timer.hpp"
-#include "window.hpp"
 #include "imgui.h"
-#include "sprite.hpp"
-#include "transformer.hpp"
 #include "render_entity.hpp"
+#include "runtime.hpp"
+#include "sprite.hpp"
+#include "timer.hpp"
+#include "transformer.hpp"
+#include "window.hpp"
 
 using namespace rlge;
 
@@ -123,7 +123,7 @@ public:
         auto& playerTex = assets().loadTexture("player", "../examples/basic_game/assets/player.bmp");
 
         auto const size = runtime().window().size();
-        camera_ = rlge::Camera();
+        camera_ = rlge::Camera2DController();
         camera_.setOffset({size.x * 0.5f, size.y * 0.5f});
         setSingleView(camera_);
 
@@ -204,7 +204,7 @@ public:
 private:
     Background* bg_{nullptr};
     ExampleEntity* example_entity_{nullptr};
-    rlge::Camera camera_;
+    rlge::Camera2DController camera_;
     FpsCounter* fps_{nullptr};
     TimerHandle sceneToggleHandle_{};
     TimerHandle globalHeartbeatHandle_{};

@@ -63,7 +63,7 @@ float map(vec3 p) {
     vec3 q = p;
 
     q = mod(p, 10) - .5;
-    float box = sdBox(p * 4., vec3(.75)) / 4.; lol';'
+    float box = sdBox(p * 4., vec3(.75)) / 4.;
     //float box = sdBox(q, vec3(.75));
 
     float ground = p.y + .75;

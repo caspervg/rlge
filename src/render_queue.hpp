@@ -36,14 +36,24 @@ namespace rlge {
         Shader shader = {0};  // Optional custom shader
     };
 
+    // Custom draw command for 3D (per-view Camera3D)
+    struct DrawCommand3D {
+        LayerId layer = InvalidLayerId;
+        float z{0.0f};
+        std::function<void(const Camera3D&, const Rectangle&)> draw;
+    };
+
     // Performance metrics
     struct RenderStats {
         size_t spritesSubmitted = 0;
         size_t batchCount = 0;
         size_t drawCalls = 0;
+        size_t drawCalls3D = 0;
         size_t customCommands = 0;
+        size_t customCommands3D = 0;
         size_t viewsRendered = 0;
         size_t executedDrawCalls = 0;
+        size_t executedDrawCalls3D = 0;
         float sortTimeMs = 0.0f;
         float flushTimeMs = 0.0f;
 
@@ -51,9 +61,12 @@ namespace rlge {
             spritesSubmitted = 0;
             batchCount = 0;
             drawCalls = 0;
+            drawCalls3D = 0;
             customCommands = 0;
+            customCommands3D = 0;
             viewsRendered = 0;
             executedDrawCalls = 0;
+            executedDrawCalls3D = 0;
             sortTimeMs = 0.0f;
             flushTimeMs = 0.0f;
         }
@@ -62,7 +75,8 @@ namespace rlge {
     class RenderQueue {
     public:
         struct RenderViewContext {
-            const Camera2D* camera{nullptr};
+            const Camera2D* camera2d{nullptr};
+            const Camera3D* camera3d{nullptr};
             Rectangle viewport{};
         };
 
@@ -82,6 +96,17 @@ namespace rlge {
         void submitCustom(LayerId layer, float z, Shader shader,
                          std::function<void()> fn);
 
+        // 3D draw submission (uses Camera3D for the active view)
+        void submit3D(LayerId layer, float z,
+                      std::function<void(const Camera3D&, const Rectangle& viewport)> fn);
+        void submit3D(LayerId layer,
+                      std::function<void(const Camera3D&, const Rectangle& viewport)> fn);
+        // Convenience 3D helpers
+        void submitModel(LayerId layer, float z, const Model& model, Vector3 position, float scale, Color tint = WHITE);
+        void submitModel(LayerId layer, const Model& model, Vector3 position, float scale, Color tint = WHITE);
+        void submitBillboard(LayerId layer, float z, const Texture2D& texture, Vector3 position, float size, Color tint = WHITE);
+        void submitBillboard(LayerId layer, const Texture2D& texture, Vector3 position, float size, Color tint = WHITE);
+
         // LayerId-based lambda submission
         void submit(LayerId layer, float z, std::function<void()> fn);
         void submit(LayerId layer, std::function<void()> fn);
@@ -99,8 +124,10 @@ namespace rlge {
         void clear();
         // Prepare world-space data (sorting batches/commands) once per frame.
         void prepareWorld();
-        // Render prepared world-space layers for a given camera and viewport.
-        void flushPreparedWorld(const Camera2D& cam, const Rectangle& viewport);
+        // Render prepared world-space 3D layers for a given camera and viewport.
+        void flushPreparedWorld3D(const Camera3D& cam, const Rectangle& viewport, bool countView = true);
+        // Render prepared world-space 2D layers for a given camera and viewport.
+        void flushPreparedWorld2D(const Camera2D& cam, const Rectangle& viewport);
         // Render UI layer (screen-space). Clears the queue.
         void flushUI();
 
@@ -121,6 +148,7 @@ namespace rlge {
 
         // Custom draw commands
         std::vector<DrawCommand> commands_;
+        std::vector<DrawCommand3D> commands3D_;
 
         // Stats
         RenderStats stats_;
@@ -134,6 +162,9 @@ namespace rlge {
         static bool compareDrawCommands(const LayerRegistry& layers,
                                         const DrawCommand& a,
                                         const DrawCommand& b);
+        static bool compareDrawCommands3D(const LayerRegistry& layers,
+                                          const DrawCommand3D& a,
+                                          const DrawCommand3D& b);
 
         // Comparator for sorting sprite quads by z
         static bool compareQuadsByZ_(const SpriteQuad& a, const SpriteQuad& b);

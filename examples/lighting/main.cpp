@@ -299,8 +299,8 @@ public:
     }
 
 private:
-    rlge::Camera camera_;
-    rlge::Camera miniCamera_;
+    rlge::Camera2DController camera_;
+    rlge::Camera2DController miniCamera_;
     Texture2D boxDiffuse_{};
     Texture2D boxNormal_{};
     Texture2D plainTexture_{};
@@ -320,7 +320,7 @@ private:
 
     void configureViews(Vector2 windowSize) {
         // Main camera centered on the window
-        camera_ = rlge::Camera();
+        camera_ = rlge::Camera2DController();
         camera_.setOffset({windowSize.x * 0.5f, windowSize.y * 0.5f});
         camera_.setTarget({windowSize.x * 0.5f, windowSize.y * 0.5f});
 
@@ -335,7 +335,7 @@ private:
             pipHeight
         };
 
-        miniCamera_ = rlge::Camera();
+        miniCamera_ = rlge::Camera2DController();
         miniCamera_.setOffset({pipViewport_.x + pipViewport_.width * 0.5f,
                                pipViewport_.y + pipViewport_.height * 0.5f});
         miniCamera_.setTarget({windowSize.x * 0.5f, windowSize.y * 0.5f});
