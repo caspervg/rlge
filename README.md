@@ -100,7 +100,7 @@ Each executable runs a focused scenario; use `F1` to toggle the ImGui overlay in
 ```cmake
 include(FetchContent)
 FetchContent_Declare(rlge
-    GIT_REPOSITORY https://github.com/your-org/rlge.git
+    GIT_REPOSITORY https://github.com/caspervg/rlge
     GIT_TAG main
 )
 FetchContent_MakeAvailable(rlge)
