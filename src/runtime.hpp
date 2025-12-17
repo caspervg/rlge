@@ -71,11 +71,15 @@ namespace rlge {
         }
 
         void popScene();
+        // Request a scene pop at the end of the current frame (safe when called from within the active scene).
+        void requestPopScene();
         void clearScenes();
 
         void run();
 
         void quit();
+        // Schedule a callback to run after the frame completes; clears before the next frame starts.
+        void postFrame(std::function<void()> cb);
 
         AssetStore& assetStore();
         const AssetStore& assetStore() const;
@@ -125,6 +129,7 @@ namespace rlge {
         void updateTransition_(float dt);
         void drawTransition_();
         void handleResize_(float width, float height);
+        void flushPostFrame_();
 
     private:
         enum class TransitionState { None, Out, In };
@@ -142,6 +147,7 @@ namespace rlge {
         std::unique_ptr<Transition> pendingTransition_;
         std::function<std::unique_ptr<Scene>()> pendingSceneFactory_;
         TransitionState transitionState_ = TransitionState::None;
+        std::vector<std::function<void()>> postFrameTasks_{};
 
         ResizeMode resizeMode_{ResizeMode::Fill};
         float aspectRatio_{0.0f}; // 0 -> derive from width/height

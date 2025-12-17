@@ -289,6 +289,7 @@ e.get<ShaderEffect<FlashParams>>()->params().intensity = 0.8f;
 ### Scene transitions
 
 - For instant swaps, call `runtime.pushScene<NewScene>()` and `runtime.popScene()`.
+- If popping from inside the active scene (e.g., as a response to input), prefer `runtime.requestPopScene()`, which defers the pop until the frame ends to avoid destroying the running scene mid-update.
 - For smooth transitions, use `runtime.transitionTo<NextScene>(std::make_unique<FadeTransition>(0.35f));`. The runtime handles the out/in phases.
 - Built-ins: `FadeTransition(duration, color)` and `SlideTransition(duration, direction)`. Draws are submitted to the UI layer so they cover the frame.
 - Create custom transitions by deriving from `Transition`, overriding `draw(RenderQueue&, screenW, screenH)`, and pushing your own shapes or effects. Set the phase with `setPhase(TransitionPhase::Out/In)` if you need different visuals per half.

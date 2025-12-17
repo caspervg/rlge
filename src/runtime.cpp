@@ -56,6 +56,16 @@ namespace rlge {
 
     void Runtime::popScene() { scenes_.pop(); }
 
+    void Runtime::requestPopScene() {
+        postFrame([this] { popScene(); });
+    }
+
+    void Runtime::postFrame(std::function<void()> cb) {
+        if (cb) {
+            postFrameTasks_.push_back(std::move(cb));
+        }
+    }
+
     void Runtime::clearScenes() {
         scenes_.clear();
     }
@@ -162,6 +172,8 @@ namespace rlge {
             }
 
             EndDrawing();
+
+            flushPostFrame_();
         }
     }
 
@@ -339,6 +351,18 @@ namespace rlge {
         for (auto& cb : resizeCallbacks_) {
             if (cb) {
                 cb(width, height);
+            }
+        }
+    }
+
+    void Runtime::flushPostFrame_() {
+        if (postFrameTasks_.empty())
+            return;
+        const auto tasks = std::move(postFrameTasks_);
+        postFrameTasks_.clear();
+        for (auto& task : tasks) {
+            if (task) {
+                task();
             }
         }
     }
