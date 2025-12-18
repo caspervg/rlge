@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <mutex>
 
 namespace rlge {
 
@@ -24,6 +25,7 @@ namespace rlge {
         // Returns an id that can be used to unsubscribe.
         template <typename Event>
         SubscriptionId subscribe(Handler<Event> handler) {
+            std::lock_guard lock(handlerMutex_);
             auto& list = handlerList<Event>();
             const SubscriptionId id = list.nextId++;
             list.handlers.push_back({id, std::move(handler)});
@@ -33,6 +35,7 @@ namespace rlge {
         // Unsubscribe a previously registered handler.
         template <typename Event>
         void unsubscribe(SubscriptionId id) {
+            std::lock_guard lock(handlerMutex_);
             const auto it = handlers_.find(std::type_index(typeid(Event)));
             if (it == handlers_.end())
                 return;
@@ -50,13 +53,17 @@ namespace rlge {
         // Immediately deliver an event to all subscribers of its type.
         template <typename Event>
         void publish(const Event& ev) {
-            const auto it = handlers_.find(std::type_index(typeid(Event)));
-            if (it == handlers_.end())
-                return;
-            auto* base = it->second.get();
-            auto* list = static_cast<HandlerList<Event>*>(base);
-            // Copy to allow handlers to subscribe/unsubscribe safely during iteration.
-            auto handlersCopy = list->handlers;
+            std::vector<typename HandlerList<Event>::Entry> handlersCopy;
+            {
+                std::lock_guard lock(handlerMutex_);
+                const auto it = handlers_.find(std::type_index(typeid(Event)));
+                if (it == handlers_.end())
+                    return;
+                auto* base = it->second.get();
+                auto* list = static_cast<HandlerList<Event>*>(base);
+                // Copy to allow handlers to subscribe/unsubscribe safely during iteration.
+                handlersCopy = list->handlers;
+            }
             for (auto& entry : handlersCopy) {
                 if (entry.fn)
                     entry.fn(ev);
@@ -65,15 +72,20 @@ namespace rlge {
 
         template <typename Event>
         void enqueue(Event&& ev) {
+            std::lock_guard lock(queueMutex_);
             queue_.emplace_back([this, ev = std::forward<Event>(ev)]() mutable { publish(std::move(ev)); });
         }
 
         // Dispatch all queued events in FIFO order.
         void dispatchQueued() {
-            if (queue_.empty())
-                return;
-            const auto current = std::move(queue_);
-            queue_.clear();
+            std::vector<std::function<void()>> current;
+            {
+                std::lock_guard lock(queueMutex_);
+                if (queue_.empty())
+                    return;
+                current = std::move(queue_);
+                queue_.clear();
+            }
             for (auto& fn : current) {
                 if (fn)
                     fn();
@@ -81,8 +93,14 @@ namespace rlge {
         }
 
         void clear() {
-            handlers_.clear();
-            queue_.clear();
+            {
+                std::lock_guard lock(handlerMutex_);
+                handlers_.clear();
+            }
+            {
+                std::lock_guard lock(queueMutex_);
+                queue_.clear();
+            }
         }
 
     private:
@@ -115,6 +133,7 @@ namespace rlge {
 
         std::unordered_map<std::type_index, std::unique_ptr<IHandlerList>> handlers_;
         std::vector<std::function<void()>> queue_;
+        std::mutex queueMutex_;
+        std::mutex handlerMutex_;
     };
 }
-
