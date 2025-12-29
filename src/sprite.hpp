@@ -4,7 +4,6 @@
 #include "component.hpp"
 #include "raylib.h"
 #include "render_layer.hpp"
-#include "transformer.hpp"
 
 namespace rlge {
     class Entity;
@@ -20,8 +19,8 @@ namespace rlge {
         void draw() override;
 
         // Set the render layer
-        void setLayer(LayerId layer) { layer_ = layer; }
-        LayerId layer() const { return layer_; }
+        void setLayer(const LayerId layer) { layer_ = layer; }
+        [[nodiscard]] LayerId layer() const { return layer_; }
 
     protected:
         Texture2D& texture_;
@@ -39,6 +38,8 @@ namespace rlge {
         SpriteAnim(Entity& e, Texture2D& tex, int frameW, int frameH, LayerId layer);
 
         void addFrame(const Rectangle& src, float time);
+        void setFrame(int frameIndex);
+        void setAutoAdvance(bool enabled);
 
         void loadStrip(int row, int frameCount, float timePerFrame);
 
@@ -54,5 +55,6 @@ namespace rlge {
         std::vector<Frame> frames_;
         int idx_ = 0;
         float timer_ = 0.0f;
+        bool autoAdvance_ = true;
     };
 }

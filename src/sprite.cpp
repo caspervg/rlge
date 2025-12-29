@@ -1,9 +1,12 @@
 #include "sprite.hpp"
 
+#include <cmath>
+
 #include "entity.hpp"
 #include "render_queue.hpp"
 #include "scene.hpp"
 #include "shader_effect.hpp"
+#include "transformer.hpp"
 
 namespace rlge {
     Sprite::Sprite(Entity& e, Texture2D& tex, const int frameW, const int frameH)
@@ -34,7 +37,15 @@ namespace rlge {
 
         const Vector2 pos{t->position.x, t->position.y};
         const Vector2 scale{t->scale.x, t->scale.y};
-        const Vector2 size{src.width * scale.x, src.height * scale.y};
+        const Vector2 absScale{std::abs(scale.x), std::abs(scale.y)};
+        Rectangle srcAdj = src;
+        if (scale.x < 0.0f) {
+            srcAdj.width = -srcAdj.width;
+        }
+        if (scale.y < 0.0f) {
+            srcAdj.height = -srcAdj.height;
+        }
+        const Vector2 size{src.width * absScale.x, src.height * absScale.y};
         const Vector2 origin{size.x * 0.5f, size.y * 0.5f};
         const Rectangle dest{pos.x, pos.y, size.x, size.y};
         const float rotation = t->rotation;
@@ -53,14 +64,14 @@ namespace rlge {
         if (shaderEffect) {
             // Use custom draw command with shader (bypasses batching)
             Shader shader = shaderEffect->shader();
-            rq.submitCustom(effectiveLayer, pos.y, shader, [this, &rq, src, dest, origin, rotation, shaderEffect]() {
+            rq.submitCustom(effectiveLayer, pos.y, shader, [this, &rq, srcAdj, dest, origin, rotation, shaderEffect]() {
                 shaderEffect->apply();
-                DrawTexturePro(texture_, src, dest, origin, rotation, WHITE);
+                DrawTexturePro(texture_, srcAdj, dest, origin, rotation, WHITE);
             });
         } else {
             // Use batched sprite submission
             rq.submitSprite(effectiveLayer, pos.y, texture_,
-                           src, dest, origin, rotation, WHITE);
+                           srcAdj, dest, origin, rotation, WHITE);
         }
     }
 
@@ -72,6 +83,18 @@ namespace rlge {
 
     void SpriteAnim::addFrame(const Rectangle& src, const float time) {
         frames_.push_back({src, time});
+    }
+
+    void SpriteAnim::setFrame(const int frameIndex) {
+        if (frameIndex < 0 || frameIndex >= frames_.size()) {
+            throw std::out_of_range{"Frame index out of bounds, the maximum is " + std::to_string(frames_.size())};
+        }
+        idx_ = frameIndex;
+        timer_ = 0.0f;
+    }
+
+    void SpriteAnim::setAutoAdvance(const bool enabled) {
+        autoAdvance_ = enabled;
     }
 
     void SpriteAnim::loadStrip(const int row, const int frameCount, const float timePerFrame) {
@@ -88,7 +111,7 @@ namespace rlge {
     }
 
     void SpriteAnim::update(const float dt) {
-        if (frames_.size() <= 1)
+        if (!autoAdvance_ || frames_.size() <= 1)
             return;
         timer_ += dt;
         if (timer_ >= frames_[idx_].time) {
@@ -107,7 +130,15 @@ namespace rlge {
         const Frame& f = frames_[idx_];
         const Vector2 pos{t->position.x, t->position.y};
         const Vector2 scale{t->scale.x, t->scale.y};
-        const Vector2 size{f.rect.width * scale.x, f.rect.height * scale.y};
+        const Vector2 absScale{std::abs(scale.x), std::abs(scale.y)};
+        Rectangle srcAdj = f.rect;
+        if (scale.x < 0.0f) {
+            srcAdj.width = -srcAdj.width;
+        }
+        if (scale.y < 0.0f) {
+            srcAdj.height = -srcAdj.height;
+        }
+        const Vector2 size{f.rect.width * absScale.x, f.rect.height * absScale.y};
         const Vector2 origin{size.x * 0.5f, size.y * 0.5f};
         const Rectangle dest{pos.x, pos.y, size.x, size.y};
         const float rotation = t->rotation;
@@ -125,15 +156,15 @@ namespace rlge {
         auto* shaderEffect = entity().get<HasShaderEffect>();
         if (shaderEffect) {
             // Use custom draw command with shader (bypasses batching)
-            Shader shader = shaderEffect->shader();
-            rq.submitCustom(effectiveLayer, pos.y, shader, [this, &f, dest, origin, rotation, shaderEffect]() {
+            const Shader shader = shaderEffect->shader();
+            rq.submitCustom(effectiveLayer, pos.y, shader, [this, &f, srcAdj, dest, origin, rotation, shaderEffect]() {
                 shaderEffect->apply();
-                DrawTexturePro(texture_, f.rect, dest, origin, rotation, WHITE);
+                DrawTexturePro(texture_, srcAdj, dest, origin, rotation, WHITE);
             });
         } else {
             // Use batched sprite submission
             rq.submitSprite(effectiveLayer, pos.y, texture_,
-                           f.rect, dest, origin, rotation, WHITE);
+                           srcAdj, dest, origin, rotation, WHITE);
         }
     }
 }

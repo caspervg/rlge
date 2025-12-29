@@ -115,6 +115,7 @@ namespace rlge {
         KpEqual = KEY_KP_EQUAL
     };
 
+#ifndef RLGE_USE_CUSTOM_ACTION
     // Default Action enum - users can define their own in their code
     enum class Action {
         MoveLeft,
@@ -132,6 +133,7 @@ namespace rlge {
         CameraAltUp,
         CameraAltDown
     };
+#endif
 
     // Mouse button enum
     enum class MouseButton {

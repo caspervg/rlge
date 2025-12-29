@@ -2,12 +2,14 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
 
 #include "raylib.h"
+#include "sprite_atlas.hpp"
 
 namespace rlge {
     struct ShaderHandle {
@@ -68,6 +70,12 @@ namespace rlge {
         [[nodiscard]] const ShaderAsset& shaderAsset(ShaderHandle handle) const;
         [[nodiscard]] const std::unordered_map<ShaderHandle, ShaderAsset, ShaderHandleHash>& shaderAssets() const { return shaderAssets_; }
 
+        template <typename StateEnum>
+        SpriteAtlas<StateEnum>& loadAtlas(const AtlasSpec<StateEnum>& spec);
+
+        template <typename StateEnum>
+        SpriteAtlas<StateEnum>& atlas(const std::string& id);
+
         // Poll shaders for changes when hotReload is enabled.
         void update(float dt);
 
@@ -89,6 +97,7 @@ namespace rlge {
         std::unordered_map<std::string, Font> fonts_;
         std::unordered_map<ShaderHandle, ShaderAsset, ShaderHandleHash> shaderAssets_;
         std::unordered_map<std::string, ShaderHandle> shaderNameToHandle_;
+        std::unordered_map<std::string, std::unique_ptr<SpriteAtlasBase>> atlases_;
         std::filesystem::path assetRoot_{std::filesystem::current_path()};
 
         std::uint32_t nextShaderHandle_{1};

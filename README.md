@@ -15,7 +15,7 @@ This repository also contains example games/demos:
 - `examples/lighting_demo`: normal-mapped sprites lit by multiple point lights, with a movable picture-in-picture view.
 - `examples/raygui_demo`: basic in-game UI using raygui; tweak a moving box's speed/color.
 - `examples/hybrid3d`: hybrid view showing a 3D lane (models + billboards) with a 2D world overlay and a 3D inset.
-
+- `examples/2d_anim`: 2D sprite animation demo using the provided animation state machine.
 ---
 
 ## Features
@@ -68,6 +68,7 @@ This will produce the following executables:
 - `rlge_lighting_demo`
 - `rlge_raygui_demo`
 - `rlge_hybrid3d`
+- `rlge_anim_2d`
 
 On Windows, they will be under `build/` or a generator-specific subdirectory (for example `build/Debug`).
 
@@ -208,6 +209,48 @@ private:
 - Use layers to control draw order and z to sort within a layer; world layers are flushed per view, UI once per frame.
 - `RenderEntity` is a convenience base that exposes `rq()`, `assets()`, `input()`, `audio()`, and `events()`.
 - Render stats (`rq().stats()`) are handy for debug overlays.
+
+### Sprites, atlases, and animations
+
+Sprites are components that draw a texture region using an entity `Transform`.
+
+```cpp
+auto& tex = assets().loadTexture("player", "assets/player.png");
+auto& player = spawn<RenderEntity>();
+player.add<Transform>().position = {120.0f, 220.0f};
+player.add<Sprite>(tex, 48, 48);
+```
+
+For multi-clip animations, build a type-safe `SpriteAtlas` through the asset store and register the clips with an `AnimationStateMachine`:
+
+```cpp
+enum class HeroState { Idle, Walk, Attack };
+
+AtlasSpec<HeroState> spec{
+    .id = "hero_atlas",
+    .frameW = 48,
+    .frameH = 48,
+    .clips = {
+        {HeroState::Idle, "assets/hero/Idle.png", 0.35f, true},
+        {HeroState::Walk, "assets/hero/Walk.png", 0.12f, true},
+        {HeroState::Attack, "assets/hero/Attack.png", 0.08f, false}
+    }
+};
+
+auto& atlas = assets().loadAtlas(spec);
+auto& sprite = player.add<SpriteAnim>(atlas.texture(), atlas.frameW(), atlas.frameH());
+atlas.addTo(sprite);
+sprite.setAutoAdvance(false);
+
+auto& anim = player.add<AnimationStateMachine<HeroState>>(sprite);
+for (const auto& clip : atlas.clips()) {
+    anim.registerClip(clip.state, {clip.startFrame, clip.frameCount, clip.frameTime, clip.loop});
+}
+```
+
+Notes:
+- Include `sprite_atlas_sprite.hpp` in translation units that call `SpriteAtlas::addTo`.
+- Atlas clips are provided as strip textures (frameW x frameH), and `loadAtlas` infers frame counts from image width.
 
 #### 3D rendering and hybrid scenes
 
