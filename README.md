@@ -252,6 +252,25 @@ Notes:
 - Include `sprite_atlas_sprite.hpp` in translation units that call `SpriteAtlas::addTo`.
 - Atlas clips are provided as strip textures (frameW x frameH), and `loadAtlas` infers frame counts from image width.
 
+#### Animation demo assets
+
+The animation state machine demo uses the Craftpix freebie pack _[Octopus, Jellyfish, Shark and Turtle Free Sprite Pixel Art
+](https://craftpix.net/freebies/octopus-jellyfish-shark-and-turtle-free-sprite-pixel-art/)_. The license disallows redistributing the PNGs, so they are not checked in. Download the pack manually and run:
+
+Linux/macOS:
+```
+scripts/fetch_anim_2d_assets.sh /path/to/craftpix_pack.zip
+scripts/fetch_anim_2d_assets.sh /path/to/unzipped_pack_dir
+```
+
+Windows PowerShell:
+```
+scripts\fetch_anim_2d_assets.ps1 -Path C:\path\to\craftpix_pack.zip
+scripts\fetch_anim_2d_assets.ps1 -Path C:\path\to\unzipped_pack_dir
+```
+
+This installs the PNGs under `examples/anim_2d/assets/`.
+
 #### 3D rendering and hybrid scenes
 
 - Use `Camera3DController` for 3D views and `Camera2DController` for 2D.
