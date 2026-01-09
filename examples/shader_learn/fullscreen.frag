@@ -88,7 +88,7 @@ void main() {
         if (d < .001 || t > 100.) break;
     }
 
-    col = vec3(t * .2);
+    col = vec3(t * .3);
 
     finalColor = vec4(col, 1);
 }

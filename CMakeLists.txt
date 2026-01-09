@@ -143,7 +143,11 @@ if(RLGE_BUILD_EXAMPLES)
     add_executable(rlge_basic_game examples/basic_game/main.cpp)
     target_link_libraries(rlge_basic_game PRIVATE rlge rlge::raylib rlge::rlimgui rlge::imgui)
 
-    add_executable(rlge_anim_2d examples/anim_2d/main.cpp)
+    add_executable(rlge_anim_2d
+        examples/anim_2d/anim_demo_scene.cpp
+        examples/anim_2d/sea_creature.cpp
+        examples/anim_2d/hud.cpp
+        examples/anim_2d/main.cpp)
     target_link_libraries(rlge_anim_2d PRIVATE rlge rlge::raylib rlge::rlimgui rlge::imgui)
 
     add_executable(rlge_particles examples/particles/main.cpp)
