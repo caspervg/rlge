@@ -35,6 +35,16 @@ void Transform::clearParent() {
     setParent(static_cast<Transform*>(nullptr));
 }
 
+void Transform::detachFromParent() {
+    const auto currentWorldPos = worldPosition();
+    const auto currentWorldRot = worldRotation();
+    const auto currentWorldScale = worldScale();
+    clearParent();
+    this->position = currentWorldPos;
+    this->rotation = currentWorldRot;
+    this->scale = currentWorldScale;
+}
+
 void Transform::setParent(Entity* parentEntity) {
     setParent(parentEntity ? parentEntity->get<Transform>() : nullptr);
 }

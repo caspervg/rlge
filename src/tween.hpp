@@ -2,13 +2,15 @@
 #include <functional>
 #include <vector>
 
+
 namespace rlge {
     class Tween {
     public:
         using Easing = std::function<float(float)>;
         using Apply = std::function<void(float)>;
+        using Complete = std::function<void()>;
 
-        Tween(float duration, const Apply& apply, const Easing& ease);
+        Tween(float duration, Apply apply, Easing ease, Complete complete = {});
 
         bool update(float dt);
 
@@ -17,6 +19,7 @@ namespace rlge {
         float dur_;
         Apply apply_;
         Easing ease_;
+        Complete complete_;
     };
 
     class TweenSystem {

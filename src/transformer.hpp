@@ -39,6 +39,7 @@ namespace rlge {
         void setParent(Transform* parent);
         void setParent(Entity* parentEntity);
         void clearParent();
+        void detachFromParent();
         [[nodiscard]] bool hasParent() const { return parent_ != nullptr; }
         [[nodiscard]] Transform* parent() const { return parent_; }
         [[nodiscard]] const std::vector<Transform*>& children() const { return children_; }
