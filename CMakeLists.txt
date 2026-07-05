@@ -205,4 +205,20 @@ if(RLGE_BUILD_EXAMPLES)
 
     add_executable(rlge_shader_learning examples/shader_learn/main.cpp)
     target_link_libraries(rlge_shader_learning PRIVATE rlge rlge::raylib rlge::rlimgui rlge::imgui)
+
+    add_executable(rlge_neon_surge
+            examples/neon_surge/main.cpp
+            examples/neon_surge/ns_assets.cpp
+            examples/neon_surge/ns_game.cpp
+            examples/neon_surge/backdrop.cpp
+            examples/neon_surge/fx.cpp
+            examples/neon_surge/player.cpp
+            examples/neon_surge/bullet.cpp
+            examples/neon_surge/enemy.cpp
+            examples/neon_surge/pickup.cpp
+            examples/neon_surge/hud.cpp
+            examples/neon_surge/arena_scene.cpp
+            examples/neon_surge/menu_scene.cpp
+            examples/neon_surge/game_over_scene.cpp)
+    target_link_libraries(rlge_neon_surge PRIVATE rlge rlge::raylib rlge::rlimgui rlge::imgui)
 endif()

@@ -16,6 +16,7 @@ This repository also contains example games/demos:
 - `examples/raygui_demo`: basic in-game UI using raygui; tweak a moving box's speed/color.
 - `examples/hybrid3d`: hybrid view showing a 3D lane (models + billboards) with a 2D world overlay and a 3D inset.
 - `examples/2d_anim`: 2D sprite animation demo using the provided animation state machine.
+- `examples/neon_surge`: **NEON SURGE** — a complete twin-stick arena survival shooter. Endless waves, four enemy archetypes, dashes, power-ups, combo multipliers, an animated nebula layer shader, parallax starfields, screen shake/zoom-kick, and fully synthesized audio — no asset files required.
 ---
 
 ## Features
@@ -69,6 +70,7 @@ This will produce the following executables:
 - `rlge_raygui_demo`
 - `rlge_hybrid3d`
 - `rlge_anim_2d`
+- `rlge_neon_surge`
 
 On Windows, they will be under `build/` or a generator-specific subdirectory (for example `build/Debug`).
 
@@ -87,6 +89,7 @@ Each executable runs a focused scenario; use `F1` to toggle the ImGui overlay in
 - `rlge_lighting_demo`: point/torch/mouse-follow lights over normal-mapped sprites; resize the PIP viewport with WASD and pan its camera with arrows.
 - `rlge_raygui_demo`: panel with sliders/checks using raygui; tweak a moving box's speed/color.
 - `rlge_hybrid3d`: hybrid 3D/2D scene with an inset view.
+- `rlge_neon_surge`: twin-stick arena survival shooter (WASD + mouse, or gamepad). Dash with Shift/RMB, pause with P; everything is procedurally generated so it runs from any working directory.
 
 ## Using RLGE in your own game
 

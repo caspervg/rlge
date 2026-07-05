@@ -152,10 +152,10 @@ namespace rlge {
     void Camera3DController::move(const float dx, const float dy, const float dz) { move(Vector3{dx, dy, dz}); }
 
     void Camera3DController::orbitTarget(const float yaw, const float pitch, const float radius) {
-        const float cp = std::cosf(pitch);
-        const float sp = std::sinf(pitch);
-        const float cy = std::cosf(yaw);
-        const float sy = std::sinf(yaw);
+        const float cp = std::cos(pitch);
+        const float sp = std::sin(pitch);
+        const float cy = std::cos(yaw);
+        const float sy = std::sin(yaw);
         const Vector3 offset{
             cy * cp * radius,
             sp * radius,
