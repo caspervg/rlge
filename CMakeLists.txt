@@ -221,4 +221,14 @@ if(RLGE_BUILD_EXAMPLES)
             examples/neon_surge/menu_scene.cpp
             examples/neon_surge/game_over_scene.cpp)
     target_link_libraries(rlge_neon_surge PRIVATE rlge rlge::raylib rlge::rlimgui rlge::imgui)
+
+    add_executable(rlge_voxhaven
+            examples/voxhaven/main.cpp
+            examples/voxhaven/vx_blocks.cpp
+            examples/voxhaven/vx_world.cpp
+            examples/voxhaven/vx_mesher.cpp
+            examples/voxhaven/vx_player.cpp
+            examples/voxhaven/vx_sfx.cpp
+            examples/voxhaven/vox_scene.cpp)
+    target_link_libraries(rlge_voxhaven PRIVATE rlge rlge::raylib rlge::rlimgui rlge::imgui)
 endif()
