@@ -111,9 +111,11 @@ namespace vox::light {
         }
 
         // Classic removal pass: zero every neighbour whose level could only have
-        // come from us, and collect the brighter ones as refill seeds.
+        // come from us, and collect the brighter ones as refill seeds. Every voxel
+        // it darkens is reported in `zeroed`, because some of them are their own
+        // light source (an emitter, or a sun column) and have to be re-seeded.
         void unflood(Access& acc, std::deque<Node>& queue, std::deque<Node>& refill,
-                     const Channel ch) {
+                     const Channel ch, std::vector<Node>& zeroed) {
             const int wh = cfg.worldHeight;
             const int cs = cfg.chunkSize;
             while (!queue.empty()) {
@@ -140,6 +142,7 @@ namespace vox::light {
                         (ch == Channel::Sky && d[1] < 0 && n.level == kMax && cur == kMax);
                     if (derived) {
                         setLight(*c, ch, lx, ny, lz, 0);
+                        zeroed.push_back({nx, ny, nz, cur});
                         queue.push_back({nx, ny, nz, cur});
                     } else {
                         refill.push_back({nx, ny, nz, cur});
@@ -161,6 +164,27 @@ namespace vox::light {
                 const int v = acc.get(ch, nx, ny, nz);
                 if (v > 1)
                     refill.push_back({nx, ny, nz, v});
+            }
+        }
+
+        // Lay the vertical sun carry down one column with exactly the rule
+        // computeChunk uses, so an edit can never disagree with a later full
+        // recompute. Only voxels the carry would brighten are touched.
+        void relaySunColumn(Access& acc, std::deque<Node>& refill, const int x, const int z) {
+            Chunk* c = acc.chunkFor(x, z);
+            if (c == nullptr)
+                return;
+            const int lx = modInt(x, cfg.chunkSize);
+            const int lz = modInt(z, cfg.chunkSize);
+            int level = kMax;
+            for (int y = cfg.worldHeight - 1; y >= 0; --y) {
+                level = std::max(0, level - blockInfo(c->at(lx, y, lz)).lightOpacity);
+                if (level == 0)
+                    break;
+                if (level > c->skyAt(lx, y, lz)) {
+                    setLight(*c, Channel::Sky, lx, y, lz, level);
+                    refill.push_back({x, y, z, level});
+                }
             }
         }
 
@@ -284,7 +308,6 @@ namespace vox::light {
             return; // a full recompute for this chunk is already queued
 
         const int cs = cfg.chunkSize;
-        const int wh = cfg.worldHeight;
         const int hx = modInt(x, cs);
         const int hz = modInt(z, cs);
 
@@ -292,10 +315,24 @@ namespace vox::light {
         {
             std::deque<Node> removal;
             std::deque<Node> refill;
+            std::vector<Node> zeroed;
             if (const int old = home->blockLightAt(hx, y, hz); old > 0) {
                 setLight(*home, Channel::Block, hx, y, hz, 0);
                 removal.push_back({x, y, z, old});
-                unflood(acc, removal, refill, Channel::Block);
+                unflood(acc, removal, refill, Channel::Block, zeroed);
+            }
+            // An emitter caught inside the darkened region is its own source and
+            // has to be put back before the refill runs.
+            for (const Node& n : zeroed) {
+                Chunk* c = acc.chunkFor(n.x, n.z);
+                if (c == nullptr)
+                    continue;
+                const int emit =
+                    blockInfo(c->at(modInt(n.x, cs), n.y, modInt(n.z, cs))).lightEmission;
+                if (emit > 0) {
+                    setLight(*c, Channel::Block, modInt(n.x, cs), n.y, modInt(n.z, cs), emit);
+                    refill.push_back({n.x, n.y, n.z, emit});
+                }
             }
             if (ai.lightEmission > 0) {
                 setLight(*home, Channel::Block, hx, y, hz, ai.lightEmission);
@@ -309,22 +346,32 @@ namespace vox::light {
         if (bi.lightOpacity != ai.lightOpacity) {
             std::deque<Node> removal;
             std::deque<Node> refill;
+            std::vector<Node> zeroed;
             if (const int old = home->skyAt(hx, y, hz); old > 0) {
                 setLight(*home, Channel::Sky, hx, y, hz, 0);
                 removal.push_back({x, y, z, old});
-                unflood(acc, removal, refill, Channel::Sky);
+                unflood(acc, removal, refill, Channel::Sky, zeroed);
             }
-            // Re-lay the whole sun column with exactly the rule computeChunk uses,
-            // so an edit can never disagree with a later full recompute.
-            int level = kMax;
-            for (int yy = wh - 1; yy >= 0 && level > 0; --yy) {
-                level = std::max(0, level - blockInfo(home->at(hx, yy, hz)).lightOpacity);
-                if (level == 0)
-                    break;
-                if (level > home->skyAt(hx, yy, hz)) {
-                    setLight(*home, Channel::Sky, hx, yy, hz, level);
-                    refill.push_back({x, yy, z, level});
-                }
+            // Voxels the removal darkened may have been lit by their own sun
+            // carry, which no neighbour can hand back, so every column it touched
+            // gets re-laid - not just the edited one.
+            const auto packColumn = [](const int cxw, const int czw) {
+                return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(cxw)) << 32) |
+                       static_cast<std::uint64_t>(static_cast<std::uint32_t>(czw));
+            };
+            std::vector<std::uint64_t> columns;
+            columns.reserve(zeroed.size() + 1);
+            columns.push_back(packColumn(x, z));
+            for (const Node& n : zeroed) {
+                columns.push_back(packColumn(n.x, n.z));
+            }
+            std::sort(columns.begin(), columns.end());
+            columns.erase(std::unique(columns.begin(), columns.end()), columns.end());
+            for (const std::uint64_t packed : columns) {
+                relaySunColumn(
+                    acc, refill,
+                    static_cast<int>(static_cast<std::int32_t>(packed >> 32)),
+                    static_cast<int>(static_cast<std::int32_t>(packed & 0xFFFFFFFFULL)));
             }
             seedNeighbours(acc, refill, Channel::Sky, x, y, z);
             flood(acc, refill, Channel::Sky);

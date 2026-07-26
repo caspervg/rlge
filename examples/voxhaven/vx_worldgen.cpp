@@ -773,44 +773,66 @@ namespace vox {
             void buildCaveEntrance(Chunk& ch, const int baseX, const int baseZ, const std::uint32_t seed,
                                    const int wx, const int wz, const int base) {
                 const std::uint32_t s = seed + kSaltStruct + 404u;
-                const int depth = 14 + static_cast<int>(noise::rand01(s, wx, wz, 1) * 10.0f);
+                const int depth = 16 + static_cast<int>(noise::rand01(s, wx, wz, 1) * 12.0f);
                 const int bottom = std::max(6, base - depth);
 
-                // Cobble collar so the mouth reads as built, not as a sinkhole.
+                // Perimeter of a 5x5 square, walked in order. Dropping one block per
+                // step turns it into a spiral stair: a plain vertical shaft would be
+                // a lethal drop, and there is no ladder block to climb back out.
+                static constexpr int kSx[16] = {-2, -1, 0, 1, 2, 2, 2, 2, 2, 1, 0, -1, -2, -2, -2, -2};
+                static constexpr int kSz[16] = {-2, -2, -2, -2, -2, -1, 0, 1, 2, 2, 2, 2, 2, 1, 0, -1};
+
+                // Open mouth with a low cobble parapet around it.
+                for (int dz = -3; dz <= 3; ++dz) {
+                    for (int dx = -3; dx <= 3; ++dx) {
+                        const int ring = std::max(std::abs(dx), std::abs(dz));
+                        if (ring == 3) {
+                            for (int y = base - 1; y <= base + 1; ++y)
+                                setWorld(ch, baseX, baseZ, wx + dx, y, wz + dz, Block::Cobble);
+                        } else {
+                            for (int y = base; y <= base + 3; ++y)
+                                setWorld(ch, baseX, baseZ, wx + dx, y, wz + dz, Block::Air);
+                        }
+                    }
+                }
+                // Landing at the top of the stair so the mouth has a floor to stand on.
                 for (int dz = -2; dz <= 2; ++dz)
                     for (int dx = -2; dx <= 2; ++dx)
-                        for (int y = base - 1; y <= base; ++y)
-                            setWorld(ch, baseX, baseZ, wx + dx, y, wz + dz, Block::Cobble);
+                        setWorld(ch, baseX, baseZ, wx + dx, base - 1, wz + dz, Block::Cobble);
 
-                for (int y = bottom; y <= base + 1; ++y) {
-                    // Lined 2x2 shaft.
-                    for (int dz = -1; dz <= 2; ++dz) {
-                        for (int dx = -1; dx <= 2; ++dx) {
-                            const bool inner = (dx >= 0 && dx <= 1 && dz >= 0 && dz <= 1);
-                            if (inner) {
-                                setWorld(ch, baseX, baseZ, wx + dx, y, wz + dz, Block::Air);
-                            } else if (y <= base) {
-                                setWorld(ch, baseX, baseZ, wx + dx, y, wz + dz, Block::Cobble);
-                            }
-                        }
-                    }
-                    // A lantern set into the lining every few courses.
-                    if (y > bottom && ((base - y) % 4) == 1)
-                        setWorld(ch, baseX, baseZ, wx - 1, y, wz, Block::Lantern);
-                }
-
-                // Small chamber at the foot of the shaft; it frequently breaks into
-                // the natural cave network, which is the point of the landmark.
-                for (int dz = -2; dz <= 3; ++dz) {
-                    for (int dx = -2; dx <= 3; ++dx) {
-                        for (int y = bottom; y <= bottom + 2; ++y) {
-                            if (dx * dx + dz * dz > 11) continue;
+                // Chamber at the foot of the stair. It frequently breaks into the
+                // natural cave network, which is the whole point of the landmark.
+                // Carved before the stair so the last treads survive inside it and
+                // step down onto the chamber floor instead of ending in a drop.
+                for (int dz = -3; dz <= 3; ++dz) {
+                    for (int dx = -3; dx <= 3; ++dx) {
+                        if (dx * dx + dz * dz > 12) continue;
+                        setWorld(ch, baseX, baseZ, wx + dx, bottom - 1, wz + dz, Block::Cobble);
+                        for (int y = bottom; y <= bottom + 2; ++y)
                             setWorld(ch, baseX, baseZ, wx + dx, y, wz + dz, Block::Air);
-                        }
                     }
                 }
-                setWorld(ch, baseX, baseZ, wx + 2, bottom, wz + 2, Block::Glowstone);
-                setWorld(ch, baseX, baseZ, wx - 1, bottom, wz - 1, Block::Glowstone);
+                setWorld(ch, baseX, baseZ, wx + 2, bottom - 1, wz + 2, Block::Glowstone);
+                setWorld(ch, baseX, baseZ, wx - 2, bottom - 1, wz - 2, Block::Glowstone);
+
+                for (int step = 0; base - 1 - step >= bottom; ++step) {
+                    const int y = base - 1 - step;
+                    const int k = step % 16;
+                    const int nk = (step + 1) % 16;
+                    setWorld(ch, baseX, baseZ, wx + kSx[k], y, wz + kSz[k], Block::Cobble);
+                    // Headroom over this tread and over the next one, so the corridor
+                    // is continuous rather than a series of sealed pockets.
+                    for (int c = 1; c <= 2; ++c) {
+                        setWorld(ch, baseX, baseZ, wx + kSx[k], y + c, wz + kSz[k], Block::Air);
+                        setWorld(ch, baseX, baseZ, wx + kSx[nk], y + c, wz + kSz[nk], Block::Air);
+                    }
+                    // Lantern set into the wall just outside the stair, every 5 steps.
+                    if ((step % 5) == 2) {
+                        const int ox = (kSx[k] == 0) ? 0 : (kSx[k] > 0 ? 3 : -3);
+                        const int oz = (kSz[k] == 0) ? 0 : (kSz[k] > 0 ? 3 : -3);
+                        setWorld(ch, baseX, baseZ, wx + ox, y + 1, wz + oz, Block::Lantern);
+                    }
+                }
             }
 
             void placeStructures(Chunk& ch, const std::uint32_t seed) {
