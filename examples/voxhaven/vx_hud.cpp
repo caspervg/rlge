@@ -150,8 +150,11 @@ namespace vox {
             const float w = vp.width * 0.26f;
             const float h = vp.height * 0.30f;
             const Color e = Fade(c, strength);
-            DrawRectangleGradientEx({vp.x, vp.y, vp.width, h}, e, BLANK, e, BLANK);
-            DrawRectangleGradientEx({vp.x, vp.y + vp.height - h, vp.width, h}, BLANK, e, BLANK, e);
+            // Corners run topLeft, bottomLeft, bottomRight, topRight. Feeding
+            // them out of order turns the intended vertical fade into a diagonal
+            // wedge, which showed up in game as a hard horizontal seam.
+            DrawRectangleGradientEx({vp.x, vp.y, vp.width, h}, e, BLANK, BLANK, e);
+            DrawRectangleGradientEx({vp.x, vp.y + vp.height - h, vp.width, h}, BLANK, e, e, BLANK);
             DrawRectangleGradientEx({vp.x, vp.y, w, vp.height}, e, e, BLANK, BLANK);
             DrawRectangleGradientEx({vp.x + vp.width - w, vp.y, w, vp.height}, BLANK, BLANK, e, e);
         }

@@ -38,7 +38,7 @@ namespace vox {
 
         // Lighting
         int maxLight = 15;
-        float nightLight = 0.10f;  // ambient floor at midnight
+        float nightLight = 0.20f;  // moonlight floor; the light curve darkens from here
 
         // Day cycle
         float dayLengthSeconds = 600.0f;

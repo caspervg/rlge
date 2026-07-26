@@ -9,6 +9,7 @@
 #include "vx_config.hpp"
 #include "vx_hud.hpp"
 #include "vx_inventory.hpp"
+#include "vx_mobs.hpp"
 #include "vx_player.hpp"
 #include "vx_sfx.hpp"
 #include "vx_world.hpp"
@@ -58,12 +59,15 @@ namespace vox {
         void setupShaders_();
         void setupView_();
         void warmStart_();
+        [[nodiscard]] Vector2 findSpawnPoint_() const;
         void setState_(State s);
         [[nodiscard]] bool cursorFreeState_() const;
 
         void updatePlaying_(float dt);
         void updateDayCycle_(float dt);
         void updateInteraction_(float dt);
+        void updateCombat_(float dt);
+        void respawnPlayer_();
         void updateDebris_(float dt);
         void updateMenuActions_();
         [[nodiscard]] HudContext makeHudContext_();
@@ -72,6 +76,7 @@ namespace vox {
         void drawChunks_();
         void drawHighlight_();
         void drawDebris_();
+        void drawMobs_();
         void drawClouds_();
         void drawUi_();
 
@@ -84,6 +89,7 @@ namespace vox {
         World world_{"voxhaven.world"};
         PlayerController player_;
         Inventory inventory_;
+        MobManager mobs_;
         Sfx sfx_;
         rlge::Camera3DController cam3_;
 
@@ -96,6 +102,14 @@ namespace vox {
         MenuState pauseMenu_;
         SettingsUiState settingsUi_;
         InventoryUiState inventoryUi_;
+        // Player vitality; mobs are the only thing that can hurt you.
+        int playerHealth_ = 20;
+        int playerMaxHealth_ = 20;
+        float regenTimer_ = 0.0f;
+        float hurtFlash_ = 0.0f;
+        float swingCooldown_ = 0.0f;
+        float deathTimer_ = 0.0f;
+
         float selectionChangedAt_ = -100.0f;
         float fpsSamples_[64] = {};
         int fpsHead_ = 0;

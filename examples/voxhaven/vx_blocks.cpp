@@ -48,7 +48,7 @@ namespace vox {
             {"sand",      true, true,  false, 0.30f, T_Sand,     T_Sand,      T_Sand,      {219, 207, 163, 255},   0, 15, SG::Sand,   Block::Sand},
             {"snow",      true, true,  false, 0.30f, T_SnowTop,  T_SnowSide,  T_Dirt,      {236, 240, 245, 255},   0, 15, SG::Snow,   Block::Snow},
             {"wood",      true, true,  false, 0.80f, T_WoodRings,T_WoodBark,  T_WoodRings, {112, 88, 55, 255},     0, 15, SG::Wood,   Block::Wood},
-            {"leaves",    true, false, true,  0.20f, T_Leaves,   T_Leaves,    T_Leaves,    {58, 122, 48, 255},     0,  1, SG::Grass,  Block::Leaves},
+            {"leaves",    true, false, true,  0.20f, T_Leaves,   T_Leaves,    T_Leaves,    {58, 122, 48, 255},     0,  3, SG::Grass,  Block::Leaves},
             {"planks",    true, true,  false, 0.70f, T_Planks,   T_Planks,    T_Planks,    {172, 138, 88, 255},    0, 15, SG::Wood,   Block::Planks},
             {"glass",     true, false, true,  0.25f, T_Glass,    T_Glass,     T_Glass,     {200, 226, 235, 255},   0,  0, SG::Glass,  Block::Glass},
             {"water",     false,false, false, 0.00f, T_Water,    T_Water,     T_Water,     {46, 90, 200, 255},     0,  2, SG::Liquid, Block::Air},

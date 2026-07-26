@@ -93,7 +93,13 @@ void main() {
     float ao    = fragColor.r;
     float sky   = fragColor.g * u_dayFactor;
     float block = fragColor.b;
-    float lum   = max(max(sky, block), u_ambient);
+
+    // Light levels are interpolated linearly (as levels), then converted to
+    // brightness with a per-level falloff. A linear ramp washes everything out
+    // and leaves overhangs barely darker than open sky; this gives canopies,
+    // cave mouths and doorways real depth.
+    float level = max(sky, block);
+    float lum   = max(pow(0.84, (1.0 - level) * 15.0), u_ambient);
 
     // Torchlight reads warm where it wins over daylight.
     vec3 warm  = vec3(1.0, 0.87, 0.68);
@@ -196,10 +202,13 @@ void main() {
                                0.22f + frand01() * 0.16f});
         }
 
+        const Vector2 spawnXZ = findSpawnPoint_();
+        spawnPos_ = {spawnXZ.x, spawnPos_.y, spawnXZ.y};
         warmStart_();
         player_.spawn(world_, spawnPos_.x, spawnPos_.z);
         spawnPos_ = player_.position();
 
+        mobs_.init(world_.seed() ^ 0x9E3779B9u);
         inventory_.giveStarterKit();
         titleMenu_.open(worldClock_);
         EnableCursor();
@@ -229,6 +238,7 @@ void main() {
     }
 
     void VoxScene::exit() {
+        mobs_.shutdown();
         world_.save();
         EnableCursor();
     }
@@ -306,6 +316,34 @@ void main() {
                   [](const float width, const float height) {
                       return Rectangle{0.0f, 0.0f, width, height};
                   });
+    }
+
+    Vector2 VoxScene::findSpawnPoint_() const {
+        // worldgen is a pure function of (seed, x, z), so we can probe columns
+        // for dry land long before any chunk is generated. Without this a seed
+        // whose origin lands in an ocean drops the player into open water with
+        // nothing to stand on and no animals anywhere in range.
+        const std::uint32_t seed = world_.seed();
+        constexpr int kStep = 12;
+        constexpr int kMaxRing = 60; // ~720 blocks out
+        for (int ring = 0; ring <= kMaxRing; ++ring) {
+            for (int dz = -ring; dz <= ring; ++dz) {
+                for (int dx = -ring; dx <= ring; ++dx) {
+                    if (ring > 0 && std::max(std::abs(dx), std::abs(dz)) != ring)
+                        continue; // perimeter only, so we spiral outwards
+                    const int x = dx * kStep;
+                    const int z = dz * kStep;
+                    const Biome b = worldgen::biomeAt(seed, x, z);
+                    if (b == Biome::Ocean || b == Biome::Beach)
+                        continue;
+                    const int h = worldgen::columnHeight(seed, x, z);
+                    if (h <= cfg.seaLevel + 2)
+                        continue;
+                    return {static_cast<float>(x) + 0.5f, static_cast<float>(z) + 0.5f};
+                }
+            }
+        }
+        return {8.5f, 8.5f};
     }
 
     void VoxScene::warmStart_() {
@@ -430,6 +468,9 @@ void main() {
         if (IsKeyPressed(KEY_F) && settings.creative) {
             player_.toggleFly();
         }
+        if (IsKeyPressed(KEY_M) && settings.creative) {
+            mobs_.spawnSampler(world_, player_.position(), player_.yaw());
+        }
         if (IsKeyPressed(KEY_G)) {
             // Quick creative toggle; leaving creative also drops you out of fly.
             settings.creative = !settings.creative;
@@ -473,6 +514,9 @@ void main() {
         meshedThisFrame_ = Mesher::remeshDirty(world_, player_.position(), cfg.meshPerFrame);
 
         updateDayCycle_(IsKeyDown(KEY_T) ? dt * 40.0f : dt);
+
+        mobs_.update(world_, player_.position(), dayTime_, dt);
+        updateCombat_(dt);
         updateInteraction_(dt);
 
         // Hotbar selection.
@@ -514,7 +558,7 @@ void main() {
         digSoundTimer_ = std::max(0.0f, digSoundTimer_ - dt);
 
         // --- Breaking (hold LMB) ---
-        if (hasTarget_ && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        if (hasTarget_ && IsMouseButtonDown(MOUSE_BUTTON_LEFT) && swingCooldown_ <= 0.0f) {
             const BlockInfo& info = blockInfo(target_.block);
             if (info.hardness >= 0.0f) {
                 if (target_.x != breakX_ || target_.y != breakY_ || target_.z != breakZ_) {
@@ -566,6 +610,68 @@ void main() {
         }
     }
 
+    void VoxScene::updateCombat_(const float dt) {
+        swingCooldown_ = std::max(0.0f, swingCooldown_ - dt);
+        hurtFlash_ = std::max(0.0f, hurtFlash_ - dt * 2.0f);
+
+        // Mob deaths become debris and a thud, reusing the block-break feedback.
+        for (const auto& [pos, kind] : mobs_.deaths) {
+            const Color c = mobColor(kind);
+            for (int i = 0; i < 18; ++i) {
+                debris_.push_back({pos,
+                                   {(frand01() - 0.5f) * 5.0f, 1.5f + frand01() * 4.0f,
+                                    (frand01() - 0.5f) * 5.0f},
+                                   c, 0.5f + frand01() * 0.5f, 0.07f + frand01() * 0.07f});
+            }
+            sfx_.play("break", 0.55f, mobStats(kind).hostile ? 0.7f : 1.15f, 0.15f);
+        }
+
+        // Damage dealt to the player by everything that reached them this frame.
+        if (const int dmg = mobs_.takePlayerDamage(); dmg > 0 && !settings.creative && deathTimer_ <= 0.0f) {
+            playerHealth_ = std::max(0, playerHealth_ - dmg);
+            hurtFlash_ = 1.0f;
+            regenTimer_ = 0.0f;
+            sfx_.play("hurt", 0.7f, 1.0f, 0.1f);
+            if (playerHealth_ == 0) {
+                deathTimer_ = 2.4f;
+                sfx_.play("land", 0.9f, 0.6f);
+            }
+        }
+
+        // Slow regeneration once nothing has hit you for a while.
+        if (playerHealth_ > 0 && playerHealth_ < playerMaxHealth_) {
+            regenTimer_ += dt;
+            if (regenTimer_ > 4.0f) {
+                regenTimer_ = 0.0f;
+                playerHealth_ = std::min(playerMaxHealth_, playerHealth_ + 1);
+            }
+        }
+
+        if (deathTimer_ > 0.0f) {
+            deathTimer_ -= dt;
+            if (deathTimer_ <= 0.0f)
+                respawnPlayer_();
+            return;
+        }
+
+        // Swinging at a creature takes priority over mining the block behind it.
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && swingCooldown_ <= 0.0f) {
+            const int damage = settings.creative ? 40 : 4;
+            if (mobs_.attack(player_.eyePosition(), player_.lookDir(), cfg.reach, damage)) {
+                swingCooldown_ = 0.35f;
+                sfx_.playDig(SoundGroup::Wood, 0.45f);
+            }
+        }
+    }
+
+    void VoxScene::respawnPlayer_() {
+        playerHealth_ = playerMaxHealth_;
+        regenTimer_ = 0.0f;
+        hurtFlash_ = 0.0f;
+        player_.spawn(world_, spawnPos_.x, spawnPos_.z);
+        mobs_.clear(); // give the player a clean slate at the spawn point
+    }
+
     void VoxScene::updateDebris_(const float dt) {
         for (auto& d : debris_) {
             d.vel.y -= 14.0f * dt;
@@ -611,6 +717,7 @@ void main() {
         if (state_ == State::Playing || state_ == State::Paused) {
             drawHighlight_();
         }
+        drawMobs_();
         drawDebris_();
         drawUi_();
     }
@@ -741,6 +848,13 @@ void main() {
         });
     }
 
+    void VoxScene::drawMobs_() {
+        const float light = dayLight_();
+        rq().submit3D(layers().world(), 1.0f, [this, light](const Camera3D& cam, const Rectangle&) {
+            mobs_.draw(cam, light);
+        });
+    }
+
     void VoxScene::drawDebris_() {
         if (debris_.empty())
             return;
@@ -791,7 +905,9 @@ void main() {
         ctx.creative = settings.creative;
         ctx.sprinting = player_.sprinting();
         ctx.onGround = player_.onGround();
-        ctx.showHealth = false; // no damage model yet
+        ctx.health = playerHealth_;
+        ctx.maxHealth = playerMaxHealth_;
+        ctx.showHealth = true; // mobs can hurt you, so hearts matter now
         ctx.breakProgress = breakProgress_;
         ctx.hasTarget = hasTarget_;
         ctx.lookingAtName = hasTarget_ ? blockInfo(target_.block).name : nullptr;
