@@ -11,6 +11,7 @@
 #include "runtime.hpp"
 
 #include "vx_mesher.hpp"
+#include "vx_worldgen.hpp"
 
 namespace vox {
     using namespace rlge;
@@ -20,14 +21,17 @@ namespace vox {
 #version 330
 in vec3 vertexPosition;
 in vec2 vertexTexCoord;
+in vec2 vertexTexCoord2;
 in vec4 vertexColor;
 uniform mat4 mvp;
 uniform mat4 matModel;
 out vec2 fragTexCoord;
+out vec2 fragTileOrigin;
 out vec4 fragColor;
 out vec3 fragPosition;
 void main() {
     fragTexCoord = vertexTexCoord;
+    fragTileOrigin = vertexTexCoord2;
     fragColor = vertexColor;
     fragPosition = vec3(matModel * vec4(vertexPosition, 1.0));
     gl_Position = mvp * vec4(vertexPosition, 1.0);
@@ -38,17 +42,20 @@ void main() {
 #version 330
 in vec3 vertexPosition;
 in vec2 vertexTexCoord;
+in vec2 vertexTexCoord2;
 in vec4 vertexColor;
 uniform mat4 mvp;
 uniform mat4 matModel;
 uniform float u_time;
 out vec2 fragTexCoord;
+out vec2 fragTileOrigin;
 out vec4 fragColor;
 out vec3 fragPosition;
 void main() {
     vec3 pos = vertexPosition;
     pos.y += sin(u_time * 1.6 + vertexPosition.x * 0.9 + vertexPosition.z * 0.7) * 0.05;
     fragTexCoord = vertexTexCoord;
+    fragTileOrigin = vertexTexCoord2;
     fragColor = vertexColor;
     fragPosition = vec3(matModel * vec4(pos, 1.0));
     gl_Position = mvp * vec4(pos, 1.0);
@@ -63,6 +70,7 @@ void main() {
         constexpr auto kChunkFragmentShader = R"(
 #version 330
 in vec2 fragTexCoord;
+in vec2 fragTileOrigin;
 in vec4 fragColor;
 in vec3 fragPosition;
 uniform sampler2D texture0;
@@ -73,8 +81,13 @@ uniform vec3 u_camPos;
 uniform float u_dayFactor;
 uniform float u_ambient;
 out vec4 finalColor;
+const vec2 kTile = vec2(1.0 / 8.0, 1.0 / 4.0);
+
 void main() {
-    vec4 tex = texture(texture0, fragTexCoord);
+    // Greedy meshing lets UVs run past the tile, so wrap them back into the
+    // quad's own atlas tile before sampling.
+    vec2 uv = fragTileOrigin + mod(fragTexCoord - fragTileOrigin, kTile);
+    vec4 tex = texture(texture0, uv);
     if (tex.a < 0.35) discard;
 
     float ao    = fragColor.r;
@@ -151,6 +164,9 @@ void main() {
             matLand_.shader = Shader{};
             matWater_.shader = Shader{};
         }
+        setHudFonts(Font{}, Font{}); // drop the HUD's borrowed handles first
+        if (uiFont_.texture.id != 0) UnloadFont(uiFont_);
+        if (displayFont_.texture.id != 0) UnloadFont(displayFont_);
         if (atlas_.id != 0) UnloadTexture(atlas_);
         if (sunTex_.id != 0) UnloadTexture(sunTex_);
         if (moonTex_.id != 0) UnloadTexture(moonTex_);
@@ -162,6 +178,7 @@ void main() {
         sunTex_ = makeDiscTexture(Color{255, 236, 160, 255}, Color{255, 190, 90, 255}, false);
         moonTex_ = makeDiscTexture(Color{224, 228, 240, 255}, Color{160, 168, 190, 255}, true);
 
+        setupFonts_();
         setupShaders_();
         setupView_();
 
@@ -183,6 +200,10 @@ void main() {
         player_.spawn(world_, spawnPos_.x, spawnPos_.z);
         spawnPos_ = player_.position();
 
+        inventory_.giveStarterKit();
+        titleMenu_.open(worldClock_);
+        EnableCursor();
+
         // Feedback effects ride the scene event bus, not the edit code path.
         sceneEvents().subscribe<BlockBroken>([this](const BlockBroken& e) {
             const Color c = blockInfo(e.block).mapColor;
@@ -192,10 +213,10 @@ void main() {
                                     (frand01() - 0.5f) * 5.0f},
                                    c, 0.5f + frand01() * 0.4f, 0.07f + frand01() * 0.08f});
             }
-            sfx_.play("break", 0.7f, 1.0f, 0.15f);
+            sfx_.playBreak(blockInfo(e.block).sound);
         });
-        sceneEvents().subscribe<BlockPlaced>([this](const BlockPlaced&) {
-            sfx_.play("place", 0.6f, 1.0f, 0.12f);
+        sceneEvents().subscribe<BlockPlaced>([this](const BlockPlaced& e) {
+            sfx_.playPlace(blockInfo(e.block).sound);
         });
 
         // Engine timers: autosave + ambient wind gusts.
@@ -210,6 +231,38 @@ void main() {
     void VoxScene::exit() {
         world_.save();
         EnableCursor();
+    }
+
+    void VoxScene::setupFonts_() {
+        // Glyphs are rasterized once at a high base size and scaled down, which
+        // keeps HUD text crisp at every window size. If the files are missing the
+        // HUD silently falls back to raylib's built-in font.
+        static constexpr int kBaseSize = 96;
+        const char* roots[] = {
+            "../examples/voxhaven/assets/",
+            "examples/voxhaven/assets/",
+            "../../examples/voxhaven/assets/",
+            "assets/",
+        };
+        const auto tryLoad = [&](const char* file) {
+            Font f{};
+            for (const char* root : roots) {
+                const char* path = TextFormat("%s%s", root, file);
+                if (!FileExists(path))
+                    continue;
+                f = LoadFontEx(path, kBaseSize, nullptr, 0);
+                if (f.texture.id != 0) {
+                    SetTextureFilter(f.texture, TEXTURE_FILTER_BILINEAR);
+                    TraceLog(LOG_INFO, "VOXHAVEN: loaded font %s", path);
+                    break;
+                }
+            }
+            return f;
+        };
+
+        uiFont_ = tryLoad("rubik_ui.ttf");
+        displayFont_ = tryLoad("rubik_mono.ttf");
+        setHudFonts(uiFont_, displayFont_);
     }
 
     void VoxScene::setupShaders_() {
@@ -268,19 +321,32 @@ void main() {
 
     void VoxScene::setState_(const State s) {
         state_ = s;
-        if (s == State::Playing) {
-            DisableCursor();
-            skipLookFrames_ = 2;
-        } else {
+        if (cursorFreeState_()) {
             EnableCursor();
+        } else {
+            DisableCursor();
+            skipLookFrames_ = 2; // swallow the jump the OS reports on cursor capture
         }
+        if (s == State::Menu)
+            titleMenu_.open(worldClock_);
+        else if (s == State::Paused)
+            pauseMenu_.open(worldClock_);
+        else if (s == State::Inventory)
+            inventoryUi_.open(worldClock_);
     }
+
+    bool VoxScene::cursorFreeState_() const { return state_ != State::Playing; }
 
     // ------------------------------------------------------------- Update
 
     void VoxScene::update(const float dt) {
         Scene::update(dt);
         worldClock_ += dt;
+        inventory_.syncCreative();
+
+        // FPS ring buffer for the HUD sparkline.
+        fpsSamples_[fpsHead_] = static_cast<float>(GetFPS());
+        fpsHead_ = (fpsHead_ + 1) % 64;
 
         switch (state_) {
         case State::Menu: {
@@ -293,29 +359,63 @@ void main() {
             world_.update(spawnPos_);
             meshedThisFrame_ = Mesher::remeshDirty(world_, spawnPos_, cfg.meshPerFrame);
             updateDayCycle_(dt);
-            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER) || IsKeyPressed(KEY_SPACE)) {
-                setState_(State::Playing);
-            }
-            if (IsKeyPressed(KEY_ESCAPE)) {
-                runtime().quit();
-            }
             break;
         }
         case State::Playing:
             updatePlaying_(dt);
             break;
         case State::Paused:
-            if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_P)) {
+        case State::Settings:
+            break; // menus drive themselves; actions are consumed below
+        case State::Inventory:
+            if (IsKeyPressed(KEY_E) || IsKeyPressed(KEY_ESCAPE)) {
+                returnHeldToInventory(inventory_, inventoryUi_);
                 setState_(State::Playing);
-            }
-            if (IsKeyPressed(KEY_Q)) {
-                world_.save();
-                runtime().quit();
             }
             break;
         }
 
+        // Menu widgets record their action while drawing, so it is consumed on
+        // the following frame.
+        updateMenuActions_();
         updateDebris_(dt);
+    }
+
+    void VoxScene::updateMenuActions_() {
+        switch (state_) {
+        case State::Menu:
+            switch (titleMenu_.take()) {
+            case MenuAction::Play: setState_(State::Playing); break;
+            case MenuAction::Settings:
+                settingsReturn_ = State::Menu;
+                setState_(State::Settings);
+                break;
+            case MenuAction::Quit: runtime().quit(); break;
+            default: break;
+            }
+            break;
+        case State::Paused:
+            switch (pauseMenu_.take()) {
+            case MenuAction::Resume: setState_(State::Playing); break;
+            case MenuAction::Settings:
+                settingsReturn_ = State::Paused;
+                setState_(State::Settings);
+                break;
+            case MenuAction::SaveAndQuit:
+                world_.save();
+                runtime().quit();
+                break;
+            default: break;
+            }
+            break;
+        case State::Settings:
+            if (settingsUi_.take() == MenuAction::Back) {
+                setState_(settingsReturn_);
+            }
+            break;
+        default:
+            break;
+        }
     }
 
     void VoxScene::updatePlaying_(const float dt) {
@@ -323,8 +423,18 @@ void main() {
             setState_(State::Paused);
             return;
         }
-        if (IsKeyPressed(KEY_F)) {
+        if (IsKeyPressed(KEY_E)) {
+            setState_(State::Inventory);
+            return;
+        }
+        if (IsKeyPressed(KEY_F) && settings.creative) {
             player_.toggleFly();
+        }
+        if (IsKeyPressed(KEY_G)) {
+            // Quick creative toggle; leaving creative also drops you out of fly.
+            settings.creative = !settings.creative;
+            if (!settings.creative)
+                player_.setFly(false);
         }
 
         // Gather inputs (engine axis bindings + raw keys).
@@ -332,6 +442,7 @@ void main() {
         in.moveX = input().axisValue(Action::MoveRight);
         in.moveZ = -input().axisValue(Action::MoveDown); // W = forward
         in.jump = IsKeyDown(KEY_SPACE);
+        in.jumpPressed = IsKeyPressed(KEY_SPACE);
         in.sprint = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_LEFT_SHIFT);
         in.descend = IsKeyDown(KEY_LEFT_SHIFT) && player_.flying();
         if (skipLookFrames_ > 0) {
@@ -343,12 +454,19 @@ void main() {
         player_.update(world_, in, dt);
         if (player_.justJumped()) sfx_.play("jump", 0.25f, 1.0f, 0.1f);
         if (player_.justSplashed()) sfx_.play("splash", 0.6f, 1.0f, 0.1f);
+        if (player_.justStepped()) sfx_.playFootstep(player_.groundSound());
+        if (player_.justLanded()) {
+            sfx_.play("land", 0.2f + 0.5f * player_.landingImpact(), 1.0f, 0.1f);
+        }
 
-        // Camera follows the eye.
+        // Camera follows the eye; sprinting widens the FOV a touch for speed.
         const Vector3 eye = player_.eyePosition();
         const Vector3 look = player_.lookDir();
         cam3_.setPosition(eye);
         cam3_.setTarget(Vector3Add(eye, look));
+        const float targetFov = settings.fov + (player_.sprinting() ? 6.0f : 0.0f) *
+                                                   player_.speedFraction();
+        cam3_.setFovy(cam3_.fovy() + (targetFov - cam3_.fovy()) * std::min(1.0f, dt * 6.0f));
 
         // World streaming + meshing budget.
         world_.update(player_.position());
@@ -359,11 +477,14 @@ void main() {
 
         // Hotbar selection.
         const float wheel = GetMouseWheelMove();
-        if (wheel < -0.1f) hotbarIndex_ = (hotbarIndex_ + 1) % 9;
-        if (wheel > 0.1f) hotbarIndex_ = (hotbarIndex_ + 8) % 9;
+        const int before = inventory_.selected();
+        if (wheel < -0.1f) inventory_.scrollSelection(1);
+        if (wheel > 0.1f) inventory_.scrollSelection(-1);
         for (int i = 0; i < 9; ++i) {
-            if (IsKeyPressed(KEY_ONE + i)) hotbarIndex_ = i;
+            if (IsKeyPressed(KEY_ONE + i)) inventory_.select(i);
         }
+        if (inventory_.selected() != before)
+            selectionChangedAt_ = worldClock_;
     }
 
     void VoxScene::updateDayCycle_(const float dt) {
@@ -402,15 +523,20 @@ void main() {
                     breakZ_ = target_.z;
                     breakProgress_ = 0.0f;
                 }
-                const float speed = player_.flying() ? 3.0f : 1.0f; // fly = creative-ish
+                const float speed = settings.creative ? 6.0f : 1.0f;
                 breakProgress_ += dt * speed / std::max(info.hardness, 0.05f);
                 if (digSoundTimer_ <= 0.0f) {
-                    sfx_.play("dig", 0.5f, 1.0f, 0.2f);
+                    sfx_.playDig(info.sound);
                     digSoundTimer_ = 0.22f;
                 }
                 if (breakProgress_ >= 1.0f) {
                     const Block broken = target_.block;
                     world_.setBlock(target_.x, target_.y, target_.z, Block::Air);
+                    // Mining yields the block's drop; a full inventory simply
+                    // loses it rather than blocking the dig.
+                    if (const Block drop = blockInfo(broken).drop; drop != Block::Air) {
+                        inventory_.add(drop, 1);
+                    }
                     sceneEvents().enqueue(BlockBroken{target_.x, target_.y, target_.z, broken});
                     breakProgress_ = 0.0f;
                     breakY_ = -1;
@@ -427,9 +553,9 @@ void main() {
             const int py = target_.y + target_.ny;
             const int pz = target_.z + target_.nz;
             const Block existing = world_.block(px, py, pz);
-            const Block toPlace = kPlaceable[static_cast<std::size_t>(hotbarIndex_)];
-            if ((existing == Block::Air || existing == Block::Water) &&
-                !player_.intersectsBlock(px, py, pz)) {
+            const Block toPlace = inventory_.selectedBlock();
+            if (toPlace != Block::Air && (existing == Block::Air || existing == Block::Water) &&
+                !player_.intersectsBlock(px, py, pz) && inventory_.consumeSelected(1)) {
                 world_.setBlock(px, py, pz, toPlace);
                 sceneEvents().enqueue(BlockPlaced{px, py, pz, toPlace});
                 placeTimer_ = cfg.placeRepeat;
@@ -486,7 +612,7 @@ void main() {
             drawHighlight_();
         }
         drawDebris_();
-        drawHud_();
+        drawUi_();
     }
 
     void VoxScene::drawSky_() {
@@ -553,12 +679,16 @@ void main() {
         visibleOpaque_.clear();
         visibleWater_.clear();
 
-        const float chunkRadius = static_cast<float>(cfg.chunkSize) * 0.9f +
-                                  static_cast<float>(cfg.worldHeight) * 0.5f;
+        const float chunkRadius = static_cast<float>(cfg.chunkSize);
         const float maxDist = static_cast<float>((settings.viewRadius + 1) * cfg.chunkSize);
+        const View* view = primaryView();
+        const float aspect = (view && view->viewport.height > 0.0f)
+                                 ? view->viewport.width / view->viewport.height
+                                 : 16.0f / 9.0f;
+        const Camera3D& cam = cam3_.cam3d();
 
         for (auto& [key, chunk] : world_.chunks()) {
-            if (!chunk.hasMesh)
+            if (!chunk.hasMesh || chunk.emptyColumn())
                 continue;
             const Vector3 center{(static_cast<float>(key.cx) + 0.5f) * cfg.chunkSize,
                                  static_cast<float>(cfg.worldHeight) * 0.5f,
@@ -567,8 +697,8 @@ void main() {
             const float horizDist = std::sqrt(toChunk.x * toChunk.x + toChunk.z * toChunk.z);
             if (horizDist > maxDist + chunkRadius)
                 continue;
-            // Cheap cone cull: skip chunks fully behind the camera.
-            if (horizDist > chunkRadius && Vector3DotProduct(toChunk, look) < -chunkRadius)
+            // Proper 6-plane frustum test against the chunk's tight AABB.
+            if (horizDist > chunkRadius && !chunkInFrustum(cam, aspect, chunk.bounds()))
                 continue;
 
             drawnChunks_++;
@@ -643,126 +773,69 @@ void main() {
 
     // ---------------------------------------------------------------- HUD
 
-    void VoxScene::drawHud_() {
-        const View* view = primaryView();
-        if (!view)
-            return;
-        const Rectangle vp = view->viewport;
+    HudContext VoxScene::makeHudContext_() {
+        HudContext ctx{};
+        if (const View* view = primaryView())
+            ctx.viewport = view->viewport;
+        ctx.inventory = &inventory_;
+        ctx.atlas = atlas_;
+        ctx.time = worldClock_;
+        ctx.dayFraction = dayTime_;
+        ctx.fps = GetFPS();
+        ctx.playerPos = player_.position();
+        ctx.biomeName = biomeName(worldgen::biomeAt(world_.seed(),
+                                                    static_cast<int>(std::floor(player_.position().x)),
+                                                    static_cast<int>(std::floor(player_.position().z))));
+        ctx.underwater = player_.eyeInWater() && state_ != State::Menu;
+        ctx.flying = player_.flying();
+        ctx.creative = settings.creative;
+        ctx.sprinting = player_.sprinting();
+        ctx.onGround = player_.onGround();
+        ctx.showHealth = false; // no damage model yet
+        ctx.breakProgress = breakProgress_;
+        ctx.hasTarget = hasTarget_;
+        ctx.lookingAtName = hasTarget_ ? blockInfo(target_.block).name : nullptr;
+        ctx.chunksLoaded = static_cast<int>(world_.chunks().size());
+        ctx.chunksDrawn = drawnChunks_;
+        ctx.meshedThisFrame = meshedThisFrame_;
+        for (int i = 0; i < 64; ++i)
+            ctx.fpsGraphSamples[i] = fpsSamples_[i];
+        ctx.fpsGraphHead = fpsHead_;
+        ctx.selectionChangedAt = selectionChangedAt_;
+        ctx.versionText = "v0.2";
+        ctx.worldName = "voxhaven.world";
+        ctx.seed = world_.seed();
+        fillMouseFromRaylib(ctx);
+        return ctx;
+    }
 
-        const State state = state_;
-        const bool underwater = player_.eyeInWater() && state != State::Menu;
-        const float breakProgress = breakProgress_;
-        const int hotbarIndex = hotbarIndex_;
-        const Texture2D atlas = atlas_;
-        const Vector3 pos = player_.position();
-        const bool flying = player_.flying();
-        const int chunksLoaded = static_cast<int>(world_.chunks().size());
-        const int chunksDrawn = drawnChunks_;
-        const float clock = std::fmod(6.0f + dayTime_ * 24.0f, 24.0f);
-        const float time = worldClock_;
-        const Block targetBlock = hasTarget_ ? target_.block : Block::Air;
+    void VoxScene::drawUi_() {
+        const HudContext ctx = makeHudContext_();
 
-        rq().submitUI([=] {
-            const float cx = vp.x + vp.width * 0.5f;
-            const float cy = vp.y + vp.height * 0.5f;
-
-            if (underwater) {
-                DrawRectangleRec(vp, Fade(Color{30, 70, 160, 255}, 0.3f));
-            }
-
-            if (state == State::Menu) {
-                // Title card over the orbiting world.
-                DrawRectangleRec(vp, Fade(BLACK, 0.28f));
-                const char* title = "VOXHAVEN";
-                const float titleSize = 96.0f;
-                const Vector2 ext = measure(title, titleSize);
-                const float bob = std::sin(time * 1.4f) * 6.0f;
-                drawLabel({cx - ext.x * 0.5f + 4, vp.y + vp.height * 0.2f + bob + 4}, title, titleSize,
-                          Fade(BLACK, 0.6f));
-                drawLabel({cx - ext.x * 0.5f, vp.y + vp.height * 0.2f + bob}, title, titleSize,
-                          Color{255, 226, 130, 255});
-                const char* sub = "AN RLGE VOXEL SANDBOX";
-                const Vector2 subExt = measure(sub, 20);
-                drawLabel({cx - subExt.x * 0.5f, vp.y + vp.height * 0.2f + bob + ext.y + 8}, sub, 20,
-                          pal::hudDim);
-
-                if (std::fmod(time, 1.0f) < 0.66f) {
-                    const char* prompt = "PRESS ENTER OR SPACE TO ENTER THE WORLD";
-                    const Vector2 pExt = measure(prompt, 26);
-                    drawLabel({cx - pExt.x * 0.5f, vp.y + vp.height * 0.62f}, prompt, 26, pal::hudText);
-                }
-
-                const char* lines[4] = {
-                    "WASD - MOVE      MOUSE - LOOK      SPACE - JUMP      CTRL - SPRINT",
-                    "LMB - MINE       RMB - PLACE       WHEEL / 1-9 - SELECT BLOCK",
-                    "F - FLY          T - FAST-FORWARD TIME       ESC - PAUSE",
-                    "WORLD AND EDITS AUTOSAVE TO voxhaven.world",
-                };
-                float ly = vp.y + vp.height * 0.72f;
-                for (const auto* line : lines) {
-                    const Vector2 lExt = measure(line, 15);
-                    drawLabel({cx - lExt.x * 0.5f, ly}, line, 15, pal::hudDim);
-                    ly += 24.0f;
-                }
-                return;
-            }
-
-            // --- Crosshair + break progress ---
-            DrawLineEx({cx - 9, cy}, {cx + 9, cy}, 2.0f, Fade(WHITE, 0.8f));
-            DrawLineEx({cx, cy - 9}, {cx, cy + 9}, 2.0f, Fade(WHITE, 0.8f));
-            if (breakProgress > 0.0f) {
-                DrawRing({cx, cy}, 14.0f, 18.0f, -90.0f, -90.0f + 360.0f * breakProgress, 32,
-                         Fade(pal::hudAccent, 0.9f));
-            }
-
-            // --- Hotbar ---
-            constexpr float slot = 48.0f;
-            const float barW = slot * 9.0f;
-            const float barX = cx - barW * 0.5f;
-            const float barY = vp.y + vp.height - slot - 14.0f;
-            for (int i = 0; i < 9; ++i) {
-                const Rectangle r{barX + i * slot, barY, slot, slot};
-                DrawRectangleRec(r, Fade(BLACK, i == hotbarIndex ? 0.6f : 0.42f));
-                const Block b = kPlaceable[static_cast<std::size_t>(i)];
-                const BlockInfo& info = blockInfo(b);
-                const Rectangle uv = tileUV(info.tileSide);
-                const Rectangle src{uv.x * atlas.width, uv.y * atlas.height,
-                                    uv.width * atlas.width, uv.height * atlas.height};
-                const Rectangle dst{r.x + 8, r.y + 8, slot - 16, slot - 16};
-                DrawTexturePro(atlas, src, dst, {0, 0}, 0.0f, WHITE);
-                DrawRectangleLinesEx(r, i == hotbarIndex ? 3.0f : 1.0f,
-                                     i == hotbarIndex ? pal::hudAccent : Fade(WHITE, 0.35f));
-                drawLabel({r.x + 4, r.y + 2}, TextFormat("%d", i + 1), 12, Fade(WHITE, 0.5f));
-            }
-            {
-                const BlockInfo& sel = blockInfo(kPlaceable[static_cast<std::size_t>(hotbarIndex)]);
-                const Vector2 nExt = measure(sel.name, 18);
-                drawLabel({cx - nExt.x * 0.5f, barY - 26}, sel.name, 18, pal::hudText);
-            }
-
-            // --- Info line ---
-            const int hours = static_cast<int>(clock);
-            const int minutes = static_cast<int>((clock - hours) * 60.0f);
-            drawLabel({vp.x + 14, vp.y + 12},
-                      TextFormat("%2d FPS   XYZ %.1f / %.1f / %.1f   %02d:%02d   chunks %d (drawn %d)%s",
-                                 GetFPS(), pos.x, pos.y, pos.z, hours, minutes, chunksLoaded,
-                                 chunksDrawn, flying ? "   [FLY]" : ""),
-                      14, Fade(pal::hudText, 0.75f));
-            if (targetBlock != Block::Air) {
-                drawLabel({vp.x + 14, vp.y + 32}, TextFormat("looking at: %s", blockInfo(targetBlock).name),
-                          14, Fade(pal::hudDim, 0.8f));
-            }
-
-            // --- Pause overlay ---
-            if (state == State::Paused) {
-                DrawRectangleRec(vp, Fade(BLACK, 0.55f));
-                const Vector2 ext = measure("PAUSED", 64);
-                drawLabel({cx - ext.x * 0.5f, vp.y + vp.height * 0.4f}, "PAUSED", 64, pal::hudText);
-                const char* hint = "ESC / P - RESUME      Q - SAVE AND QUIT";
-                const Vector2 hExt = measure(hint, 18);
-                drawLabel({cx - hExt.x * 0.5f, vp.y + vp.height * 0.4f + 84}, hint, 18, pal::hudDim);
-            }
-        });
+        // Only one menu may draw per frame - they all read the same keys.
+        switch (state_) {
+        case State::Menu:
+            rq().submitUI([this, ctx] { drawTitleScreen(ctx, titleMenu_); });
+            break;
+        case State::Settings:
+            rq().submitUI([this, ctx] { drawSettingsPanel(ctx, settingsUi_); });
+            break;
+        case State::Paused:
+            rq().submitUI([this, ctx] {
+                drawHud(ctx);
+                drawPauseMenu(ctx, pauseMenu_);
+            });
+            break;
+        case State::Inventory:
+            rq().submitUI([this, ctx] {
+                drawHud(ctx);
+                drawInventoryScreen(ctx, inventory_, inventoryUi_);
+            });
+            break;
+        case State::Playing:
+            rq().submitUI([ctx] { drawHud(ctx); });
+            break;
+        }
     }
 
     // -------------------------------------------------------------- Debug

@@ -7,6 +7,8 @@
 
 #include "vx_blocks.hpp"
 #include "vx_config.hpp"
+#include "vx_hud.hpp"
+#include "vx_inventory.hpp"
 #include "vx_player.hpp"
 #include "vx_sfx.hpp"
 #include "vx_world.hpp"
@@ -36,7 +38,7 @@ namespace vox {
         void debugOverlay() override;
 
     private:
-        enum class State { Menu, Playing, Paused };
+        enum class State { Menu, Playing, Paused, Settings, Inventory };
 
         struct Debris {
             Vector3 pos;
@@ -52,30 +54,36 @@ namespace vox {
             float alpha;
         };
 
+        void setupFonts_();
         void setupShaders_();
         void setupView_();
         void warmStart_();
         void setState_(State s);
+        [[nodiscard]] bool cursorFreeState_() const;
 
         void updatePlaying_(float dt);
         void updateDayCycle_(float dt);
         void updateInteraction_(float dt);
         void updateDebris_(float dt);
+        void updateMenuActions_();
+        [[nodiscard]] HudContext makeHudContext_();
 
         void drawSky_();
         void drawChunks_();
         void drawHighlight_();
         void drawDebris_();
         void drawClouds_();
-        void drawHud_();
+        void drawUi_();
 
         [[nodiscard]] Color skyColor_() const;
         [[nodiscard]] float dayLight_() const;
 
         // --- Core state ---
         State state_ = State::Menu;
+        State settingsReturn_ = State::Menu;
         World world_{"voxhaven.world"};
         PlayerController player_;
+        Inventory inventory_;
         Sfx sfx_;
         rlge::Camera3DController cam3_;
 
@@ -83,10 +91,21 @@ namespace vox {
         float menuOrbit_ = 0.0f;
         int skipLookFrames_ = 0;
 
+        // --- UI state owned by vx_hud ---
+        MenuState titleMenu_;
+        MenuState pauseMenu_;
+        SettingsUiState settingsUi_;
+        InventoryUiState inventoryUi_;
+        float selectionChangedAt_ = -100.0f;
+        float fpsSamples_[64] = {};
+        int fpsHead_ = 0;
+
         // --- Rendering ---
         Texture2D atlas_{};
         Texture2D sunTex_{};
         Texture2D moonTex_{};
+        Font uiFont_{};
+        Font displayFont_{};
         Material matLand_{};
         Material matWater_{};
         bool materialsReady_ = false;
@@ -97,6 +116,12 @@ namespace vox {
         std::vector<Vector3> starDirs_;
         std::vector<Cloud> clouds_;
 
+        // Visible meshes gathered once per frame, then drawn by a single queued
+        // command per layer. Submitting one command per chunk allocated a
+        // std::function for every chunk, every frame.
+        std::vector<Mesh> visibleOpaque_;
+        std::vector<Mesh> visibleWater_;
+
         // --- Simulation ---
         float dayTime_ = 0.22f; // 0..1, 0 = sunrise
         float worldClock_ = 0.0f;
@@ -104,19 +129,12 @@ namespace vox {
         std::vector<Debris> debris_;
 
         // --- Interaction ---
-        int hotbarIndex_ = 0;
         float breakProgress_ = 0.0f;
         int breakX_ = 0, breakY_ = -1, breakZ_ = 0;
         float digSoundTimer_ = 0.0f;
         float placeTimer_ = 0.0f;
         bool hasTarget_ = false;
         RayHit target_{};
-
-        // Visible meshes gathered once per frame, then drawn by a single queued
-        // command per layer. Submitting one command per chunk allocated a
-        // std::function for every chunk, every frame.
-        std::vector<Mesh> visibleOpaque_;
-        std::vector<Mesh> visibleWater_;
 
         // --- Stats for the debug overlay ---
         int meshedThisFrame_ = 0;

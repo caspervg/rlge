@@ -226,6 +226,9 @@ if(RLGE_BUILD_EXAMPLES)
             examples/voxhaven/main.cpp
             examples/voxhaven/vx_blocks.cpp
             examples/voxhaven/vx_worldgen.cpp
+            examples/voxhaven/vx_light.cpp
+            examples/voxhaven/vx_inventory.cpp
+            examples/voxhaven/vx_hud.cpp
             examples/voxhaven/vx_world.cpp
             examples/voxhaven/vx_mesher.cpp
             examples/voxhaven/vx_player.cpp

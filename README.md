@@ -17,7 +17,7 @@ This repository also contains example games/demos:
 - `examples/hybrid3d`: hybrid view showing a 3D lane (models + billboards) with a 2D world overlay and a 3D inset.
 - `examples/2d_anim`: 2D sprite animation demo using the provided animation state machine.
 - `examples/neon_surge`: **NEON SURGE** — a complete twin-stick arena survival shooter. Endless waves, four enemy archetypes, dashes, power-ups, combo multipliers, an animated nebula layer shader, parallax starfields, screen shake/zoom-kick, and fully synthesized audio — no asset files required.
-- `examples/voxhaven`: **VOXHAVEN** — a first-person voxel sandbox on the engine's 3D lane. Streaming chunked terrain with biomes, rivers, caves, ores and structures; greedy-meshed chunks with baked ambient occlusion and propagated sky/block lighting; custom fog/day-cycle/water shaders; mining and building with a full inventory; day/night with sun, moon, stars and drifting clouds; persistent world saves; procedural textures and synthesized audio — zero asset files.
+- `examples/voxhaven`: **VOXHAVEN** — a first-person voxel sandbox on the engine's 3D lane. Streaming chunked terrain with biomes, rivers, caves, ores and structures; greedy-meshed chunks with baked ambient occlusion and propagated sky/block lighting; custom fog/day-cycle/water shaders; mining and building with a full inventory; day/night with sun, moon, stars and drifting clouds; persistent world saves; procedural textures and synthesized audio — the only binary assets are two OFL fonts.
 ---
 
 ## Features
