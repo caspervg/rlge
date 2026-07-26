@@ -218,7 +218,7 @@ namespace vox {
                 if (swampy > 0.01f) {
                     // Target sits just under the waterline so a good fraction of a
                     // swamp ends up as shallow pools rather than merely damp hills.
-                    const float target = static_cast<float>(cfg.seaLevel) - 0.3f;
+                    const float target = static_cast<float>(cfg.seaLevel) + 0.15f;
                     const float nearSea = 1.0f - smoothstep(2.0f, 14.0f, std::fabs(h - target));
                     h = noise::lerp(h, target + detail * 1.6f, swampy * nearSea * 0.92f);
                 }
@@ -1026,9 +1026,10 @@ namespace vox {
                         break;
                     case Biome::Swamp:
                         subDepth = 4;
-                        if (h <= sea && c.patch < 0.45f) {
-                            topB = Block::Clay;
-                            subB = Block::Clay;
+                        if (h <= sea) {
+                            // Submerged swamp floor is mud, not beach sand.
+                            topB = (c.patch < 0.55f) ? Block::Clay : Block::Dirt;
+                            subB = Block::Dirt;
                         }
                         break;
                     case Biome::SnowyPeaks:
