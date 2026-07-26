@@ -55,6 +55,11 @@ void main() {
 }
 )";
 
+        // Vertex colors carry the light model baked by the mesher:
+        //   R = ambient occlusion * directional face shade
+        //   G = skylight   (0..1)   B = blocklight (0..1)
+        // Combining them here means the day/night cycle only moves a uniform -
+        // no chunk ever needs remeshing as the sun moves.
         constexpr auto kChunkFragmentShader = R"(
 #version 330
 in vec2 fragTexCoord;
@@ -65,11 +70,23 @@ uniform vec3 u_tint;
 uniform vec3 u_fogColor;
 uniform vec2 u_fogRange;
 uniform vec3 u_camPos;
+uniform float u_dayFactor;
+uniform float u_ambient;
 out vec4 finalColor;
 void main() {
     vec4 tex = texture(texture0, fragTexCoord);
     if (tex.a < 0.35) discard;
-    vec3 col = tex.rgb * fragColor.rgb * u_tint;
+
+    float ao    = fragColor.r;
+    float sky   = fragColor.g * u_dayFactor;
+    float block = fragColor.b;
+    float lum   = max(max(sky, block), u_ambient);
+
+    // Torchlight reads warm where it wins over daylight.
+    vec3 warm  = vec3(1.0, 0.87, 0.68);
+    vec3 hue   = mix(vec3(1.0), warm, clamp(block - sky, 0.0, 1.0));
+
+    vec3 col = tex.rgb * u_tint * hue * (lum * ao);
     float dist = length(fragPosition - u_camPos);
     float fog = smoothstep(u_fogRange.x, u_fogRange.y, dist);
     col = mix(col, u_fogColor, fog);
@@ -208,11 +225,15 @@ void main() {
         locLandFogColor_ = GetShaderLocation(land, "u_fogColor");
         locLandFogRange_ = GetShaderLocation(land, "u_fogRange");
         locLandCamPos_ = GetShaderLocation(land, "u_camPos");
+        locLandDay_ = GetShaderLocation(land, "u_dayFactor");
+        locLandAmbient_ = GetShaderLocation(land, "u_ambient");
         locWaterTint_ = GetShaderLocation(water, "u_tint");
         locWaterFogColor_ = GetShaderLocation(water, "u_fogColor");
         locWaterFogRange_ = GetShaderLocation(water, "u_fogRange");
         locWaterCamPos_ = GetShaderLocation(water, "u_camPos");
         locWaterTime_ = GetShaderLocation(water, "u_time");
+        locWaterDay_ = GetShaderLocation(water, "u_dayFactor");
+        locWaterAmbient_ = GetShaderLocation(water, "u_ambient");
 
         matLand_ = LoadMaterialDefault();
         matLand_.shader = land;
@@ -406,7 +427,7 @@ void main() {
             const int py = target_.y + target_.ny;
             const int pz = target_.z + target_.nz;
             const Block existing = world_.block(px, py, pz);
-            const Block toPlace = kHotbar[static_cast<std::size_t>(hotbarIndex_)];
+            const Block toPlace = kPlaceable[static_cast<std::size_t>(hotbarIndex_)];
             if ((existing == Block::Air || existing == Block::Water) &&
                 !player_.intersectsBlock(px, py, pz)) {
                 world_.setBlock(px, py, pz, toPlace);
@@ -502,29 +523,39 @@ void main() {
         const bool underwater = player_.eyeInWater() && state_ != State::Menu;
         const float light = dayLight_();
 
-        // Frame uniforms.
-        const Vector3 tint = underwater ? Vector3{0.55f * light, 0.75f * light, 1.0f * light}
-                                        : Vector3{light, light, light};
+        // Frame uniforms. u_tint is pure color now; brightness comes from the
+        // baked sky/block light combined with u_dayFactor in the shader.
+        const Vector3 tint = underwater ? Vector3{0.55f, 0.75f, 1.0f} : Vector3{1.0f, 1.0f, 1.0f};
         const Vector3 fogColor = underwater ? Vector3Scale(toV3(pal::waterFog), std::max(light, 0.35f))
                                             : toV3(skyColor_());
         const Vector2 fogRange = underwater ? Vector2{2.0f, 24.0f}
-                                            : Vector2{cfg.fogStart, cfg.fogEnd};
+                                            : Vector2{settings.fogStart(), settings.fogEnd()};
+        const float dayFactor = light;
+        // A faint floor keeps unlit caves navigable rather than pure black.
+        const float ambient = 0.045f;
 
         SetShaderValue(matLand_.shader, locLandTint_, &tint, SHADER_UNIFORM_VEC3);
         SetShaderValue(matLand_.shader, locLandFogColor_, &fogColor, SHADER_UNIFORM_VEC3);
         SetShaderValue(matLand_.shader, locLandFogRange_, &fogRange, SHADER_UNIFORM_VEC2);
         SetShaderValue(matLand_.shader, locLandCamPos_, &camPos, SHADER_UNIFORM_VEC3);
+        SetShaderValue(matLand_.shader, locLandDay_, &dayFactor, SHADER_UNIFORM_FLOAT);
+        SetShaderValue(matLand_.shader, locLandAmbient_, &ambient, SHADER_UNIFORM_FLOAT);
         SetShaderValue(matWater_.shader, locWaterTint_, &tint, SHADER_UNIFORM_VEC3);
         SetShaderValue(matWater_.shader, locWaterFogColor_, &fogColor, SHADER_UNIFORM_VEC3);
         SetShaderValue(matWater_.shader, locWaterFogRange_, &fogRange, SHADER_UNIFORM_VEC2);
         SetShaderValue(matWater_.shader, locWaterCamPos_, &camPos, SHADER_UNIFORM_VEC3);
+        SetShaderValue(matWater_.shader, locWaterDay_, &dayFactor, SHADER_UNIFORM_FLOAT);
+        SetShaderValue(matWater_.shader, locWaterAmbient_, &ambient, SHADER_UNIFORM_FLOAT);
         const float t = worldClock_;
         SetShaderValue(matWater_.shader, locWaterTime_, &t, SHADER_UNIFORM_FLOAT);
 
         drawnChunks_ = 0;
+        visibleOpaque_.clear();
+        visibleWater_.clear();
+
         const float chunkRadius = static_cast<float>(cfg.chunkSize) * 0.9f +
                                   static_cast<float>(cfg.worldHeight) * 0.5f;
-        const float maxDist = static_cast<float>((cfg.viewRadius + 1) * cfg.chunkSize);
+        const float maxDist = static_cast<float>((settings.viewRadius + 1) * cfg.chunkSize);
 
         for (auto& [key, chunk] : world_.chunks()) {
             if (!chunk.hasMesh)
@@ -541,20 +572,27 @@ void main() {
                 continue;
 
             drawnChunks_++;
-            if (chunk.opaqueMesh.vertexCount > 0) {
-                const Mesh mesh = chunk.opaqueMesh;
-                const Material mat = matLand_;
-                rq().submit3D(layers().world(), 0.0f, [mesh, mat](const Camera3D&, const Rectangle&) {
-                    DrawMesh(mesh, mat, MatrixIdentity());
-                });
-            }
-            if (chunk.waterMesh.vertexCount > 0) {
-                const Mesh mesh = chunk.waterMesh;
-                const Material mat = matWater_;
-                rq().submit3D(layers().foreground(), 0.0f, [mesh, mat](const Camera3D&, const Rectangle&) {
-                    DrawMesh(mesh, mat, MatrixIdentity());
-                });
-            }
+            if (chunk.opaqueMesh.vertexCount > 0)
+                visibleOpaque_.push_back(chunk.opaqueMesh);
+            if (chunk.waterMesh.vertexCount > 0)
+                visibleWater_.push_back(chunk.waterMesh);
+        }
+
+        // One command per layer, iterating the gathered lists at flush time.
+        // The lists stay alive and untouched between submit and flush.
+        if (!visibleOpaque_.empty()) {
+            rq().submit3D(layers().world(), 0.0f, [this](const Camera3D&, const Rectangle&) {
+                for (const Mesh& mesh : visibleOpaque_) {
+                    DrawMesh(mesh, matLand_, MatrixIdentity());
+                }
+            });
+        }
+        if (!visibleWater_.empty()) {
+            rq().submit3D(layers().foreground(), 0.0f, [this](const Camera3D&, const Rectangle&) {
+                for (const Mesh& mesh : visibleWater_) {
+                    DrawMesh(mesh, matWater_, MatrixIdentity());
+                }
+            });
         }
     }
 
@@ -685,7 +723,7 @@ void main() {
             for (int i = 0; i < 9; ++i) {
                 const Rectangle r{barX + i * slot, barY, slot, slot};
                 DrawRectangleRec(r, Fade(BLACK, i == hotbarIndex ? 0.6f : 0.42f));
-                const Block b = kHotbar[static_cast<std::size_t>(i)];
+                const Block b = kPlaceable[static_cast<std::size_t>(i)];
                 const BlockInfo& info = blockInfo(b);
                 const Rectangle uv = tileUV(info.tileSide);
                 const Rectangle src{uv.x * atlas.width, uv.y * atlas.height,
@@ -697,7 +735,7 @@ void main() {
                 drawLabel({r.x + 4, r.y + 2}, TextFormat("%d", i + 1), 12, Fade(WHITE, 0.5f));
             }
             {
-                const BlockInfo& sel = blockInfo(kHotbar[static_cast<std::size_t>(hotbarIndex)]);
+                const BlockInfo& sel = blockInfo(kPlaceable[static_cast<std::size_t>(hotbarIndex)]);
                 const Vector2 nExt = measure(sel.name, 18);
                 drawLabel({cx - nExt.x * 0.5f, barY - 26}, sel.name, 18, pal::hudText);
             }

@@ -17,7 +17,7 @@ This repository also contains example games/demos:
 - `examples/hybrid3d`: hybrid view showing a 3D lane (models + billboards) with a 2D world overlay and a 3D inset.
 - `examples/2d_anim`: 2D sprite animation demo using the provided animation state machine.
 - `examples/neon_surge`: **NEON SURGE** — a complete twin-stick arena survival shooter. Endless waves, four enemy archetypes, dashes, power-ups, combo multipliers, an animated nebula layer shader, parallax starfields, screen shake/zoom-kick, and fully synthesized audio — no asset files required.
-- `examples/voxhaven`: **VOXHAVEN** — a first-person voxel sandbox on the engine's 3D lane. Streaming chunked terrain with biomes, caves, ores and trees; baked ambient occlusion; custom fog/day-cycle/water shaders; block mining and building with a hotbar; day/night with sun, moon, stars and drifting clouds; persistent world saves; procedural textures and synthesized audio — zero asset files.
+- `examples/voxhaven`: **VOXHAVEN** — a first-person voxel sandbox on the engine's 3D lane. Streaming chunked terrain with biomes, rivers, caves, ores and structures; greedy-meshed chunks with baked ambient occlusion and propagated sky/block lighting; custom fog/day-cycle/water shaders; mining and building with a full inventory; day/night with sun, moon, stars and drifting clouds; persistent world saves; procedural textures and synthesized audio — zero asset files.
 ---
 
 ## Features
@@ -92,7 +92,7 @@ Each executable runs a focused scenario; use `F1` to toggle the ImGui overlay in
 - `rlge_raygui_demo`: panel with sliders/checks using raygui; tweak a moving box's speed/color.
 - `rlge_hybrid3d`: hybrid 3D/2D scene with an inset view.
 - `rlge_neon_surge`: twin-stick arena survival shooter (WASD + mouse, or gamepad). Dash with Shift/RMB, pause with P; everything is procedurally generated so it runs from any working directory.
-- `rlge_voxhaven`: first-person voxel sandbox. WASD + mouse, LMB mines, RMB places, wheel/1-9 picks a block, F toggles fly, T fast-forwards the day cycle. The world autosaves to `voxhaven.world` in the working directory.
+- `rlge_voxhaven`: first-person voxel sandbox. WASD + mouse, LMB mines, RMB places, wheel/1-9 picks a block, E opens the inventory, F toggles fly, T fast-forwards the day cycle, ESC pauses (with a live settings panel for render distance, FOV and sensitivity). The world autosaves to `voxhaven.world` in the working directory.
 
 ## Using RLGE in your own game
 

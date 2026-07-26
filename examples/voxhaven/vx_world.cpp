@@ -6,6 +6,7 @@
 #include <fstream>
 
 #include "vx_noise.hpp"
+#include "vx_worldgen.hpp"
 
 namespace vox {
 
@@ -71,7 +72,7 @@ namespace vox {
 
         // Generate missing chunks nearest-first, limited per frame.
         int genBudget = cfg.genPerFrame;
-        for (int r = 0; r <= cfg.viewRadius && genBudget > 0; ++r) {
+        for (int r = 0; r <= settings.viewRadius && genBudget > 0; ++r) {
             for (int dz = -r; dz <= r && genBudget > 0; ++dz) {
                 for (int dx = -r; dx <= r && genBudget > 0; ++dx) {
                     if (std::max(std::abs(dx), std::abs(dz)) != r)
@@ -99,7 +100,7 @@ namespace vox {
         // Drop far chunks (frees GPU meshes).
         std::vector<ChunkKey> toDrop;
         for (auto& [key, chunk] : chunks_) {
-            if (std::max(std::abs(key.cx - pcx), std::abs(key.cz - pcz)) > cfg.unloadRadius) {
+            if (std::max(std::abs(key.cx - pcx), std::abs(key.cz - pcz)) > settings.unloadRadius) {
                 toDrop.push_back(key);
             }
         }
@@ -172,83 +173,7 @@ namespace vox {
     // --------------------------------------------------------- Generation
 
     void World::generateChunk(Chunk& chunk) const {
-        const int baseX = chunk.key.cx * cfg.chunkSize;
-        const int baseZ = chunk.key.cz * cfg.chunkSize;
-
-        for (int lz = 0; lz < cfg.chunkSize; ++lz) {
-            for (int lx = 0; lx < cfg.chunkSize; ++lx) {
-                const int wx = baseX + lx;
-                const int wz = baseZ + lz;
-                const float fx = static_cast<float>(wx);
-                const float fz = static_cast<float>(wz);
-
-                // Continent-scale relief + hills + temperature band for biomes.
-                const float relief = noise::fbm2(seed_, fx * 0.004f, fz * 0.004f, 4);
-                const float hills = noise::fbm2(seed_ + 9, fx * 0.02f, fz * 0.02f, 4);
-                const float temp = noise::fbm2(seed_ + 21, fx * 0.003f, fz * 0.003f, 3);
-
-                const float h = 26.0f + relief * 34.0f + (hills - 0.5f) * 18.0f;
-                const int surface = std::clamp(static_cast<int>(h), 4, cfg.worldHeight - 8);
-
-                const bool desert = temp > 0.62f;
-                const bool snowy = temp < 0.34f;
-
-                for (int y = 0; y < cfg.worldHeight; ++y) {
-                    Block b = Block::Air;
-                    if (y == 0) {
-                        b = Block::Bedrock;
-                    } else if (y < surface - 3) {
-                        b = Block::Stone;
-                        // Ore veins.
-                        const float ore = noise::rand01(seed_ + 31, wx, y, wz);
-                        if (y < 40 && ore > 0.982f) b = Block::CoalOre;
-                        else if (y < 24 && ore < 0.008f) b = Block::IronOre;
-                        // Caves: carve with 3D fBM worms.
-                        const float cave = noise::fbm3(seed_ + 47, fx * 0.045f, y * 0.06f, fz * 0.045f, 3);
-                        if (cave > 0.62f && y > 2) b = Block::Air;
-                    } else if (y < surface) {
-                        b = desert ? Block::Sand : Block::Dirt;
-                    } else if (y == surface) {
-                        if (desert) b = Block::Sand;
-                        else if (surface <= cfg.seaLevel + 1) b = Block::Sand; // beaches
-                        else if (snowy || surface > 58) b = Block::Snow;
-                        else b = Block::Grass;
-                    } else if (y <= cfg.seaLevel) {
-                        b = Block::Water;
-                    }
-                    chunk.set(lx, y, lz, b);
-                }
-
-                // Trees on grass, deterministic per column.
-                const int surfaceBlockY = surface;
-                if (chunk.at(lx, surfaceBlockY, lz) == Block::Grass &&
-                    lx >= 2 && lx < cfg.chunkSize - 2 && lz >= 2 && lz < cfg.chunkSize - 2) {
-                    const float forest = noise::fbm2(seed_ + 63, fx * 0.015f, fz * 0.015f, 3);
-                    const float roll = noise::rand01(seed_ + 71, wx, wz);
-                    if (forest > 0.52f && roll > 0.975f) {
-                        const int trunkH = 4 + static_cast<int>(noise::rand01(seed_ + 72, wx, wz) * 3.0f);
-                        for (int t = 1; t <= trunkH; ++t) {
-                            chunk.set(lx, surfaceBlockY + t, lz, Block::Wood);
-                        }
-                        // Leaf blob.
-                        for (int dy = trunkH - 2; dy <= trunkH + 2; ++dy) {
-                            for (int dz2 = -2; dz2 <= 2; ++dz2) {
-                                for (int dx2 = -2; dx2 <= 2; ++dx2) {
-                                    const int dist = std::abs(dx2) + std::abs(dz2) +
-                                                     std::abs(dy - trunkH);
-                                    if (dist > 3)
-                                        continue;
-                                    const int ty = surfaceBlockY + dy;
-                                    if (chunk.at(lx + dx2, ty, lz + dz2) == Block::Air) {
-                                        chunk.set(lx + dx2, ty, lz + dz2, Block::Leaves);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        worldgen::generateChunk(chunk, seed_);
     }
 
     void World::applyEditsTo(Chunk& chunk) const {

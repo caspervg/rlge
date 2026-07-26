@@ -100,6 +100,53 @@ namespace vox {
                 return 0.55f * (*lp)(0.045f) * breathe * fadeIn * fadeOut;
             });
         }
+
+        // Footsteps differ mostly in filter cutoff and decay: soft and damped for
+        // grass/snow, sharp and bright for stone/glass, hollow for wood.
+        Wave makeStep(const float cutoff, const float decay, const float tone, const float toneMix) {
+            auto lp = std::make_shared<NoiseLp>();
+            return synth(0.12f, [lp, cutoff, decay, tone, toneMix](const float t) {
+                const float body = 1.9f * (*lp)(cutoff) * envExp(t, decay);
+                const float knock = toneMix * sine(t, tone) * envExp(t, decay * 1.6f);
+                return body + knock;
+            });
+        }
+
+        Wave makeLand() {
+            auto lp = std::make_shared<NoiseLp>();
+            return synth(0.26f, [lp](const float t) {
+                const float thud = 0.7f * sine(t, 110.0f * std::exp(-6.0f * t) + 45.0f) * envExp(t, 14.0f);
+                return thud + 1.4f * (*lp)(0.22f) * envExp(t, 26.0f);
+            });
+        }
+
+        const char* stepIdFor(const SoundGroup group) {
+            switch (group) {
+            case SoundGroup::Stone: return "step_stone";
+            case SoundGroup::Wood: return "step_wood";
+            case SoundGroup::Sand: return "step_sand";
+            case SoundGroup::Snow: return "step_snow";
+            case SoundGroup::Glass: return "step_stone";
+            case SoundGroup::Liquid: return "step_water";
+            case SoundGroup::Grass:
+            default: return "step_grass";
+            }
+        }
+
+        // Mining/placing reuse the generic crunch, retuned per material so stone
+        // reads as harder and higher than dirt.
+        float pitchFor(const SoundGroup group) {
+            switch (group) {
+            case SoundGroup::Stone: return 1.25f;
+            case SoundGroup::Glass: return 1.75f;
+            case SoundGroup::Wood: return 1.0f;
+            case SoundGroup::Sand: return 0.85f;
+            case SoundGroup::Snow: return 1.4f;
+            case SoundGroup::Liquid: return 0.7f;
+            case SoundGroup::Grass:
+            default: return 0.9f;
+            }
+        }
     } // namespace
 
     Sfx::Sfx() {
@@ -114,6 +161,31 @@ namespace vox {
         addWave("jump", makeJump(), 3);
         addWave("chime", makeChime(), 2);
         addWave("wind", makeWind(), 2);
+        addWave("land", makeLand(), 3);
+
+        //                          cutoff decay tone   toneMix
+        addWave("step_grass", makeStep(0.10f, 46.0f, 150.0f, 0.05f), 5);
+        addWave("step_stone", makeStep(0.34f, 52.0f, 320.0f, 0.16f), 5);
+        addWave("step_wood",  makeStep(0.22f, 40.0f, 210.0f, 0.30f), 5);
+        addWave("step_sand",  makeStep(0.15f, 60.0f, 120.0f, 0.03f), 5);
+        addWave("step_snow",  makeStep(0.08f, 70.0f, 180.0f, 0.04f), 5);
+        addWave("step_water", makeStep(0.06f, 30.0f, 90.0f,  0.02f), 5);
+    }
+
+    void Sfx::playFootstep(const SoundGroup group, const float volume) {
+        play(stepIdFor(group), volume, 1.0f, 0.14f);
+    }
+
+    void Sfx::playDig(const SoundGroup group, const float volume) {
+        play("dig", volume, pitchFor(group), 0.18f);
+    }
+
+    void Sfx::playBreak(const SoundGroup group, const float volume) {
+        play("break", volume, pitchFor(group), 0.14f);
+    }
+
+    void Sfx::playPlace(const SoundGroup group, const float volume) {
+        play("place", volume, pitchFor(group), 0.12f);
     }
 
     Sfx::~Sfx() {

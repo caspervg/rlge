@@ -90,9 +90,10 @@ namespace vox {
         Material matLand_{};
         Material matWater_{};
         bool materialsReady_ = false;
-        int locLandFogColor_ = -1, locLandFogRange_ = -1, locLandTint_ = -1, locLandCamPos_ = -1;
+        int locLandFogColor_ = -1, locLandFogRange_ = -1, locLandTint_ = -1, locLandCamPos_ = -1,
+            locLandDay_ = -1, locLandAmbient_ = -1;
         int locWaterFogColor_ = -1, locWaterFogRange_ = -1, locWaterTint_ = -1, locWaterCamPos_ = -1,
-            locWaterTime_ = -1;
+            locWaterTime_ = -1, locWaterDay_ = -1, locWaterAmbient_ = -1;
         std::vector<Vector3> starDirs_;
         std::vector<Cloud> clouds_;
 
@@ -110,6 +111,12 @@ namespace vox {
         float placeTimer_ = 0.0f;
         bool hasTarget_ = false;
         RayHit target_{};
+
+        // Visible meshes gathered once per frame, then drawn by a single queued
+        // command per layer. Submitting one command per chunk allocated a
+        // std::function for every chunk, every frame.
+        std::vector<Mesh> visibleOpaque_;
+        std::vector<Mesh> visibleWater_;
 
         // --- Stats for the debug overlay ---
         int meshedThisFrame_ = 0;

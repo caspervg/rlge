@@ -5,6 +5,8 @@
 
 #include "raylib.h"
 
+#include "vx_blocks.hpp"
+
 namespace vox {
 
     // Polyphonic player for procedurally synthesized sounds (zero asset files).
@@ -19,6 +21,12 @@ namespace vox {
 
         void play(const std::string& id, float volume = 1.0f, float pitch = 1.0f,
                   float pitchJitter = 0.0f);
+
+        // Material-aware helpers: pick the right timbre for the block involved.
+        void playFootstep(SoundGroup group, float volume = 0.28f);
+        void playDig(SoundGroup group, float volume = 0.5f);
+        void playBreak(SoundGroup group, float volume = 0.7f);
+        void playPlace(SoundGroup group, float volume = 0.6f);
 
     private:
         struct Entry {

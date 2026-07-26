@@ -225,6 +225,7 @@ if(RLGE_BUILD_EXAMPLES)
     add_executable(rlge_voxhaven
             examples/voxhaven/main.cpp
             examples/voxhaven/vx_blocks.cpp
+            examples/voxhaven/vx_worldgen.cpp
             examples/voxhaven/vx_world.cpp
             examples/voxhaven/vx_mesher.cpp
             examples/voxhaven/vx_player.cpp
