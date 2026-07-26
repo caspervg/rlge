@@ -82,7 +82,7 @@ uniform vec3 u_camPos;
 uniform float u_dayFactor;
 uniform float u_ambient;
 out vec4 finalColor;
-const vec2 kTile = vec2(1.0 / 8.0, 1.0 / 4.0);
+const vec2 kTile = vec2(1.0 / 8.0, 1.0 / 8.0);
 
 void main() {
     // Greedy meshing lets UVs run past the tile, so wrap them back into the
@@ -388,6 +388,8 @@ void main() {
             pauseMenu_.open(worldClock_);
         else if (s == State::Inventory)
             inventoryUi_.open(worldClock_);
+        else if (s == State::Crafting)
+            craftUi_.open(worldClock_);
     }
 
     bool VoxScene::cursorFreeState_() const { return state_ != State::Playing; }
@@ -427,6 +429,10 @@ void main() {
                 returnHeldToInventory(inventory_, inventoryUi_);
                 setState_(State::Playing);
             }
+            break;
+        case State::Crafting:
+            if (IsKeyPressed(KEY_C) || IsKeyPressed(KEY_ESCAPE))
+                setState_(State::Playing);
             break;
         }
 
@@ -481,6 +487,19 @@ void main() {
         if (IsKeyPressed(KEY_E)) {
             setState_(State::Inventory);
             return;
+        }
+        if (IsKeyPressed(KEY_C)) {
+            setState_(State::Crafting);
+            return;
+        }
+        if (IsKeyPressed(KEY_R)) {
+            // Wear whatever armour is in the selected slot.
+            const Block sel = inventory_.selectedBlock();
+            if (itemInfo(sel).tool == ToolKind::Armour && inventory_.consumeSelected(1)) {
+                if (const Block old = equipment_.equip(sel); old != Block::Air)
+                    inventory_.add(old, 1);
+                sfx_.playPlace(SoundGroup::Stone, 0.7f);
+            }
         }
         if (IsKeyPressed(KEY_F) && settings.creative) {
             player_.toggleFly();
@@ -584,7 +603,9 @@ void main() {
                     breakZ_ = target_.z;
                     breakProgress_ = 0.0f;
                 }
-                const float speed = settings.creative ? 6.0f : 1.0f;
+                const float speed = settings.creative
+                                        ? 6.0f
+                                        : miningMultiplier(inventory_.selectedBlock(), target_.block);
                 breakProgress_ += dt * speed / std::max(info.hardness, 0.05f);
                 if (digSoundTimer_ <= 0.0f) {
                     sfx_.playDig(info.sound);
@@ -615,7 +636,8 @@ void main() {
             const int pz = target_.z + target_.nz;
             const Block existing = world_.block(px, py, pz);
             const Block toPlace = inventory_.selectedBlock();
-            if (toPlace != Block::Air && (existing == Block::Air || existing == Block::Water) &&
+            if (toPlace != Block::Air && !isItem(toPlace) &&
+                (existing == Block::Air || existing == Block::Water) &&
                 !player_.intersectsBlock(px, py, pz) && inventory_.consumeSelected(1)) {
                 world_.setBlock(px, py, pz, toPlace);
                 sceneEvents().enqueue(BlockPlaced{px, py, pz, toPlace});
@@ -644,7 +666,8 @@ void main() {
         }
 
         // Damage dealt to the player by everything that reached them this frame.
-        if (const int dmg = mobs_.takePlayerDamage(); dmg > 0 && !settings.creative && deathTimer_ <= 0.0f) {
+        if (const int raw = mobs_.takePlayerDamage(); raw > 0 && !settings.creative && deathTimer_ <= 0.0f) {
+            const int dmg = equipment_.mitigate(raw);
             playerHealth_ = std::max(0, playerHealth_ - dmg);
             hurtFlash_ = 1.0f;
             regenTimer_ = 0.0f;
@@ -673,7 +696,7 @@ void main() {
 
         // Swinging at a creature takes priority over mining the block behind it.
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && swingCooldown_ <= 0.0f) {
-            const int damage = settings.creative ? 40 : 4;
+            const int damage = settings.creative ? 40 : attackDamage(inventory_.selectedBlock());
             if (mobs_.attack(player_.eyePosition(), player_.lookDir(), cfg.reach, damage)) {
                 swingCooldown_ = 0.35f;
                 sfx_.playDig(SoundGroup::Wood, 0.45f);
@@ -687,6 +710,7 @@ void main() {
         hurtFlash_ = 0.0f;
         player_.spawn(world_, spawnPos_.x, spawnPos_.z);
         mobs_.clear(); // give the player a clean slate at the spawn point
+        equipment_.clear();
     }
 
     void VoxScene::updateDebris_(const float dt) {
@@ -997,8 +1021,25 @@ void main() {
                 drawInventoryScreen(ctx, inventory_, inventoryUi_);
             });
             break;
+        case State::Crafting: {
+            CraftContext cc{};
+            cc.viewport = ctx.viewport;
+            cc.atlas = atlas_;
+            cc.time = worldClock_;
+            cc.mouse = GetMousePosition();
+            cc.mousePressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+            cc.wheel = GetMouseWheelMove();
+            rq().submitUI([this, ctx, cc] {
+                drawHud(ctx);
+                drawCraftingScreen(cc, inventory_, equipment_, craftUi_);
+            });
+            break;
+        }
         case State::Playing:
-            rq().submitUI([ctx] { drawHud(ctx); });
+            rq().submitUI([this, ctx] {
+                drawHud(ctx);
+                drawArmourStrip(ctx.viewport, atlas_, equipment_, hudScale(ctx.viewport));
+            });
             break;
         }
     }

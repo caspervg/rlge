@@ -817,23 +817,28 @@ namespace vox {
             const char* key;
             const char* what;
         };
-        constexpr std::array<Hint, 12> hints = {{{"WASD", "MOVE"},
+        constexpr std::array<Hint, 16> hints = {{{"WASD", "MOVE"},
                                                  {"MOUSE", "LOOK"},
                                                  {"SPACE", "JUMP"},
                                                  {"SHIFT", "SPRINT"},
-                                                 {"LMB", "MINE"},
+                                                 {"LMB", "MINE / HIT"},
                                                  {"RMB", "PLACE"},
                                                  {"1-9", "SELECT"},
                                                  {"WHEEL", "CYCLE"},
                                                  {"E", "INVENTORY"},
+                                                 {"C", "CRAFTING"},
+                                                 {"R", "WEAR ARMOUR"},
+                                                 {"G", "CREATIVE"},
                                                  {"F", "FLY"},
+                                                 {"M", "SPAWN MOBS"},
                                                  {"T", "FAST TIME"},
                                                  {"ESC", "PAUSE"}}};
         const float legendW = std::min(vp.width * 0.88f, 900.0f * s);
         const float fs = 12.0f * s;
         const float rowH = fs * 2.2f;
-        const Rectangle legend{cx - legendW * 0.5f, vp.y + vp.height - rowH * 3.0f - 54.0f * s, legendW,
-                               rowH * 3.0f + 20.0f * s};
+        const auto legendRows = static_cast<float>((hints.size() + 3) / 4);
+        const Rectangle legend{cx - legendW * 0.5f, vp.y + vp.height - rowH * legendRows - 54.0f * s,
+                               legendW, rowH * legendRows + 20.0f * s};
         panel(legend, s, Fade(kPanelDeep, 0.86f), kEdgeSoft);
         const float colW = (legend.width - 24.0f * s) / 4.0f;
         for (std::size_t i = 0; i < hints.size(); ++i) {

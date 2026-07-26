@@ -9,6 +9,7 @@
 #include "vx_config.hpp"
 #include "vx_hud.hpp"
 #include "vx_inventory.hpp"
+#include "vx_items.hpp"
 #include "vx_mobs.hpp"
 #include "vx_postfx.hpp"
 #include "vx_player.hpp"
@@ -42,7 +43,7 @@ namespace vox {
         void debugOverlay() override;
 
     private:
-        enum class State { Menu, Playing, Paused, Settings, Inventory };
+        enum class State { Menu, Playing, Paused, Settings, Inventory, Crafting };
 
         struct Debris {
             Vector3 pos;
@@ -92,6 +93,8 @@ namespace vox {
         World world_{"voxhaven.world"};
         PlayerController player_;
         Inventory inventory_;
+        Equipment equipment_;
+        CraftUiState craftUi_;
         MobManager mobs_;
         PostFx postFx_;
         Sfx sfx_;

@@ -34,6 +34,22 @@ namespace vox {
             T_Gravel,
             T_Clay,
             T_Ice,        // 23
+            T_Stick,      // 24 - items from here on
+            T_Coal,
+            T_IronIngot,
+            T_GoldIngot,
+            T_WoodSword,  // 28
+            T_StoneSword,
+            T_IronSword,
+            T_WoodPick,
+            T_StonePick,  // 32
+            T_IronPick,
+            T_WoodAxe,
+            T_StoneAxe,
+            T_IronAxe,    // 36
+            T_Helmet,
+            T_Chestplate,
+            T_Boots,      // 39
         };
 
         using SG = SoundGroup;
@@ -53,7 +69,7 @@ namespace vox {
             {"glass",     true, false, true,  0.25f, T_Glass,    T_Glass,     T_Glass,     {200, 226, 235, 255},   0,  0, SG::Glass,  Block::Glass},
             {"water",     false,false, false, 0.00f, T_Water,    T_Water,     T_Water,     {46, 90, 200, 255},     0,  2, SG::Liquid, Block::Air},
             {"bedrock",   true, true,  false, -1.0f, T_Bedrock,  T_Bedrock,   T_Bedrock,   {40, 40, 44, 255},      0, 15, SG::Stone,  Block::Air},
-            {"coal ore",  true, true,  false, 1.10f, T_CoalOre,  T_CoalOre,   T_CoalOre,   {70, 70, 72, 255},      0, 15, SG::Stone,  Block::CoalOre},
+            {"coal ore",  true, true,  false, 1.10f, T_CoalOre,  T_CoalOre,   T_CoalOre,   {70, 70, 72, 255},      0, 15, SG::Stone,  Block::Coal},
             {"iron ore",  true, true,  false, 1.30f, T_IronOre,  T_IronOre,   T_IronOre,   {188, 152, 122, 255},   0, 15, SG::Stone,  Block::IronOre},
             {"gold ore",  true, true,  false, 1.45f, T_GoldOre,  T_GoldOre,   T_GoldOre,   {226, 190, 92, 255},    0, 15, SG::Stone,  Block::GoldOre},
             {"glowstone", true, true,  false, 0.40f, T_Glowstone,T_Glowstone, T_Glowstone, {255, 214, 110, 255},  15, 15, SG::Glass,  Block::Glowstone},
@@ -62,6 +78,24 @@ namespace vox {
             {"gravel",    true, true,  false, 0.40f, T_Gravel,   T_Gravel,    T_Gravel,    {128, 122, 118, 255},   0, 15, SG::Sand,   Block::Gravel},
             {"clay",      true, true,  false, 0.45f, T_Clay,     T_Clay,      T_Clay,      {162, 168, 180, 255},   0, 15, SG::Sand,   Block::Clay},
             {"ice",       true, false, true,  0.35f, T_Ice,      T_Ice,       T_Ice,       {170, 210, 245, 255},   0,  1, SG::Glass,  Block::Ice},
+            // Items: never solid, never placed, hardness < 0 so they are inert
+            // if one ever ends up referenced as a world block.
+            {"stick",     false,false, false, -1.0f, T_Stick,    T_Stick,     T_Stick,     {150, 112, 66, 255},    0,  0, SG::Wood,   Block::Air},
+            {"coal",      false,false, false, -1.0f, T_Coal,     T_Coal,      T_Coal,      {40, 40, 44, 255},      0,  0, SG::Stone,  Block::Air},
+            {"iron ingot",false,false, false, -1.0f, T_IronIngot,T_IronIngot, T_IronIngot, {214, 214, 220, 255},   0,  0, SG::Stone,  Block::Air},
+            {"gold ingot",false,false, false, -1.0f, T_GoldIngot,T_GoldIngot, T_GoldIngot, {240, 208, 92, 255},    0,  0, SG::Stone,  Block::Air},
+            {"wooden sword",  false,false,false,-1.0f, T_WoodSword, T_WoodSword, T_WoodSword, {176,142,92,255},  0,0,SG::Wood, Block::Air},
+            {"stone sword",   false,false,false,-1.0f, T_StoneSword,T_StoneSword,T_StoneSword,{130,130,134,255}, 0,0,SG::Stone,Block::Air},
+            {"iron sword",    false,false,false,-1.0f, T_IronSword, T_IronSword, T_IronSword, {214,214,220,255}, 0,0,SG::Stone,Block::Air},
+            {"wooden pickaxe",false,false,false,-1.0f, T_WoodPick,  T_WoodPick,  T_WoodPick,  {176,142,92,255},  0,0,SG::Wood, Block::Air},
+            {"stone pickaxe", false,false,false,-1.0f, T_StonePick, T_StonePick, T_StonePick, {130,130,134,255}, 0,0,SG::Stone,Block::Air},
+            {"iron pickaxe",  false,false,false,-1.0f, T_IronPick,  T_IronPick,  T_IronPick,  {214,214,220,255}, 0,0,SG::Stone,Block::Air},
+            {"wooden axe",    false,false,false,-1.0f, T_WoodAxe,   T_WoodAxe,   T_WoodAxe,   {176,142,92,255},  0,0,SG::Wood, Block::Air},
+            {"stone axe",     false,false,false,-1.0f, T_StoneAxe,  T_StoneAxe,  T_StoneAxe,  {130,130,134,255}, 0,0,SG::Stone,Block::Air},
+            {"iron axe",      false,false,false,-1.0f, T_IronAxe,   T_IronAxe,   T_IronAxe,   {214,214,220,255}, 0,0,SG::Stone,Block::Air},
+            {"iron helmet",   false,false,false,-1.0f, T_Helmet,    T_Helmet,    T_Helmet,    {198,198,206,255}, 0,0,SG::Stone,Block::Air},
+            {"iron chestplate",false,false,false,-1.0f,T_Chestplate,T_Chestplate,T_Chestplate,{198,198,206,255}, 0,0,SG::Stone,Block::Air},
+            {"iron boots",    false,false,false,-1.0f, T_Boots,     T_Boots,     T_Boots,     {198,198,206,255}, 0,0,SG::Stone,Block::Air},
         };
 
         float n2(const std::uint32_t seed, const int px, const int py, const float scale) {
@@ -294,6 +328,121 @@ namespace vox {
                     px(img, T_Glowstone, x, y, Color{255, 244, 190, 255});
                 }
             }
+        }
+
+        // --- item icons -----------------------------------------------------
+        // Drawn on transparent tiles so they read as objects in a slot rather
+        // than as blocks. Handles share one wood ramp; heads carry the tier.
+        const Color woodDark{110, 78, 44, 255};
+        const Color woodLite{160, 118, 70, 255};
+        const auto tierHead = [](const int tier) -> Color {
+            switch (tier) {
+            case 1: return Color{178, 142, 92, 255};   // wood
+            case 2: return Color{136, 136, 142, 255};  // stone
+            default: return Color{222, 224, 232, 255}; // iron
+            }
+        };
+        const auto tierEdge = [](const int tier) -> Color {
+            switch (tier) {
+            case 1: return Color{124, 96, 58, 255};
+            case 2: return Color{96, 96, 102, 255};
+            default: return Color{160, 164, 176, 255};
+            }
+        };
+
+        // Diagonal wooden handle running bottom-left to upper-right.
+        const auto handle = [&](const int tile) {
+            for (int i = 0; i < 9; ++i) {
+                const int x = 3 + i, y = 12 - i;
+                px(img, tile, x, y, woodDark);
+                px(img, tile, x, y + 1, woodLite);
+            }
+        };
+
+        const auto swordTile = [&](const int tile, const int tier) {
+            const Color head = tierHead(tier);
+            const Color edge = tierEdge(tier);
+            for (int i = 0; i < 8; ++i) { // blade
+                const int x = 5 + i, y = 10 - i;
+                px(img, tile, x, y, head);
+                px(img, tile, x - 1, y, edge);
+                px(img, tile, x, y + 1, edge);
+            }
+            for (int i = 0; i < 4; ++i) // grip
+                px(img, tile, 3 + i, 12 - i, woodDark);
+            px(img, tile, 3, 10, woodLite);  // crossguard
+            px(img, tile, 4, 11, woodLite);
+            px(img, tile, 5, 12, woodLite);
+        };
+
+        const auto pickTile = [&](const int tile, const int tier) {
+            const Color head = tierHead(tier);
+            const Color edge = tierEdge(tier);
+            handle(tile);
+            for (int i = 0; i < 9; ++i) { // arched head
+                const int x = 3 + i;
+                const int y = 5 - static_cast<int>(2.0f * std::sin(i / 8.0f * 3.14159f));
+                px(img, tile, x, y, head);
+                px(img, tile, x, y + 1, edge);
+            }
+        };
+
+        const auto axeTile = [&](const int tile, const int tier) {
+            const Color head = tierHead(tier);
+            const Color edge = tierEdge(tier);
+            handle(tile);
+            for (int y = 2; y < 8; ++y) {  // blade slab beside the haft
+                const int w = 4 - std::abs(y - 4) / 2;
+                for (int x = 0; x < w; ++x)
+                    px(img, tile, 8 + x, y, x == w - 1 ? edge : head);
+            }
+        };
+
+        // Stick, coal lump, and two ingots.
+        for (int i = 0; i < 10; ++i) {
+            px(img, T_Stick, 5 + i / 2, 12 - i, woodDark);
+            px(img, T_Stick, 6 + i / 2, 12 - i, woodLite);
+        }
+        for (int y = 5; y < 12; ++y)
+            for (int x = 4; x < 12; ++x)
+                if ((x - 8) * (x - 8) + (y - 8) * (y - 8) < 14)
+                    px(img, T_Coal, x, y, shade(Color{38, 38, 42, 255},
+                                                0.8f + 0.5f * noise::rand01(seed, x, y)));
+        const auto ingot = [&](const int tile, const Color c) {
+            for (int y = 6; y < 11; ++y) {
+                const int inset = (y == 6 || y == 10) ? 2 : 1;
+                for (int x = 3 + inset; x < 13 - inset; ++x)
+                    px(img, tile, x, y, y < 8 ? c : shade(c, 0.78f));
+            }
+        };
+        ingot(T_IronIngot, Color{222, 224, 232, 255});
+        ingot(T_GoldIngot, Color{242, 208, 88, 255});
+
+        swordTile(T_WoodSword, 1);  swordTile(T_StoneSword, 2);  swordTile(T_IronSword, 3);
+        pickTile(T_WoodPick, 1);    pickTile(T_StonePick, 2);    pickTile(T_IronPick, 3);
+        axeTile(T_WoodAxe, 1);      axeTile(T_StoneAxe, 2);      axeTile(T_IronAxe, 3);
+
+        // Armour silhouettes.
+        const Color plate{206, 208, 216, 255};
+        const Color plateDark{150, 152, 162, 255};
+        for (int x = 3; x < 13; ++x) {                       // helmet dome + visor
+            for (int y = 3; y < 8; ++y)
+                px(img, T_Helmet, x, y, (y == 3 || x == 3 || x == 12) ? plateDark : plate);
+            if (x > 4 && x < 11)
+                px(img, T_Helmet, x, 8, x % 3 == 0 ? plateDark : Color{40, 44, 52, 255});
+            px(img, T_Helmet, x, 9, plateDark);
+        }
+        for (int y = 3; y < 13; ++y) {                       // chestplate torso
+            const int x0 = (y < 5) ? 2 : 4;
+            const int x1 = (y < 5) ? 14 : 12;
+            for (int x = x0; x < x1; ++x)
+                px(img, T_Chestplate, x, y, (x == x0 || x == x1 - 1 || y == 3) ? plateDark : plate);
+        }
+        for (int y = 8; y < 13; ++y) {                       // a pair of boots
+            for (int x = 2; x < 7; ++x)
+                px(img, T_Boots, x, y, (y == 12 || x == 2) ? plateDark : plate);
+            for (int x = 9; x < 14; ++x)
+                px(img, T_Boots, x, y, (y == 12 || x == 13) ? plateDark : plate);
         }
 
         Texture2D tex = LoadTextureFromImage(img);

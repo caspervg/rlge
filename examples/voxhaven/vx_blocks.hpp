@@ -29,15 +29,35 @@ namespace vox {
         Gravel,
         Clay,
         Ice,
+        // --- Items below this line: carried and crafted, never placed. ---
+        Stick,
+        Coal,
+        IronIngot,
+        GoldIngot,
+        WoodSword,
+        StoneSword,
+        IronSword,
+        WoodPick,
+        StonePick,
+        IronPick,
+        WoodAxe,
+        StoneAxe,
+        IronAxe,
+        IronHelmet,
+        IronChestplate,
+        IronBoots,
         Count
     };
+
+    // Everything from Stick onwards is an inventory item rather than a block.
+    constexpr Block kFirstItem = Block::Stick;
 
     constexpr int kBlockCount = static_cast<int>(Block::Count);
 
     // Atlas is an 8x4 grid of 16x16 tiles.
     constexpr int kTilePx = 16;
     constexpr int kAtlasCols = 8;
-    constexpr int kAtlasRows = 4;
+    constexpr int kAtlasRows = 8;  // 64 tiles: 24 blocks + item icons
 
     // Footstep / mining sound family.
     enum class SoundGroup : std::uint8_t {
