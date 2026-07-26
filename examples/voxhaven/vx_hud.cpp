@@ -918,7 +918,7 @@ namespace vox {
         const float cx = vp.x + vp.width * 0.5f;
 
         // Rows point straight at vox::settings, so edits are live with no apply.
-        std::array<SettingRow, 9> rows = {{
+        std::array<SettingRow, 16> rows = {{
             {"RENDER DISTANCE", RowKind::SliderInt, 2.0f, 12.0f, nullptr, &settings.viewRadius, nullptr,
              "%.0f chunks"},
             {"FIELD OF VIEW", RowKind::SliderFloat, 60.0f, 110.0f, &settings.fov, nullptr, nullptr,
@@ -933,6 +933,17 @@ namespace vox {
              nullptr},
             {"SHOW DEBUG LINE", RowKind::Toggle, 0, 0, nullptr, nullptr, &settings.showDebugLine,
              nullptr},
+            {"POST PROCESSING", RowKind::Toggle, 0, 0, nullptr, nullptr, &settings.postFx, nullptr},
+            {"BLOOM", RowKind::Toggle, 0, 0, nullptr, nullptr, &settings.bloom, nullptr},
+            {"BLOOM STRENGTH", RowKind::SliderFloat, 0.0f, 1.5f, &settings.bloomStrength, nullptr,
+             nullptr, nullptr},
+            {"FILM GRAIN", RowKind::Toggle, 0, 0, nullptr, nullptr, &settings.filmGrain, nullptr},
+            {"CHROMATIC ABERRATION", RowKind::Toggle, 0, 0, nullptr, nullptr, &settings.aberration,
+             nullptr},
+            {"CONTRAST", RowKind::SliderFloat, 0.80f, 1.40f, &settings.contrast, nullptr, nullptr,
+             nullptr},
+            {"SATURATION", RowKind::SliderFloat, 0.0f, 1.80f, &settings.saturation, nullptr, nullptr,
+             nullptr},
             {"BACK", RowKind::Button, 0, 0, nullptr, nullptr, nullptr, nullptr},
         }};
         const int rowCount = static_cast<int>(rows.size());
@@ -941,7 +952,7 @@ namespace vox {
         vignette(vp, BLACK, 0.35f);
 
         const float fs = 14.0f * s;
-        const float rowH = 40.0f * s;
+        const float rowH = (rowCount > 10 ? 30.0f : 40.0f) * s;
         const float pad = 22.0f * s;
         const float headH = 58.0f * s;
         const float pw = std::min(580.0f * s, vp.width * 0.94f);

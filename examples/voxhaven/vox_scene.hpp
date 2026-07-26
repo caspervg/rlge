@@ -10,6 +10,7 @@
 #include "vx_hud.hpp"
 #include "vx_inventory.hpp"
 #include "vx_mobs.hpp"
+#include "vx_postfx.hpp"
 #include "vx_player.hpp"
 #include "vx_sfx.hpp"
 #include "vx_world.hpp"
@@ -35,6 +36,8 @@ namespace vox {
         void enter() override;
         void exit() override;
         void update(float dt) override;
+        RenderTexture2D* beginWorldRenderTarget() override;
+        void afterWorldRender(RenderTexture2D* target, const std::vector<rlge::View>& views) override;
         void draw() override;
         void debugOverlay() override;
 
@@ -90,6 +93,7 @@ namespace vox {
         PlayerController player_;
         Inventory inventory_;
         MobManager mobs_;
+        PostFx postFx_;
         Sfx sfx_;
         rlge::Camera3DController cam3_;
 

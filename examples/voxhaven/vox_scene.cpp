@@ -12,6 +12,7 @@
 
 #include "vx_mesher.hpp"
 #include "vx_worldgen.hpp"
+#include "vx_postfx.hpp"
 
 namespace vox {
     using namespace rlge;
@@ -238,9 +239,23 @@ void main() {
     }
 
     void VoxScene::exit() {
+        postFx_.shutdown();
         mobs_.shutdown();
         world_.save();
         EnableCursor();
+    }
+
+    RenderTexture2D* VoxScene::beginWorldRenderTarget() {
+        const Vector2 size = runtime().window().renderSize();
+        return postFx_.target(static_cast<int>(size.x), static_cast<int>(size.y));
+    }
+
+    void VoxScene::afterWorldRender(RenderTexture2D* target, const std::vector<View>&) {
+        if (target == nullptr)
+            return;
+        const Vector2 size = runtime().window().renderSize();
+        postFx_.apply({0.0f, 0.0f, size.x, size.y}, worldClock_,
+                      player_.eyeInWater() && state_ != State::Menu, dayLight_());
     }
 
     void VoxScene::setupFonts_() {
@@ -305,6 +320,8 @@ void main() {
         matWater_.shader = water;
         matWater_.maps[MATERIAL_MAP_ALBEDO].texture = atlas_;
         materialsReady_ = true;
+
+        postFx_.init(store);
     }
 
     void VoxScene::setupView_() {
@@ -702,15 +719,6 @@ void main() {
     void VoxScene::draw() {
         Scene::draw();
 
-        // Sky gradient, drawn immediately into the backbuffer: the engine's 3D
-        // flush clears depth only, so the world renders on top of this.
-        {
-            const auto [w, h] = runtime().window().size();
-            const Color horizon = skyColor_();
-            const Color zenith = fromV3(Vector3Scale(toV3(horizon), 0.45f));
-            DrawRectangleGradientV(0, 0, static_cast<int>(w), static_cast<int>(h), zenith, horizon);
-        }
-
         drawSky_();
         drawChunks_();
         drawClouds_();
@@ -723,6 +731,47 @@ void main() {
     }
 
     void VoxScene::drawSky_() {
+        const Color horizon = skyColor_();
+        const Color zenith = fromV3(Vector3Scale(toV3(horizon), 0.45f));
+        rq().submit3D(layers().background(), -1.0f,
+                      [horizon, zenith](const Camera3D& cam, const Rectangle&) {
+                          // Untextured gradient shell locked to the camera. Drawn
+                          // with the depth mask off so everything else overwrites it.
+                          rlDisableDepthMask();
+                          rlDisableBackfaceCulling();
+                          rlSetTexture(rlGetTextureIdDefault());
+                          rlBegin(RL_QUADS);
+                          constexpr float r = 400.0f;
+                          constexpr float top = 300.0f;
+                          constexpr float bot = -300.0f;
+                          const Vector3 c = cam.position;
+                          const float sx[4][4] = {{-r, -r, r, -r}, {r, -r, r, r},
+                                                  {r, r, -r, r},   {-r, r, -r, -r}};
+                          for (const auto& q : sx) {
+                              rlColor4ub(horizon.r, horizon.g, horizon.b, 255);
+                              rlVertex3f(c.x + q[0], c.y + bot, c.z + q[1]);
+                              rlVertex3f(c.x + q[2], c.y + bot, c.z + q[3]);
+                              rlColor4ub(zenith.r, zenith.g, zenith.b, 255);
+                              rlVertex3f(c.x + q[2], c.y + top, c.z + q[3]);
+                              rlVertex3f(c.x + q[0], c.y + top, c.z + q[1]);
+                          }
+                          rlColor4ub(zenith.r, zenith.g, zenith.b, 255);
+                          rlVertex3f(c.x - r, c.y + top, c.z - r);
+                          rlVertex3f(c.x - r, c.y + top, c.z + r);
+                          rlVertex3f(c.x + r, c.y + top, c.z + r);
+                          rlVertex3f(c.x + r, c.y + top, c.z - r);
+                          rlColor4ub(horizon.r, horizon.g, horizon.b, 255);
+                          rlVertex3f(c.x - r, c.y + bot, c.z - r);
+                          rlVertex3f(c.x + r, c.y + bot, c.z - r);
+                          rlVertex3f(c.x + r, c.y + bot, c.z + r);
+                          rlVertex3f(c.x - r, c.y + bot, c.z + r);
+                          rlEnd();
+                          rlSetTexture(0);
+                          rlDrawRenderBatchActive();
+                          rlEnableBackfaceCulling();
+                          rlEnableDepthMask();
+                      });
+
         const float sunAngle = dayTime_ * 2.0f * PI;
         const Vector3 sunDir{std::cos(sunAngle), std::sin(sunAngle), 0.35f};
         const float night = 1.0f - std::clamp(std::sin(sunAngle) * 3.0f + 0.5f, 0.0f, 1.0f);

@@ -61,6 +61,19 @@ namespace vox {
         bool smoothLighting = true;
         float masterVolume = 0.8f;
 
+        // Post-processing chain (see vx_postfx). Everything here is live.
+        bool postFx = true;
+        bool bloom = true;
+        float bloomStrength = 0.34f;
+        float bloomThreshold = 0.82f;  // high, so snow and ice do not blow out
+        bool filmGrain = true;
+        float grainStrength = 0.30f;
+        bool aberration = false;
+        bool postVignette = true;
+        float vignetteStrength = 0.45f;
+        float contrast = 1.06f;
+        float saturation = 1.10f;
+
         [[nodiscard]] float fogStart() const { return static_cast<float>(viewRadius) * 16.0f * 0.55f; }
         [[nodiscard]] float fogEnd() const { return static_cast<float>(viewRadius) * 16.0f * 0.95f; }
     };

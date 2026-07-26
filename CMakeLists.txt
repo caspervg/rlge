@@ -230,6 +230,7 @@ if(RLGE_BUILD_EXAMPLES)
             examples/voxhaven/vx_inventory.cpp
             examples/voxhaven/vx_hud.cpp
             examples/voxhaven/vx_mobs.cpp
+            examples/voxhaven/vx_postfx.cpp
             examples/voxhaven/vx_world.cpp
             examples/voxhaven/vx_mesher.cpp
             examples/voxhaven/vx_player.cpp
