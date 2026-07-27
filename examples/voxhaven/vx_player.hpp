@@ -50,6 +50,10 @@ namespace vox {
         [[nodiscard]] float pitch() const { return pitch_; }
         // 0..1 fraction of max ground speed, for the sprint FOV kick.
         [[nodiscard]] float speedFraction() const;
+        // Walk cycle, reused by the first-person view model so the held item
+        // sways in step with the footfalls.
+        [[nodiscard]] float bobPhase() const { return bobPhase_; }
+        [[nodiscard]] float bobAmount() const { return bobAmount_; }
 
         // True if placing a block at this cell would overlap the player.
         [[nodiscard]] bool intersectsBlock(int bx, int by, int bz) const;

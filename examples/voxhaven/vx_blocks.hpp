@@ -59,6 +59,11 @@ namespace vox {
     constexpr int kAtlasCols = 8;
     constexpr int kAtlasRows = 8;  // 64 tiles: 24 blocks + item icons
 
+    // View-model tiles, exposed because the first-person arm is drawn outside
+    // this translation unit. Keep in step with the Tile enum in vx_blocks.cpp.
+    constexpr int kTileArmSkin = 40;
+    constexpr int kTileSleeve = 41;
+
     // Footstep / mining sound family.
     enum class SoundGroup : std::uint8_t {
         None,

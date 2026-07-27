@@ -12,6 +12,7 @@
 
 #include "vx_mesher.hpp"
 #include "vx_worldgen.hpp"
+#include "vx_viewmodel.hpp"
 #include "vx_postfx.hpp"
 
 namespace vox {
@@ -549,6 +550,13 @@ void main() {
         world_.update(player_.position());
         meshedThisFrame_ = Mesher::remeshDirty(world_, player_.position(), cfg.meshPerFrame);
 
+        const bool swinging = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+        if (swinging || swingAnim_ > 0.0f) {
+            swingAnim_ += dt * 3.6f;
+            if (swingAnim_ >= 1.0f)
+                swingAnim_ = swinging ? swingAnim_ - 1.0f : 0.0f;
+        }
+
         updateDayCycle_(IsKeyDown(KEY_T) ? dt * 40.0f : dt);
 
         mobs_.update(world_, player_.position(), dayTime_, dt);
@@ -751,6 +759,7 @@ void main() {
         }
         drawMobs_();
         drawDebris_();
+        drawViewModel_();
         drawUi_();
     }
 
@@ -926,6 +935,29 @@ void main() {
         rq().submit3D(layers().world(), 1.0f, [this, light](const Camera3D& cam, const Rectangle&) {
             mobs_.draw(cam, light);
         });
+    }
+
+    void VoxScene::drawViewModel_() {
+        if (state_ == State::Menu)
+            return;
+        ViewModelState vm;
+        vm.held = inventory_.selectedBlock();
+        // Swing tracking only runs while playing, so an overlay opened
+        // mid-arc would otherwise leave the arm frozen at that angle.
+        vm.swing = state_ == State::Playing ? swingAnim_ : 0.0f;
+        vm.bobPhase = player_.bobPhase();
+        vm.bobAmount = player_.bobAmount();
+        // Swapping slots dips the item out of frame and back.
+        vm.equipDrop = std::clamp(1.0f - (worldClock_ - selectionChangedAt_) / 0.22f, 0.0f, 1.0f);
+        vm.light = dayLight_();
+
+        const Texture2D atlas = atlas_;
+        // Highest z on the foreground layer: the view model clears depth, so it
+        // has to be the last thing the 3D lane draws.
+        rq().submit3D(layers().foreground(), 10.0f,
+                      [atlas, vm](const Camera3D& cam, const Rectangle&) {
+                          drawViewModel(cam, atlas, vm);
+                      });
     }
 
     void VoxScene::drawDebris_() {

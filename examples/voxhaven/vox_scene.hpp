@@ -14,6 +14,7 @@
 #include "vx_postfx.hpp"
 #include "vx_player.hpp"
 #include "vx_sfx.hpp"
+#include "vx_viewmodel.hpp"
 #include "vx_world.hpp"
 
 namespace vox {
@@ -81,6 +82,7 @@ namespace vox {
         void drawHighlight_();
         void drawDebris_();
         void drawMobs_();
+        void drawViewModel_();
         void drawClouds_();
         void drawUi_();
 
@@ -115,6 +117,7 @@ namespace vox {
         float regenTimer_ = 0.0f;
         float hurtFlash_ = 0.0f;
         float swingCooldown_ = 0.0f;
+        float swingAnim_ = 0.0f;   // 0..1 through the current arm swing
         float deathTimer_ = 0.0f;
 
         float selectionChangedAt_ = -100.0f;

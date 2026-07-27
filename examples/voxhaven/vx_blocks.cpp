@@ -50,6 +50,8 @@ namespace vox {
             T_Helmet,
             T_Chestplate,
             T_Boots,      // 39
+            T_ArmSkin,    // 40 - first-person view model
+            T_Sleeve,     // 41
         };
 
         using SG = SoundGroup;
@@ -329,6 +331,11 @@ namespace vox {
                 }
             }
         }
+
+        // First-person arm: bare skin and a shirt sleeve, in the same grain
+        // style as everything else so the hand belongs to this world.
+        paintTile(img, T_ArmSkin, seed + 21, Color{232, 190, 152, 255}, 1.1f, 0.14f);
+        paintTile(img, T_Sleeve, seed + 22, Color{60, 140, 150, 255}, 1.0f, 0.20f);
 
         // --- item icons -----------------------------------------------------
         // Drawn on transparent tiles so they read as objects in a slot rather
